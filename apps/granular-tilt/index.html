@@ -6,14 +6,9 @@
   <title>Granular Tilt — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
   <style>
-    canvas#scope {
-      flex: 1;
-      min-height: 0;
-      width: calc(100% - 1rem);
-      margin: 0.35rem 0.5rem;
-      border-radius: 8px;
+    #scope {
       background: #111827;
-      display: block;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -29,7 +24,9 @@
   </div>
   <p class="status-bar" id="status"><span id="rateOut">Rate: —</span> · <span id="pitchOut">Pitch: —</span></p>
   <div class="main-stage">
-    <canvas id="scope"></canvas>
+    <div class="stage-fill">
+      <canvas id="scope" class="canvas-fill"></canvas>
+    </div>
   </div>
   <div class="app-toolbar">
     <button type="button" class="btn" id="startBtn">Start sound</button>
@@ -47,9 +44,13 @@
       document.getElementById("learnPanel").classList.toggle("open");
 
     function resizeCanvas() {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * devicePixelRatio;
-      canvas.height = rect.height * devicePixelRatio;
+      const box = canvas.parentElement.getBoundingClientRect();
+      const w = Math.max(1, Math.floor(box.width * devicePixelRatio));
+      const h = Math.max(1, Math.floor(box.height * devicePixelRatio));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
     }
 
     function makeGrainBuffer() {
@@ -97,11 +98,15 @@
       requestAnimationFrame(draw);
     }
 
+    const ro = new ResizeObserver(() => resizeCanvas());
+    ro.observe(canvas.parentElement);
+
     document.getElementById("startBtn").onclick = async () => {
       ctx = getAudioContext();
       await unlockAudio(ctx);
       ({ master } = createMasterBus(ctx, 0.5));
       buffer = makeGrainBuffer();
+      resizeCanvas();
       draw();
 
       await enableSensors();

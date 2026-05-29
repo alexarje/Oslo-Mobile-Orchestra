@@ -6,40 +6,26 @@
   <title>Motion Wah — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
   <style>
-    .viz {
-      flex: 1;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.35rem;
-      touch-action: none;
-      cursor: pointer;
-    }
-    .viz.active {
-      background: rgba(110, 231, 183, 0.08);
-      border-radius: 10px;
-    }
     .phone-icon {
       width: 72px;
       height: 120px;
       border: 2px solid var(--accent);
       border-radius: 12px;
       transition: transform 0.1s ease-out;
+      flex-shrink: 0;
     }
-    .viz.active .phone-icon {
+    .touch-zone.active .phone-icon {
       border-color: var(--accent-dim);
       box-shadow: 0 0 16px rgba(110, 231, 183, 0.35);
     }
-    .viz p {
+    .touch-zone p {
       margin: 0;
       font-size: 0.75rem;
       color: var(--muted);
     }
-    .viz .meter {
+    .touch-zone .meter {
       width: 70%;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -54,10 +40,12 @@
     <p>Hold the screen to play; tilt sweeps a band-pass filter.</p>
   </div>
   <p class="status-bar" id="status">Start sound, then hold &amp; tilt</p>
-  <div class="main-stage viz" id="touchZone">
-    <div class="phone-icon" id="phone"></div>
-    <p>Hold here · tilt forward / back</p>
-    <div class="meter"><div class="meter-fill" id="meter"></div></div>
+  <div class="main-stage">
+    <div class="touch-zone" id="touchZone">
+      <div class="phone-icon" id="phone"></div>
+      <p>Hold here · tilt forward / back</p>
+      <div class="meter"><div class="meter-fill" id="meter"></div></div>
+    </div>
   </div>
   <div class="app-toolbar">
     <button type="button" class="btn" id="startBtn">Start sound</button>
