@@ -6,84 +6,53 @@
   <title>Conductor — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
   <style>
-    .countdown {
-      font-size: 4rem;
-      font-weight: 800;
-      text-align: center;
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .cond-panel {
+      flex-shrink: 0;
+      margin: 0.35rem 0.5rem;
+      padding: 0.5rem;
+      font-size: 0.75rem;
     }
-    .link-box {
-      word-break: break-all;
-      font-size: 0.8rem;
-      background: #0f172a;
-      padding: 0.75rem;
-      border-radius: 8px;
-      margin-top: 0.5rem;
-    }
-    .role-tabs {
-      display: flex;
-      gap: 0.5rem;
-      padding: 1rem 1rem 0;
-    }
-    .role-tabs button {
-      flex: 1;
-      min-height: var(--touch-min);
-      border-radius: 8px;
-      border: 1px solid #475569;
-      background: var(--surface);
-      color: var(--text);
-      font-weight: 600;
-    }
-    .role-tabs button.active {
-      border-color: var(--accent);
-      background: #064e3b;
-    }
-    .hidden { display: none !important; }
+    .cond-panel p { margin: 0.25rem 0; }
   </style>
 </head>
-<body>
+<body class="app-shell">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Conductor</h1>
   </header>
   <div class="role-tabs">
-    <button type="button" id="tabCond" class="active">I conduct</button>
-    <button type="button" id="tabMus">I play</button>
+    <button type="button" id="tabCond" class="active">Conduct</button>
+    <button type="button" id="tabMus">Play</button>
   </div>
 
   <div id="conductorView" class="main-stage">
-    <div class="panel">
-      <h2>Ensemble sync</h2>
-      <p>Set BPM, tap <strong>Start countdown</strong>, then share the musician link. Everyone’s clock aligns to the same start time (works for Pulse Grid and any app opened with the link).</p>
-      <div class="bpm-row" style="padding:0;display:flex;gap:1rem;align-items:center;">
-        <label for="bpm">BPM</label>
-        <input type="range" id="bpm" min="60" max="140" value="96" style="flex:1" />
-        <span id="bpmVal">96</span>
-      </div>
+    <div class="control-row">
+      <label for="bpm">BPM</label>
+      <input type="range" id="bpm" min="60" max="140" value="96" />
+      <span id="bpmVal">96</span>
     </div>
-    <div class="countdown" id="countdown">Ready</div>
-    <button type="button" class="btn" id="goBtn" style="margin: 1rem;">Start countdown (5 sec)</button>
-    <div class="panel hidden" id="sharePanel">
-      <h2>Musician link</h2>
-      <p>Send this URL (or QR via your projector). Players open it, choose an instrument from the hub, then tap Start when the countdown hits 0.</p>
+    <div class="countdown-lg" id="countdown">Ready</div>
+    <div class="scroll-panel hidden" id="sharePanel">
+      <p style="margin:0 0 0.35rem;font-size:0.75rem;color:var(--muted);">Musician link</p>
       <div class="link-box" id="musicianLink"></div>
-      <button type="button" class="btn-secondary btn" id="copyBtn" style="margin-top:0.75rem;width:100%;">Copy link</button>
+    </div>
+    <div class="app-toolbar">
+      <button type="button" class="btn" id="goBtn">Countdown 5s</button>
+      <button type="button" class="btn-secondary btn btn-sm icon-only hidden" id="copyBtn" title="Copy">⎘</button>
     </div>
   </div>
 
   <div id="musicianView" class="main-stage hidden">
-    <div class="panel">
-      <h2>Joined session</h2>
-      <p id="joinInfo">Waiting for conductor…</p>
-      <p>BPM: <strong id="joinBpm">—</strong> · Start: <strong id="joinStart">—</strong></p>
+    <p class="status-bar" id="joinInfo">Waiting…</p>
+    <div class="countdown-lg" id="musCountdown">—</div>
+    <div class="scroll-panel">
+      <p style="margin:0;font-size:0.72rem;color:var(--muted);">BPM <strong id="joinBpm">—</strong> · <span id="joinStart">—</span></p>
+      <p style="margin:0.35rem 0 0;font-size:0.72rem;"><a href="../pulse-grid/">Pulse Grid</a> link:</p>
+      <div class="link-box" id="pulseLink"></div>
     </div>
-    <div class="countdown" id="musCountdown">—</div>
-    <a class="btn" href="../../" style="margin:1rem;text-align:center;text-decoration:none;display:block;">Open instrument apps</a>
-    <p class="panel" style="font-size:0.85rem;">Tip: open <a href="../pulse-grid/">Pulse Grid</a> with this page’s timing — the link below includes start &amp; bpm.</p>
-    <div class="link-box" id="pulseLink"></div>
+    <div class="app-toolbar">
+      <a class="btn" href="../../" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">Apps</a>
+    </div>
   </div>
 
   <script type="module">
@@ -129,6 +98,7 @@
       const url = buildMusicianUrl(startMs, bpm);
       document.getElementById("sharePanel").classList.remove("hidden");
       document.getElementById("musicianLink").textContent = url;
+      document.getElementById("copyBtn").classList.remove("hidden");
       runCountdown(document.getElementById("countdown"), startMs, () => {
         document.getElementById("countdown").textContent = "Go!";
       });
@@ -158,7 +128,7 @@
       const bpm = params.get("bpm") || "96";
       document.getElementById("joinBpm").textContent = bpm;
       document.getElementById("joinStart").textContent = new Date(startMs).toLocaleTimeString();
-      document.getElementById("joinInfo").textContent = "Countdown to ensemble start";
+      document.getElementById("joinInfo").textContent = "Countdown";
       document.getElementById("pulseLink").textContent = buildPulseUrl(startMs, bpm);
       runCountdown(document.getElementById("musCountdown"), startMs, () => {
         document.getElementById("musCountdown").textContent = "Go!";

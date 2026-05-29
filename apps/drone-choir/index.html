@@ -6,40 +6,24 @@
   <title>Drone Choir — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
   <style>
-    .note-picker { padding: 1rem; }
-    .note-picker button {
-      min-height: 56px;
-      font-size: 1rem;
-      border-radius: 10px;
-      border: 2px solid #475569;
-      background: var(--surface);
-      color: var(--text);
-      font-weight: 600;
-    }
-    .note-picker button.selected {
-      border-color: var(--accent);
-      background: #064e3b;
-    }
-    .note-picker .grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.5rem;
-    }
     .dial {
-      width: 160px;
-      height: 160px;
-      border-radius: 50%;
-      border: 4px solid var(--accent-dim);
-      margin: 1rem auto;
+      flex: 1;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      font-size: 1.5rem;
       color: var(--muted);
+    }
+    .pick-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+      margin: 0.25rem 0 0;
     }
   </style>
 </head>
-<body>
+<body class="app-shell">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Drone Choir</h1>
@@ -47,15 +31,15 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Ensemble harmony</h2>
-    <p>Each player picks a chord tone (C–E–G–B♭ for F minor). <strong>Device orientation (gamma)</strong> bends pitch ±30 cents — together you get a living cluster chord without a keyboard.</p>
+    <p>Pick a chord tone; rotate phone to detune (gamma → cents).</p>
   </div>
-  <p class="status-bar" id="status">Choose your note, then start</p>
-  <div class="note-picker">
-    <p style="color: var(--muted); margin: 0 0 0.75rem;">F minor chord — pick one:</p>
-    <div class="grid" id="notes"></div>
-  </div>
+  <p class="status-bar" id="status">Pick note, start drone</p>
+  <p class="pick-label">F minor — pick one</p>
+  <div class="note-grid" id="notes"></div>
   <div class="dial" id="dial">—</div>
-  <button type="button" class="btn" id="startBtn" style="margin: 1rem;">Start drone</button>
+  <div class="app-toolbar">
+    <button type="button" class="btn" id="startBtn">Start drone</button>
+  </div>
   <script type="module">
     import { getAudioContext, unlockAudio, createMasterBus, midiToFreq } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
@@ -109,13 +93,12 @@
 
       await enableSensors();
       onOrientation(({ gamma }) => {
-        const cents = (gamma || 0) * 0.5;
-        const detune = Math.max(-50, Math.min(50, cents));
+        const detune = Math.max(-50, Math.min(50, (gamma || 0) * 0.5));
         osc.detune.setTargetAtTime(detune, ctx.currentTime, 0.05);
         document.getElementById("dial").textContent = `${detune > 0 ? "+" : ""}${detune.toFixed(0)}¢`;
       });
 
-      document.getElementById("status").textContent = "Rotate phone slowly to detune";
+      document.getElementById("status").textContent = "Rotate to detune";
       document.getElementById("status").classList.add("ok");
       document.getElementById("startBtn").disabled = true;
     };

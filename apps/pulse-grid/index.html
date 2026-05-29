@@ -5,34 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Pulse Grid — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
-  <style>
-    .grid-16 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      padding: 1rem;
-      flex: 1;
-      align-content: start;
-    }
-    .cell {
-      aspect-ratio: 1;
-      border-radius: 8px;
-      background: #334155;
-      border: none;
-      min-height: 56px;
-    }
-    .cell.on { background: var(--accent-dim); }
-    .cell.playing { box-shadow: 0 0 12px var(--accent); }
-    .bpm-row {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0 1rem 1rem;
-    }
-    .bpm-row input { flex: 1; min-height: var(--touch-min); }
-  </style>
 </head>
-<body>
+<body class="app-shell">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Pulse Grid</h1>
@@ -40,26 +14,27 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Step sequencer</h2>
-    <p>Each step is a 16th note in a bar. Toggle steps to build a pattern. For 20 players: assign different timbres via <strong>Sound color</strong> — together you layer rhythms without needing network sync (listen to the room).</p>
-    <p>Optional: open the same BPM from Conductor for tighter ensemble timing.</p>
+    <p>16 steps = one bar. Assign different sounds across the ensemble.</p>
   </div>
-  <p class="status-bar" id="status">Pick sound color, toggle steps, start</p>
-  <div class="bpm-row">
+  <div class="control-row">
     <label for="color">Sound</label>
-    <select id="color" style="flex:1;min-height:48px;">
+    <select id="color">
       <option value="kick">Kick</option>
       <option value="snare">Snare</option>
-      <option value="hat">Hi-hat</option>
+      <option value="hat">Hat</option>
       <option value="tone">Tone</option>
     </select>
-  </div>
-  <div class="bpm-row">
     <label for="bpm">BPM</label>
     <input type="range" id="bpm" min="60" max="140" value="100" />
     <span id="bpmVal">100</span>
   </div>
-  <div class="grid-16" id="grid"></div>
-  <button type="button" class="btn" id="startBtn" style="margin: 1rem;">Start sequencer</button>
+  <p class="status-bar" id="status">Toggle steps, start</p>
+  <div class="main-stage">
+    <div class="seq-grid" id="grid"></div>
+  </div>
+  <div class="app-toolbar">
+    <button type="button" class="btn" id="startBtn">Start</button>
+  </div>
   <script type="module">
     import { getAudioContext, unlockAudio, createMasterBus, midiToFreq } from "../../shared/audio.js";
 
@@ -86,12 +61,12 @@
       document.getElementById("bpmVal").textContent = e.target.value;
     };
 
-  const urlBpm = new URLSearchParams(location.search).get("bpm");
-  const urlStart = new URLSearchParams(location.search).get("start");
-  if (urlBpm) {
-    document.getElementById("bpm").value = urlBpm;
-    document.getElementById("bpmVal").textContent = urlBpm;
-  }
+    const urlBpm = new URLSearchParams(location.search).get("bpm");
+    const urlStart = new URLSearchParams(location.search).get("start");
+    if (urlBpm) {
+      document.getElementById("bpm").value = urlBpm;
+      document.getElementById("bpmVal").textContent = urlBpm;
+    }
 
     function playSound(type) {
       const t = ctx.currentTime;
@@ -170,7 +145,7 @@
         nextTime = ctx.currentTime + 0.05;
       }
       scheduler();
-      document.getElementById("status").textContent = "Playing — layer with the group";
+      document.getElementById("status").textContent = "Playing";
       document.getElementById("status").classList.add("ok");
       document.getElementById("startBtn").disabled = true;
     };

@@ -1,4 +1,4 @@
-/* Oslo Mobile Orchestra — shared mobile-first UI */
+/* Oslo Mobile Orchestra — compact mobile layout (fits one screen) */
 :root {
   --bg: #0d0f14;
   --surface: #1a1f2e;
@@ -7,7 +7,11 @@
   --text: #f1f5f9;
   --muted: #94a3b8;
   --danger: #f87171;
-  --touch-min: 48px;
+  --touch-min: 40px;
+  --header-h: 40px;
+  --status-h: 22px;
+  --toolbar-h: 44px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -20,7 +24,6 @@ html,
 body {
   margin: 0;
   padding: 0;
-  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
@@ -29,54 +32,196 @@ body {
   -webkit-user-select: none;
 }
 
+/* Instrument apps: no page scroll, flex fill viewport */
+body.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
 a {
   color: var(--accent);
 }
 
 .app-header {
-  padding: 0.75rem 1rem;
+  flex-shrink: 0;
+  height: var(--header-h);
+  padding: 0 0.5rem;
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--surface);
   border-bottom: 1px solid #2d3548;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  position: sticky;
-  top: 0;
+  gap: 0.35rem;
   z-index: 10;
 }
 
 .app-header h1 {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   margin: 0;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .back-link {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   text-decoration: none;
-  padding: 0.5rem;
-  min-width: var(--touch-min);
-  min-height: var(--touch-min);
+  padding: 0.25rem;
+  min-width: 36px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .main-stage {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 56px);
+  overflow: hidden;
+}
+
+.status-bar {
+  flex-shrink: 0;
+  min-height: var(--status-h);
+  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--muted);
+  text-align: center;
+  background: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-bar.ok {
+  color: var(--accent);
+}
+
+.status-bar.warn {
+  color: #fbbf24;
+}
+
+.learn-toggle {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid #475569;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.65rem;
+  min-height: 28px;
+}
+
+/* Overlay — does not push main UI down */
+.learn-panel.panel {
+  display: none;
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  max-height: 32vh;
+  overflow-y: auto;
+  z-index: 30;
+  border-radius: 0 0 10px 10px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.learn-panel.open {
+  display: block;
+}
+
+.learn-panel.panel h2 {
+  font-size: 0.7rem;
+  margin: 0 0 0.25rem;
+}
+
+.learn-panel.panel p {
+  margin: 0.25rem 0;
+}
+
+.app-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  padding-bottom: calc(0.35rem + var(--safe-b));
+  background: var(--surface);
+  border-top: 1px solid #2d3548;
+  min-height: var(--toolbar-h);
+}
+
+.app-toolbar .btn {
+  flex: 1;
+  min-height: 36px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+.app-toolbar .btn.icon-only {
+  flex: 0 0 auto;
+  min-width: 36px;
+  padding: 0.35rem;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background: #111827;
+}
+
+.control-row label {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.control-row select,
+.control-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  font-size: 0.8rem;
+}
+
+.control-row select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 0.2rem 0.35rem;
+}
+
+.control-row span {
+  color: var(--muted);
+  min-width: 1.75rem;
+  text-align: right;
+  font-size: 0.75rem;
 }
 
 .btn {
   min-height: var(--touch-min);
-  min-width: var(--touch-min);
-  padding: 0.75rem 1.25rem;
+  padding: 0.5rem 0.75rem;
   border: none;
-  border-radius: 12px;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   background: var(--accent-dim);
@@ -98,25 +243,31 @@ a {
   color: #1c1917;
 }
 
+.btn-sm {
+  min-height: 34px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+}
+
 .panel {
-  margin: 1rem;
-  padding: 1rem;
+  margin: 0.5rem;
+  padding: 0.65rem;
   background: var(--surface);
-  border-radius: 12px;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .panel h2 {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.35rem;
 }
 
 .panel p {
-  margin: 0.5rem 0;
+  margin: 0.35rem 0;
   color: var(--muted);
 }
 
@@ -124,47 +275,11 @@ a {
   color: var(--text);
 }
 
-.status-bar {
-  padding: 0.5rem 1rem;
-  font-size: 0.8rem;
-  color: var(--muted);
-  text-align: center;
-  background: #111827;
-}
-
-.status-bar.ok {
-  color: var(--accent);
-}
-
-.status-bar.warn {
-  color: #fbbf24;
-}
-
-.learn-toggle {
-  background: transparent;
-  border: 1px solid #475569;
-  color: var(--muted);
-  border-radius: 8px;
-  padding: 0.35rem 0.65rem;
-  font-size: 0.75rem;
-}
-
-.learn-panel {
-  display: none;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-
-.learn-panel.open {
-  display: block;
-}
-
 .meter {
-  height: 8px;
+  height: 6px;
   background: #334155;
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
-  margin-top: 0.5rem;
 }
 
 .meter-fill {
@@ -174,25 +289,225 @@ a {
   transition: width 0.05s linear;
 }
 
-.grid-2 {
+/* Hub (scrollable list) */
+body.hub {
+  min-height: 100dvh;
+}
+
+.hub-header {
+  padding: 0.65rem 0.75rem 0.4rem;
+  text-align: center;
+}
+
+.hub-header h1 {
+  font-size: 1.15rem;
+  margin: 0 0 0.25rem;
+  font-weight: 700;
+}
+
+.hub-header p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.app-list {
+  list-style: none;
+  padding: 0 0.5rem 0.5rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.app-list a {
+  display: block;
+  padding: 0.5rem 0.65rem;
+  background: var(--surface);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid #2d3548;
+}
+
+.app-list .tag {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  display: block;
+}
+
+.app-list .title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.app-list .desc {
+  display: none;
+}
+
+.hub-tips {
+  margin: 0 0.5rem 0.75rem;
+  font-size: 0.72rem;
+}
+
+.hub-tips summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0.35rem 0;
+}
+
+.hub-tips[open] summary {
+  margin-bottom: 0.35rem;
+}
+
+.hub-tips p {
+  margin: 0.25rem 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.hub-tips strong {
+  color: var(--text);
+}
+
+/* Shared instrument widgets */
+.play-surface {
+  flex: 1;
+  min-height: 0;
+  margin: 0.35rem 0.5rem;
+  border-radius: 10px;
+  touch-action: none;
+}
+
+.pred-display {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+  margin: 0.25rem 0.5rem;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.pred-display.still {
+  color: #38bdf8;
+}
+
+.pred-display.shake {
+  color: #fb923c;
+}
+
+.btn-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 0.35rem;
+  padding: 0 0.5rem 0.35rem;
+  flex-shrink: 0;
 }
 
-label.choice {
+.seq-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 4px;
+  padding: 0.35rem 0.5rem;
+}
+
+.seq-grid .cell {
+  min-height: 0;
+  border-radius: 6px;
+  background: #334155;
+  border: none;
+  padding: 0;
+}
+
+.seq-grid .cell.on {
+  background: var(--accent-dim);
+}
+
+.seq-grid .cell.playing {
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.note-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.note-grid button {
+  min-height: 38px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  border: 2px solid #475569;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.note-grid button.selected {
+  border-color: var(--accent);
+  background: #064e3b;
+}
+
+.countdown-lg {
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: var(--touch-min);
-  padding: 0.5rem;
-  background: var(--surface);
-  border-radius: 8px;
-  font-size: 0.95rem;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 800;
 }
 
-label.choice input {
-  width: 22px;
-  height: 22px;
+.role-tabs {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0;
+  flex-shrink: 0;
+}
+
+.role-tabs button {
+  flex: 1;
+  min-height: 34px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.role-tabs button.active {
+  border-color: var(--accent);
+  background: #064e3b;
+}
+
+.scroll-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0.35rem 0.5rem;
+  padding: 0.5rem;
+}
+
+.link-box {
+  word-break: break-all;
+  font-size: 0.7rem;
+  background: #0f172a;
+  padding: 0.4rem;
+  border-radius: 6px;
+  margin-top: 0.35rem;
+}
+
+.hidden {
+  display: none !important;
 }

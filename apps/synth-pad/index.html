@@ -7,39 +7,24 @@
   <link rel="stylesheet" href="../../shared/ui.css" />
   <style>
     #pad {
-      flex: 1;
-      margin: 1rem;
-      border-radius: 16px;
       background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
       border: 2px solid #334155;
-      touch-action: none;
       position: relative;
     }
     #pad .cursor {
       position: absolute;
-      width: 48px;
-      height: 48px;
-      margin: -24px 0 0 -24px;
+      width: 36px;
+      height: 36px;
+      margin: -18px 0 0 -18px;
       border-radius: 50%;
       border: 2px solid var(--accent);
       pointer-events: none;
       opacity: 0;
     }
     #pad.active .cursor { opacity: 1; }
-    .controls { padding: 0 1rem 1rem; }
-    select {
-      width: 100%;
-      min-height: var(--touch-min);
-      font-size: 1rem;
-      border-radius: 8px;
-      padding: 0.5rem;
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid #475569;
-    }
   </style>
 </head>
-<body>
+<body class="app-shell">
   <header class="app-header">
     <a class="back-link" href="../../" aria-label="Back">←</a>
     <h1>Synth Pad</h1>
@@ -47,22 +32,23 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Sound synthesis</h2>
-    <p><strong>X</strong> = pitch (oscillator frequency). <strong>Y</strong> = brightness (low-pass filter cutoff).</p>
-    <p><strong>Sine / Square / Saw</strong> are basic waveforms (harmonic content). <strong>FM</strong> uses one oscillator to modulate another’s frequency — metallic, bell-like timbres.</p>
+    <p><strong>X</strong> = pitch. <strong>Y</strong> = filter brightness. <strong>FM</strong> = frequency modulation.</p>
   </div>
-  <p class="status-bar" id="status">Tap Start, then drag the pad</p>
+  <p class="status-bar" id="status">Start sound, drag pad</p>
   <div class="main-stage">
-    <div id="pad"><div class="cursor" id="cursor"></div></div>
-    <div class="controls">
-      <label for="wave">Waveform</label>
-      <select id="wave">
-        <option value="sine">Sine</option>
-        <option value="square">Square</option>
-        <option value="sawtooth">Saw</option>
-        <option value="fm">FM</option>
-      </select>
-    </div>
-    <button type="button" class="btn" id="startBtn" style="margin: 0 1rem 1rem;">Start sound</button>
+    <div id="pad" class="play-surface"><div class="cursor" id="cursor"></div></div>
+  </div>
+  <div class="control-row">
+    <label for="wave">Wave</label>
+    <select id="wave">
+      <option value="sine">Sine</option>
+      <option value="square">Square</option>
+      <option value="sawtooth">Saw</option>
+      <option value="fm">FM</option>
+    </select>
+  </div>
+  <div class="app-toolbar">
+    <button type="button" class="btn" id="startBtn">Start sound</button>
   </div>
   <script type="module">
     import { getAudioContext, unlockAudio, applyEnvelope, createMasterBus, midiToFreq } from "../../shared/audio.js";
@@ -80,7 +66,7 @@
       ctx = getAudioContext();
       await unlockAudio(ctx);
       ({ master } = createMasterBus(ctx));
-      status.textContent = "Drag the pad to play";
+      status.textContent = "Drag pad";
       status.classList.add("ok");
       document.getElementById("startBtn").disabled = true;
     };
@@ -153,10 +139,8 @@
 
     function pointer(e) {
       const rect = pad.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
-      const nx = Math.max(0, Math.min(1, x));
-      const ny = Math.max(0, Math.min(1, y));
+      const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
       cursor.style.left = `${nx * 100}%`;
       cursor.style.top = `${ny * 100}%`;
       updateFromXY(nx, ny, true);
