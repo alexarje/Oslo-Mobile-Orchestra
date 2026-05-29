@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Granular Tilt — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+    canvas#scope {
+      flex: 1;
+      width: calc(100% - 2rem);
+      margin: 0 1rem;
+      border-radius: 12px;
+      background: #111827;
+    }
+    .readouts {
+      display: flex;
+      justify-content: space-around;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Granular Tilt</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Granular synthesis</h2>
+    <p>Sound = many tiny grains (5–40 ms slices) of a buffer, triggered rapidly with random offset and pitch. <strong>Beta</strong> (front/back tilt) changes grain rate; <strong>Gamma</strong> (left/right) shifts pitch — classic “cloud” texture.</p>
+  </div>
+  <p class="status-bar" id="status">Start to hear grain cloud</p>
+  <canvas id="scope" height="120"></canvas>
+  <div class="readouts">
+    <span id="rateOut">Rate: —</span>
+    <span id="pitchOut">Pitch: —</span>
+  </div>
+  <button type="button" class="btn" id="startBtn" style="margin: 1rem;">Start sound</button>
+  <script type="module">
+    import { getAudioContext, unlockAudio, createMasterBus } from "../../shared/audio.js";
+    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+
+    let ctx, master, grainInterval, buffer;
+    const canvas = document.getElementById("scope");
+    const g = canvas.getContext("2d");
+    let beta = 45, gamma = 0;
+
+    document.getElementById("learnBtn").onclick = () =>
+      document.getElementById("learnPanel").classList.toggle("open");
+
+    function makeGrainBuffer() {
+      const len = ctx.sampleRate * 0.5;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
+      }
+      return buf;
+    }
+
+    function spawnGrain() {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const pos = Math.random() * (buffer.duration - 0.04);
+      const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
+      const duration = 0.02 + Math.random() * 0.03;
+      src.playbackRate.value = rate;
+      const gNode = ctx.createGain();
+      gNode.gain.value = 0.15;
+      src.connect(gNode);
+      gNode.connect(master);
+      const t = ctx.currentTime;
+      src.start(t, pos, duration);
+      gNode.gain.setValueAtTime(0, t);
+      gNode.gain.linearRampToValueAtTime(0.2, t + 0.005);
+      gNode.gain.linearRampToValueAtTime(0, t + duration);
+    }
+
+    function draw() {
+      const w = canvas.width = canvas.clientWidth * devicePixelRatio;
+      const h = canvas.height = 120 * devicePixelRatio;
+      g.fillStyle = "#111827";
+      g.fillRect(0, 0, w, h);
+      g.strokeStyle = "#6ee7b7";
+      g.beginPath();
+      for (let i = 0; i < 40; i++) {
+        const x = (i / 40) * w;
+        const y = h / 2 + Math.sin(i * 0.5 + performance.now() / 200) * (beta / 90) * h * 0.3;
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+      }
+      g.stroke();
+      requestAnimationFrame(draw);
+    }
+
+    document.getElementById("startBtn").onclick = async () => {
+      ctx = getAudioContext();
+      await unlockAudio(ctx);
+      ({ master } = createMasterBus(ctx, 0.5));
+      buffer = makeGrainBuffer();
+      draw();
+
+      await enableSensors();
+      onOrientation((o) => {
+        beta = o.beta ?? 45;
+        gamma = o.gamma ?? 0;
+        document.getElementById("rateOut").textContent = `Rate: ${(5 + (beta / 90) * 25).toFixed(0)}/s`;
+        document.getElementById("pitchOut").textContent = `Pitch: ${(0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2)}×`;
+      });
+
+      function schedule() {
+        const hz = 5 + (beta / 90) * 25;
+        spawnGrain();
+        grainInterval = setTimeout(schedule, 1000 / hz);
+      }
+      schedule();
+
+      document.getElementById("status").textContent = "Tilt to sculpt texture";
+      document.getElementById("status").classList.add("ok");
+      document.getElementById("startBtn").disabled = true;
+    };
+  </script>
+</body>
+</html>

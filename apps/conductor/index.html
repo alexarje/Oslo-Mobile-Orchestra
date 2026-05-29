@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Conductor — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+    .countdown {
+      font-size: 4rem;
+      font-weight: 800;
+      text-align: center;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .link-box {
+      word-break: break-all;
+      font-size: 0.8rem;
+      background: #0f172a;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+    }
+    .role-tabs {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem 1rem 0;
+    }
+    .role-tabs button {
+      flex: 1;
+      min-height: var(--touch-min);
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+    }
+    .role-tabs button.active {
+      border-color: var(--accent);
+      background: #064e3b;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Conductor</h1>
+  </header>
+  <div class="role-tabs">
+    <button type="button" id="tabCond" class="active">I conduct</button>
+    <button type="button" id="tabMus">I play</button>
+  </div>
+
+  <div id="conductorView" class="main-stage">
+    <div class="panel">
+      <h2>Ensemble sync</h2>
+      <p>Set BPM, tap <strong>Start countdown</strong>, then share the musician link. Everyone’s clock aligns to the same start time (works for Pulse Grid and any app opened with the link).</p>
+      <div class="bpm-row" style="padding:0;display:flex;gap:1rem;align-items:center;">
+        <label for="bpm">BPM</label>
+        <input type="range" id="bpm" min="60" max="140" value="96" style="flex:1" />
+        <span id="bpmVal">96</span>
+      </div>
+    </div>
+    <div class="countdown" id="countdown">Ready</div>
+    <button type="button" class="btn" id="goBtn" style="margin: 1rem;">Start countdown (5 sec)</button>
+    <div class="panel hidden" id="sharePanel">
+      <h2>Musician link</h2>
+      <p>Send this URL (or QR via your projector). Players open it, choose an instrument from the hub, then tap Start when the countdown hits 0.</p>
+      <div class="link-box" id="musicianLink"></div>
+      <button type="button" class="btn-secondary btn" id="copyBtn" style="margin-top:0.75rem;width:100%;">Copy link</button>
+    </div>
+  </div>
+
+  <div id="musicianView" class="main-stage hidden">
+    <div class="panel">
+      <h2>Joined session</h2>
+      <p id="joinInfo">Waiting for conductor…</p>
+      <p>BPM: <strong id="joinBpm">—</strong> · Start: <strong id="joinStart">—</strong></p>
+    </div>
+    <div class="countdown" id="musCountdown">—</div>
+    <a class="btn" href="../../" style="margin:1rem;text-align:center;text-decoration:none;display:block;">Open instrument apps</a>
+    <p class="panel" style="font-size:0.85rem;">Tip: open <a href="../pulse-grid/">Pulse Grid</a> with this page’s timing — the link below includes start &amp; bpm.</p>
+    <div class="link-box" id="pulseLink"></div>
+  </div>
+
+  <script type="module">
+    const params = new URLSearchParams(location.search);
+    const isMusician = params.has("start");
+
+    const conductorView = document.getElementById("conductorView");
+    const musicianView = document.getElementById("musicianView");
+    const tabCond = document.getElementById("tabCond");
+    const tabMus = document.getElementById("tabMus");
+
+    function showRole(musician) {
+      conductorView.classList.toggle("hidden", musician);
+      musicianView.classList.toggle("hidden", !musician);
+      tabCond.classList.toggle("active", !musician);
+      tabMus.classList.toggle("active", musician);
+    }
+
+    tabCond.onclick = () => { history.replaceState({}, "", location.pathname); showRole(false); };
+    tabMus.onclick = () => showRole(true);
+
+    document.getElementById("bpm").oninput = (e) => {
+      document.getElementById("bpmVal").textContent = e.target.value;
+    };
+
+    function buildMusicianUrl(startMs, bpm) {
+      const u = new URL(location.href);
+      u.searchParams.set("start", String(startMs));
+      u.searchParams.set("bpm", String(bpm));
+      return u.toString();
+    }
+
+    function buildPulseUrl(startMs, bpm) {
+      const u = new URL("../pulse-grid/", location.href);
+      u.searchParams.set("start", String(startMs));
+      u.searchParams.set("bpm", String(bpm));
+      return u.toString();
+    }
+
+    document.getElementById("goBtn").onclick = () => {
+      const bpm = document.getElementById("bpm").value;
+      const startMs = Date.now() + 5000;
+      const url = buildMusicianUrl(startMs, bpm);
+      document.getElementById("sharePanel").classList.remove("hidden");
+      document.getElementById("musicianLink").textContent = url;
+      runCountdown(document.getElementById("countdown"), startMs, () => {
+        document.getElementById("countdown").textContent = "Go!";
+      });
+    };
+
+    document.getElementById("copyBtn").onclick = () => {
+      navigator.clipboard?.writeText(document.getElementById("musicianLink").textContent);
+    };
+
+    function runCountdown(el, startMs, onZero) {
+      const tick = () => {
+        const left = startMs - Date.now();
+        if (left <= 0) {
+          el.textContent = "0";
+          onZero?.();
+          return;
+        }
+        el.textContent = String(Math.ceil(left / 1000));
+        requestAnimationFrame(tick);
+      };
+      tick();
+    }
+
+    if (isMusician) {
+      showRole(true);
+      const startMs = parseInt(params.get("start"), 10);
+      const bpm = params.get("bpm") || "96";
+      document.getElementById("joinBpm").textContent = bpm;
+      document.getElementById("joinStart").textContent = new Date(startMs).toLocaleTimeString();
+      document.getElementById("joinInfo").textContent = "Countdown to ensemble start";
+      document.getElementById("pulseLink").textContent = buildPulseUrl(startMs, bpm);
+      runCountdown(document.getElementById("musCountdown"), startMs, () => {
+        document.getElementById("musCountdown").textContent = "Go!";
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g);
+          g.connect(ctx.destination);
+          o.frequency.value = 880;
+          g.gain.setValueAtTime(0.3, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+          o.start();
+          o.stop(ctx.currentTime + 0.35);
+        } catch {}
+      });
+    }
+  </script>
+</body>
+</html>

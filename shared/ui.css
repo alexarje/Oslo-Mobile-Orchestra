@@ -1,0 +1,198 @@
+/* Oslo Mobile Orchestra — shared mobile-first UI */
+:root {
+  --bg: #0d0f14;
+  --surface: #1a1f2e;
+  --accent: #6ee7b7;
+  --accent-dim: #34d399;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --danger: #f87171;
+  --touch-min: 48px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+a {
+  color: var(--accent);
+}
+
+.app-header {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid #2d3548;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header h1 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.back-link {
+  font-size: 1.25rem;
+  text-decoration: none;
+  padding: 0.5rem;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 56px);
+}
+
+.btn {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent-dim);
+  color: #042f2e;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #334155;
+  color: var(--text);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #1c1917;
+}
+
+.panel {
+  margin: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.panel h2 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+.panel p {
+  margin: 0.5rem 0;
+  color: var(--muted);
+}
+
+.panel strong {
+  color: var(--text);
+}
+
+.status-bar {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+  background: #111827;
+}
+
+.status-bar.ok {
+  color: var(--accent);
+}
+
+.status-bar.warn {
+  color: #fbbf24;
+}
+
+.learn-toggle {
+  background: transparent;
+  border: 1px solid #475569;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+.learn-panel {
+  display: none;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.learn-panel.open {
+  display: block;
+}
+
+.meter {
+  height: 8px;
+  background: #334155;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.05s linear;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+label.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--touch-min);
+  padding: 0.5rem;
+  background: var(--surface);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+label.choice input {
+  width: 22px;
+  height: 22px;
+}

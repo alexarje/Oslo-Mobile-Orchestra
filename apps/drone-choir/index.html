@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Drone Choir — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+    .note-picker { padding: 1rem; }
+    .note-picker button {
+      min-height: 56px;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: 2px solid #475569;
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+    }
+    .note-picker button.selected {
+      border-color: var(--accent);
+      background: #064e3b;
+    }
+    .note-picker .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+    .dial {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 4px solid var(--accent-dim);
+      margin: 1rem auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Drone Choir</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Ensemble harmony</h2>
+    <p>Each player picks a chord tone (C–E–G–B♭ for F minor). <strong>Device orientation (gamma)</strong> bends pitch ±30 cents — together you get a living cluster chord without a keyboard.</p>
+  </div>
+  <p class="status-bar" id="status">Choose your note, then start</p>
+  <div class="note-picker">
+    <p style="color: var(--muted); margin: 0 0 0.75rem;">F minor chord — pick one:</p>
+    <div class="grid" id="notes"></div>
+  </div>
+  <div class="dial" id="dial">—</div>
+  <button type="button" class="btn" id="startBtn" style="margin: 1rem;">Start drone</button>
+  <script type="module">
+    import { getAudioContext, unlockAudio, createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+
+    const CHORD = [
+      { name: "F", midi: 53 },
+      { name: "A♭", midi: 56 },
+      { name: "C", midi: 60 },
+      { name: "E♭", midi: 63 },
+    ];
+    let selected = 60;
+    let ctx, osc, gain, master;
+
+    const grid = document.getElementById("notes");
+    CHORD.forEach((n) => {
+      const b = document.createElement("button");
+      b.textContent = n.name;
+      b.type = "button";
+      if (n.midi === selected) b.classList.add("selected");
+      b.onclick = () => {
+        selected = n.midi;
+        grid.querySelectorAll("button").forEach((x) => x.classList.remove("selected"));
+        b.classList.add("selected");
+        if (osc) osc.frequency.setTargetAtTime(midiToFreq(selected), ctx.currentTime, 0.1);
+      };
+      grid.appendChild(b);
+    });
+
+    document.getElementById("learnBtn").onclick = () =>
+      document.getElementById("learnPanel").classList.toggle("open");
+
+    document.getElementById("startBtn").onclick = async () => {
+      ctx = getAudioContext();
+      await unlockAudio(ctx);
+      ({ master } = createMasterBus(ctx, 0.35));
+      gain = ctx.createGain();
+      gain.gain.value = 0.4;
+      osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = midiToFreq(selected);
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.frequency.value = 0.15;
+      lfoGain.gain.value = 4;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start();
+      lfo.start();
+
+      await enableSensors();
+      onOrientation(({ gamma }) => {
+        const cents = (gamma || 0) * 0.5;
+        const detune = Math.max(-50, Math.min(50, cents));
+        osc.detune.setTargetAtTime(detune, ctx.currentTime, 0.05);
+        document.getElementById("dial").textContent = `${detune > 0 ? "+" : ""}${detune.toFixed(0)}¢`;
+      });
+
+      document.getElementById("status").textContent = "Rotate phone slowly to detune";
+      document.getElementById("status").classList.add("ok");
+      document.getElementById("startBtn").disabled = true;
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Oslo Mobile Orchestra</title>
+  <link rel="stylesheet" href="shared/ui.css" />
+  <style>
+    .hero {
+      padding: 1.5rem 1rem 1rem;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 1.5rem;
+      margin: 0 0 0.5rem;
+      font-weight: 700;
+    }
+    .hero p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    .app-list {
+      list-style: none;
+      padding: 0 1rem 2rem;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .app-list a {
+      display: block;
+      padding: 1rem 1.25rem;
+      background: var(--surface);
+      border-radius: 14px;
+      text-decoration: none;
+      color: var(--text);
+      border: 1px solid #2d3548;
+    }
+    .app-list a:active {
+      transform: scale(0.98);
+    }
+    .app-list .tag {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .app-list .title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .app-list .desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      line-height: 1.4;
+    }
+    .tips {
+      margin: 0 1rem 1.5rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .tips strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <h1>Oslo Mobile Orchestra</h1>
+    <p>Web instruments for ~20 phones — synthesis, sensors &amp; simple AI. Tap an app, then tap <strong>Start sound</strong> on each device.</p>
+  </header>
+
+  <ul class="app-list">
+    <li>
+      <a href="apps/conductor/">
+        <span class="tag">Ensemble · Timing</span>
+        <span class="title">Conductor</span>
+        <span class="desc">One person shares a link; everyone starts on the same beat.</span>
+      </a>
+    </li>
+    <li>
+      <a href="apps/synth-pad/">
+        <span class="tag">Synthesis · Touch</span>
+        <span class="title">Synth Pad</span>
+        <span class="desc">XY pad — waveform, filter &amp; FM. Classic subtractive + modulation.</span>
+      </a>
+    </li>
+    <li>
+      <a href="apps/motion-wah/">
+        <span class="tag">Synthesis · Accelerometer</span>
+        <span class="title">Motion Wah</span>
+        <span class="desc">Tilt the phone to sweep a resonant filter (wah / vowel sounds).</span>
+      </a>
+    </li>
+    <li>
+      <a href="apps/drone-choir/">
+        <span class="tag">Harmony · Gyroscope</span>
+        <span class="title">Drone Choir</span>
+        <span class="desc">Pick a chord tone; rotate the phone to detune your drone in the ensemble.</span>
+      </a>
+    </li>
+    <li>
+      <a href="apps/train-shake/">
+        <span class="tag">AI · k-NN · Motion</span>
+        <span class="title">Train &amp; Shake</span>
+        <span class="desc">Record “still” vs “shake” — teach a classifier, then play by moving.</span>
+      </a>
+    </li>
+    <li>
+      <a href="apps/granular-tilt/">
+        <span class="tag">Synthesis · Granular · Tilt</span>
+        <span class="title">Granular Tilt</span>
+        <span class="desc">Grain cloud texture — pitch and density from device orientation.</span>
+      </a>
+    </li>
+    <li>
+      <a href="apps/pulse-grid/">
+        <span class="tag">Rhythm · Touch</span>
+        <span class="title">Pulse Grid</span>
+        <span class="desc">16-step sequencer — each musician owns a different sound color.</span>
+      </a>
+    </li>
+  </ul>
+
+  <div class="tips panel">
+    <h2>Before the concert</h2>
+    <p><strong>Wi‑Fi:</strong> Same room network helps if you use Conductor links; other apps work offline.</p>
+    <p><strong>iPhone:</strong> Allow motion/orientation when asked. Keep silent mode off for volume.</p>
+    <p><strong>Android:</strong> Chrome works best. Disable battery saver for the browser tab during performance.</p>
+    <p><strong>Volume:</strong> Set phones to ~70% so 20 devices balance in the room.</p>
+  </div>
+</body>
+</html>

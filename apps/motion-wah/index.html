@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Motion Wah — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+  .viz {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .phone-icon {
+    width: 120px;
+    height: 200px;
+    border: 3px solid var(--accent);
+    border-radius: 16px;
+    transition: transform 0.1s ease-out;
+  }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Motion Wah</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Resonant filter</h2>
+    <p>The accelerometer measures gravity + movement on three axes. We map <strong>tilt</strong> to a band-pass filter (high Q) — the same idea as a wah-wah pedal or vowel formants in speech synthesis.</p>
+  </div>
+  <p class="status-bar" id="status">Start sound, then allow motion sensors</p>
+  <div class="main-stage viz">
+    <div class="phone-icon" id="phone"></div>
+    <p style="color: var(--muted); text-align: center;">Tilt forward/back to sweep the filter</p>
+    <div class="meter" style="width: 80%;"><div class="meter-fill" id="meter"></div></div>
+  </div>
+  <button type="button" class="btn" id="startBtn" style="margin: 1rem;">Start sound</button>
+  <script type="module">
+    import { getAudioContext, unlockAudio, createMasterBus } from "../../shared/audio.js";
+    import { enableSensors, onMotion, normalizeAccel } from "../../shared/sensors.js";
+
+    const status = document.getElementById("status");
+    const meter = document.getElementById("meter");
+    const phone = document.getElementById("phone");
+    let ctx, filter, osc, master, running = false;
+
+    document.getElementById("learnBtn").onclick = () =>
+      document.getElementById("learnPanel").classList.toggle("open");
+
+    document.getElementById("startBtn").onclick = async () => {
+      ctx = getAudioContext();
+      await unlockAudio(ctx);
+      ({ master } = createMasterBus(ctx, 0.5));
+      osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = 110;
+      filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.Q.value = 12;
+      filter.frequency.value = 400;
+      osc.connect(filter);
+      filter.connect(master);
+      osc.start();
+      running = true;
+
+      const ok = await enableSensors();
+      if (!ok) {
+        status.textContent = "Motion denied — try Safari settings";
+        status.classList.add("warn");
+        return;
+      }
+      status.textContent = "Tilt to play";
+      status.classList.add("ok");
+      onMotion(({ x, y, z }) => {
+        if (!running) return;
+        const n = normalizeAccel(x, y, z);
+        const tilt = (n.y + 1) / 2;
+        const freq = 150 + tilt * 3500;
+        filter.frequency.setTargetAtTime(freq, ctx.currentTime, 0.03);
+        meter.style.width = `${tilt * 100}%`;
+        phone.style.transform = `rotateX(${tilt * 40 - 20}deg)`;
+      });
+      document.getElementById("startBtn").disabled = true;
+    };
+  </script>
+</body>
+</html>
