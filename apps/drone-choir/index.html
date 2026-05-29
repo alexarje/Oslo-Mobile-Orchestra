@@ -140,11 +140,14 @@
       if (!pitchPad.classList.contains("active")) return;
       setFingerFromY(e.clientY);
     });
-    pitchPad.addEventListener("pointerup", () => {
+    function endPointer(e) {
       pitchPad.classList.remove("active");
-      pitchPad.releasePointerCapture?.();
-    });
-    pitchPad.addEventListener("pointercancel", () => pitchPad.classList.remove("active"));
+      if (e.pointerId != null && pitchPad.hasPointerCapture(e.pointerId)) {
+        pitchPad.releasePointerCapture(e.pointerId);
+      }
+    }
+    pitchPad.addEventListener("pointerup", endPointer);
+    pitchPad.addEventListener("pointercancel", endPointer);
 
     const grid = document.getElementById("notes");
     CHORD.forEach((n) => {
