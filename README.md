@@ -1,28 +1,9 @@
 # Oslo Mobile Orchestra
 
-Web-based instruments for **~20 musicians using only their phones** (Android + iPhone). No app store install — open in the browser, tap **Start sound**, and play.
-
-Built for workshops and concerts where you want to explore **different ways of making music**, **sound synthesis**, **phone sensors**, and **simple on-device AI**.
-
-## Quick start
-
-1. Host this folder on any static server, or open locally:
-   ```bash
-   cd Oslo-Mobile-Orchestra
-   python3 -m http.server 8080
-   ```
-2. On each phone, open `http://<your-computer-ip>:8080/`
-3. For ensemble timing, one person uses **Conductor** and shares the musician link.
-
-### GitHub Pages
+Web-based instruments for musicians using only their phones (Android + iPhone). No need to install anything, just open in the browser, tap **Start sound**, and play.
 
 Live site: **https://alexarje.github.io/Oslo-Mobile-Orchestra/**
 
-1. Push to `main` (the [workflow](.github/workflows/pages.yml) updates the `gh-pages` branch).
-2. **One-time:** [Settings → Pages](https://github.com/alexarje/Oslo-Mobile-Orchestra/settings/pages) → **Build and deployment** → **Source:** *Deploy from a branch* → **Branch:** `gh-pages` / `/ (root)` → **Save**.
-3. Wait ~1 minute after the workflow is green, then open the URL above.
-
-HTTPS is required for motion sensors on iPhone. Redeploy: push to `main` or **Actions → Deploy GitHub Pages → Run workflow**.
 
 ## Apps
 
@@ -81,20 +62,6 @@ These fit the same stack (vanilla JS, static hosting):
 - **NFC / QR sections** — QR on stage assigns part numbers 1–20
 - **Haptics** — `navigator.vibrate` on steps (Android mainly)
 
-## Project structure
-
-```
-index.html          # Hub
-shared/             # audio.js, sensors.js, ml.js, ui.css
-apps/
-  conductor/
-  synth-pad/
-  motion-wah/
-  drone-choir/
-  train-shake/
-  granular-tilt/
-  pulse-grid/
-```
 
 ## License
 
