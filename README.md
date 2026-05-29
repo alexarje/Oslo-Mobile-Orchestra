@@ -1,9 +1,10 @@
 # Oslo Mobile Orchestra
 
-Web-based instruments for musicians using only their phones (Android + iPhone). No need to install anything, just open in the browser, tap **Start sound**, and play.
+Web-based instruments for musicians using only their phones (Android + iPhone). No need to install anything — open in the browser, tap **Start sound**, and play.
 
-Live site: **https://alexarje.github.io/Oslo-Mobile-Orchestra/**
+**Live site:** https://alexarje.github.io/Oslo-Mobile-Orchestra/
 
+**Workshop script:** [docs/WORKSHOP-GUIDE.md](docs/WORKSHOP-GUIDE.md) · **Future ideas:** [docs/IDEAS.md](docs/IDEAS.md)
 
 ## Apps
 
@@ -11,8 +12,8 @@ Live site: **https://alexarje.github.io/Oslo-Mobile-Orchestra/**
 |-----|----------------|----------------|
 | [Conductor](apps/conductor/) | Shared downbeat | URL-encoded start time + BPM |
 | [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM |
-| [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Accelerometer → resonant bandpass |
-| [Drone Choir](apps/drone-choir/) | Harmonic mass | Orientation → microtonal detune |
+| [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
+| [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
 | [Train & Shake](apps/train-shake/) | Gesture performance | k-NN classifier on motion features |
 | [Granular Tilt](apps/granular-tilt/) | Textures / clouds | Granular synthesis + orientation |
 | [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step sequencer, drum synthesis |
@@ -53,15 +54,35 @@ All apps use **Web Audio API** and standard **DeviceMotion** / **DeviceOrientati
 
 ## Ideas to add next
 
-These fit the same stack (vanilla JS, static hosting):
+Full backlog with tables and priorities: **[docs/IDEAS.md](docs/IDEAS.md)**
 
-- **Mic pitch** — `getUserMedia` + autocorrelation (monophonic “theremin”)
-- **TensorFlow.js** — pretrained [speech commands](https://github.com/tensorflow/tfjs-models/tree/master/speech-commands) for “noise vs hum”
-- **Web MIDI / Bluetooth** — limited on iOS; optional for hybrid setups
-- **Peer sync** — [WebRTC](https://peerjs.com/) or a tiny WebSocket room server for beat phase (tighter than URL start time)
-- **NFC / QR sections** — QR on stage assigns part numbers 1–20
-- **Haptics** — `navigator.vibrate` on steps (Android mainly)
+### New apps
+- **Mic theremin** — microphone pitch → continuous tone
+- **Hum vs clap** — TensorFlow.js speech / audio classifier
+- **Gyro compass** — orientation → stereo pan (spatial ensemble)
+- **QR part assignment** — scan on stage → `?part=12` + suggested instrument
 
+### Ensemble
+- **WebRTC or WebSocket room** — tighter sync than URL countdown alone
+- **Conductor QR** — share musician link without typing
+- **Pattern in URL** — Pulse Grid pattern encoded in hash for copy/paste
+
+### Existing app upgrades
+- Pulse Grid pattern share · Train & Shake third gesture class · PWA “Add to Home Screen” · offline service worker
+- Haptics on steps (Android) · accessibility mode (larger UI, high contrast)
+
+### Education & AI showcase
+- Live feature plot + confusion matrix for k-NN · compare k-NN vs tiny neural net
+- “Data stays on device” ethics note for classroom discussion
+
+### Synthesis demos
+- Karplus–Strong pluck · additive bells · FM matrix · wavetable swipe
+
+Pick one from [IDEAS.md](docs/IDEAS.md) and open a PR — or ask in an issue.
+
+## Deploy
+
+Push to `main` → GitHub Action updates `gh-pages`. One-time: **Settings → Pages → Deploy from branch → `gh-pages` / root**.
 
 ## License
 
