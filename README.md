@@ -11,6 +11,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | App | Music making | Tech highlight |
 |-----|----------------|----------------|
 | [Conductor](apps/conductor/) | Shared downbeat | URL-encoded start time + BPM |
+| [Pentatonic Flute](apps/flute-blow/) | Melody by breath | Mic level → sound; slide → pentatonic pitch |
 | [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM |
 | [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
@@ -57,7 +58,8 @@ All apps use **Web Audio API** and standard **DeviceMotion** / **DeviceOrientati
 Full backlog with tables and priorities: **[docs/IDEAS.md](docs/IDEAS.md)**
 
 ### New apps
-- **Mic theremin** — microphone pitch → continuous tone
+- ~~**Mic flute**~~ → [Pentatonic Flute](apps/flute-blow/) (breath gate + pentatonic slide)
+- **Mic theremin** — microphone pitch → continuous tone (chromatic)
 - **Hum vs clap** — TensorFlow.js speech / audio classifier
 - **Gyro compass** — orientation → stereo pan (spatial ensemble)
 - **QR part assignment** — scan on stage → `?part=12` + suggested instrument

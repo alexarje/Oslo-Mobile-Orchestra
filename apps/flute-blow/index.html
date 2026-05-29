@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Pentatonic Flute — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+    #flutePad {
+      background: linear-gradient(
+        to top,
+        #1e3a5f 0%,
+        #1e293b 20%,
+        #0f172a 40%,
+        #0f172a 60%,
+        #1e293b 80%,
+        #1e3a5f 100%
+      );
+      border: 2px solid #334155;
+    }
+    #flutePad .finger {
+      position: absolute;
+      left: 50%;
+      width: 32px;
+      height: 32px;
+      margin: -16px 0 0 -16px;
+      border-radius: 50%;
+      background: #7dd3fc;
+      border: 2px solid #0c4a6e;
+      pointer-events: none;
+      opacity: 0.9;
+      box-shadow: 0 0 14px rgba(125, 211, 252, 0.45);
+    }
+    #flutePad .note-label {
+      position: absolute;
+      left: 0.5rem;
+      font-size: 0.65rem;
+      color: var(--muted);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    #flutePad .readout {
+      position: absolute;
+      top: 0.35rem;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #7dd3fc;
+      pointer-events: none;
+    }
+    .breath-row {
+      flex-shrink: 0;
+      padding: 0.25rem 0.5rem 0;
+    }
+    .breath-row label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+    .breath-meter {
+      height: 10px;
+      background: #334155;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .breath-meter-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #7dd3fc);
+      transition: width 0.05s linear;
+    }
+    .breath-meter-fill.blowing {
+      background: linear-gradient(90deg, #34d399, #6ee7b7);
+    }
+    .breath-threshold {
+      position: relative;
+      height: 0;
+    }
+    .breath-threshold::after {
+      content: "";
+      position: absolute;
+      left: var(--thresh, 30%);
+      top: -10px;
+      width: 2px;
+      height: 10px;
+      background: #fbbf24;
+    }
+  </style>
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Pentatonic Flute</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Breath + pentatonic</h2>
+    <p><strong>Blow</strong> into the mic (not the speaker). Loud breath crosses the yellow mark → sound.</p>
+    <p><strong>Slide</strong> up/down for pitch — C major pentatonic (C D E G A), two octaves, no “wrong” notes.</p>
+  </div>
+  <p class="status-bar" id="status">Allow mic, then blow</p>
+  <div class="breath-row">
+    <label>Breath level</label>
+    <div class="breath-meter breath-threshold" id="breathWrap" style="--thresh: 35%">
+      <div class="breath-meter-fill" id="breathMeter"></div>
+    </div>
+  </div>
+  <div class="main-stage">
+    <div id="flutePad" class="stage-fill">
+      <span class="readout" id="readout">C4</span>
+      <div class="finger" id="finger" style="top: 50%"></div>
+    </div>
+  </div>
+  <div class="app-toolbar">
+    <button type="button" class="btn" id="startBtn">Start flute</button>
+  </div>
+  <script type="module">
+    import { getAudioContext, unlockAudio, createMasterBus, midiToFreq } from "../../shared/audio.js";
+
+    // C major pentatonic — semitones from root per octave
+    const PENTA = [0, 2, 4, 7, 9];
+    const ROOT_MIDI = 60;
+    const NOTE_NAMES = ["C", "D", "E", "G", "A"];
+    const STEPS = 10; // two octaves
+
+    const flutePad = document.getElementById("flutePad");
+    const finger = document.getElementById("finger");
+    const readout = document.getElementById("readout");
+    const breathMeter = document.getElementById("breathMeter");
+    const breathWrap = document.getElementById("breathWrap");
+    const status = document.getElementById("status");
+
+    let ctx, master, analyser, micSource, micStream;
+    let toneGain, toneOsc, noiseGain, noiseSrc;
+    let blowThreshold = 0.02;
+    let noiseFloor = 0.005;
+    let currentMidi = 60;
+    let noteIndex = 5;
+    let ready = false;
+    const timeData = new Float32Array(2048);
+
+    function indexToMidi(i) {
+      const idx = Math.max(0, Math.min(STEPS - 1, Math.round(i)));
+      const oct = Math.floor(idx / 5);
+      const deg = idx % 5;
+      return ROOT_MIDI + oct * 12 + PENTA[deg];
+    }
+
+    function labelFromIndex(i) {
+      const idx = Math.max(0, Math.min(STEPS - 1, Math.round(i)));
+      const oct = Math.floor(idx / 5);
+      const deg = idx % 5;
+      return `${NOTE_NAMES[deg]}${4 + oct}`;
+    }
+
+    function placeFinger(ny) {
+      finger.style.top = `${ny * 100}%`;
+      noteIndex = (1 - ny) * (STEPS - 1);
+      currentMidi = indexToMidi(noteIndex);
+      readout.textContent = labelFromIndex(noteIndex);
+      if (toneOsc) {
+        toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), ctx.currentTime, 0.04);
+      }
+    }
+
+    function layoutNoteMarkers() {
+      flutePad.querySelectorAll(".note-label").forEach((el) => el.remove());
+      for (let i = 0; i < STEPS; i++) {
+        const el = document.createElement("span");
+        el.className = "note-label";
+        el.textContent = labelFromIndex(i);
+        el.style.top = `${(1 - i / (STEPS - 1)) * 100}%`;
+        flutePad.appendChild(el);
+      }
+    }
+
+    layoutNoteMarkers();
+    placeFinger(0.5);
+
+    flutePad.addEventListener("pointerdown", (e) => {
+      if (!ready) return;
+      flutePad.setPointerCapture(e.pointerId);
+      placeFinger(getNy(e));
+    });
+    flutePad.addEventListener("pointermove", (e) => {
+      if (!flutePad.hasPointerCapture(e.pointerId)) return;
+      placeFinger(getNy(e));
+    });
+
+    function getNy(e) {
+      const rect = flutePad.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    }
+
+    function getRms() {
+      analyser.getFloatTimeDomainData(timeData);
+      let sum = 0;
+      for (let i = 0; i < timeData.length; i++) sum += timeData[i] * timeData[i];
+      return Math.sqrt(sum / timeData.length);
+    }
+
+    async function calibrateNoise() {
+      const samples = [];
+      const t0 = performance.now();
+      while (performance.now() - t0 < 600) {
+        samples.push(getRms());
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      noiseFloor = samples.reduce((a, b) => a + b, 0) / samples.length;
+      blowThreshold = Math.max(0.012, noiseFloor * 2.8 + 0.006);
+      const pct = Math.min(85, (blowThreshold / 0.12) * 100);
+      breathWrap.style.setProperty("--thresh", `${pct}%`);
+    }
+
+    function createVoice() {
+      toneGain = ctx.createGain();
+      toneGain.gain.value = 0;
+      toneOsc = ctx.createOscillator();
+      toneOsc.type = "triangle";
+      toneOsc.frequency.value = midiToFreq(currentMidi);
+
+      const vibrato = ctx.createOscillator();
+      const vibratoGain = ctx.createGain();
+      vibrato.frequency.value = 5.5;
+      vibratoGain.gain.value = 3;
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(toneOsc.frequency);
+      vibrato.start();
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 2800;
+      filter.Q.value = 0.7;
+
+      toneOsc.connect(filter);
+      filter.connect(toneGain);
+      toneGain.connect(master);
+      toneOsc.start();
+
+      // Soft breath noise layer
+      noiseGain = ctx.createGain();
+      noiseGain.gain.value = 0;
+      const bufLen = ctx.sampleRate * 0.2;
+      const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.5;
+      noiseSrc = ctx.createBufferSource();
+      noiseSrc.buffer = buf;
+      noiseSrc.loop = true;
+      const nf = ctx.createBiquadFilter();
+      nf.type = "bandpass";
+      nf.frequency.value = 1200;
+      nf.Q.value = 0.8;
+      noiseSrc.connect(nf);
+      nf.connect(noiseGain);
+      noiseGain.connect(master);
+      noiseSrc.start();
+    }
+
+    function tick() {
+      if (!ready) return;
+      const rms = getRms();
+      const pct = Math.min(100, (rms / 0.12) * 100);
+      breathMeter.style.width = `${pct}%`;
+      const blowing = rms > blowThreshold;
+      breathMeter.classList.toggle("blowing", blowing);
+
+      if (blowing) {
+        const strength = Math.min(1, (rms - blowThreshold) / (0.12 - blowThreshold));
+        const t = ctx.currentTime;
+        toneGain.gain.setTargetAtTime(0.08 + strength * 0.42, t, 0.02);
+        noiseGain.gain.setTargetAtTime(strength * 0.06, t, 0.02);
+        toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), t, 0.03);
+      } else {
+        const t = ctx.currentTime;
+        toneGain.gain.setTargetAtTime(0, t, 0.06);
+        noiseGain.gain.setTargetAtTime(0, t, 0.04);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    document.getElementById("learnBtn").onclick = () =>
+      document.getElementById("learnPanel").classList.toggle("open");
+
+    document.getElementById("startBtn").onclick = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        status.textContent = "Mic not supported in this browser";
+        status.classList.add("warn");
+        return;
+      }
+
+      ctx = getAudioContext();
+      await unlockAudio(ctx);
+      ({ master } = createMasterBus(ctx, 0.55));
+
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+          video: false,
+        });
+      } catch {
+        status.textContent = "Microphone permission denied";
+        status.classList.add("warn");
+        return;
+      }
+
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      micSource = ctx.createMediaStreamSource(micStream);
+      micSource.connect(analyser);
+
+      createVoice();
+      status.textContent = "Calibrating… stay quiet";
+      await calibrateNoise();
+      ready = true;
+      status.textContent = "Blow past yellow · slide pitch";
+      status.classList.add("ok");
+      document.getElementById("startBtn").disabled = true;
+      tick();
+    };
+  </script>
+</body>
+</html>

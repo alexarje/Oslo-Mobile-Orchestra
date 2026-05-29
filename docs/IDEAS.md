@@ -8,6 +8,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 
 | Idea | Music role | Tech |
 |------|------------|------|
+| ~~**Pentatonic Flute**~~ | Melody by breath | Done → [flute-blow](../apps/flute-blow/) — mic RMS gate + slide pitch |
 | **Mic Theremin** | Solo melody, “voice in the ensemble” | `getUserMedia` + pitch detection (autocorrelation or YIN) → oscillator frequency |
 | **Hum vs Clap** | Call-and-response sections | TensorFlow.js [speech commands](https://github.com/tensorflow/tfjs-models/tree/master/speech-commands) or custom audio classifier |
 | **Tilt Harp** | Plucked glissandi | Touch = pluck; tilt = scale / key |
