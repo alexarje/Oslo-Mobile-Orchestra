@@ -15,6 +15,12 @@
       justify-content: center;
       gap: 0.5rem;
       padding: 0.35rem;
+      touch-action: none;
+      cursor: pointer;
+    }
+    .viz.active {
+      background: rgba(110, 231, 183, 0.08);
+      border-radius: 10px;
     }
     .phone-icon {
       width: 72px;
@@ -22,6 +28,10 @@
       border: 2px solid var(--accent);
       border-radius: 12px;
       transition: transform 0.1s ease-out;
+    }
+    .viz.active .phone-icon {
+      border-color: var(--accent-dim);
+      box-shadow: 0 0 16px rgba(110, 231, 183, 0.35);
     }
     .viz p {
       margin: 0;
@@ -41,12 +51,12 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Resonant filter</h2>
-    <p>Tilt maps to a band-pass filter — wah / vowel sounds.</p>
+    <p>Hold the screen to play; tilt sweeps a band-pass filter.</p>
   </div>
-  <p class="status-bar" id="status">Start sound, allow motion</p>
-  <div class="main-stage viz">
+  <p class="status-bar" id="status">Start sound, then hold &amp; tilt</p>
+  <div class="main-stage viz" id="touchZone">
     <div class="phone-icon" id="phone"></div>
-    <p>Tilt forward / back</p>
+    <p>Hold here · tilt forward / back</p>
     <div class="meter"><div class="meter-fill" id="meter"></div></div>
   </div>
   <div class="app-toolbar">
@@ -59,15 +69,37 @@
     const status = document.getElementById("status");
     const meter = document.getElementById("meter");
     const phone = document.getElementById("phone");
-    let ctx, filter, osc, master, running = false;
+    const touchZone = document.getElementById("touchZone");
+    let ctx, filter, osc, gate, master, ready = false, holding = false;
 
     document.getElementById("learnBtn").onclick = () =>
       document.getElementById("learnPanel").classList.toggle("open");
+
+    function release() {
+      holding = false;
+      touchZone.classList.remove("active");
+      if (gate) gate.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+      meter.style.width = "0%";
+      phone.style.transform = "";
+    }
+
+    touchZone.addEventListener("pointerdown", (e) => {
+      if (!ready) return;
+      touchZone.setPointerCapture(e.pointerId);
+      holding = true;
+      touchZone.classList.add("active");
+      gate.gain.setTargetAtTime(0.5, ctx.currentTime, 0.02);
+    });
+    touchZone.addEventListener("pointerup", release);
+    touchZone.addEventListener("pointercancel", release);
+    touchZone.addEventListener("lostpointercapture", release);
 
     document.getElementById("startBtn").onclick = async () => {
       ctx = getAudioContext();
       await unlockAudio(ctx);
       ({ master } = createMasterBus(ctx, 0.5));
+      gate = ctx.createGain();
+      gate.gain.value = 0;
       osc = ctx.createOscillator();
       osc.type = "sawtooth";
       osc.frequency.value = 110;
@@ -76,20 +108,21 @@
       filter.Q.value = 12;
       filter.frequency.value = 400;
       osc.connect(filter);
-      filter.connect(master);
+      filter.connect(gate);
+      gate.connect(master);
       osc.start();
-      running = true;
+      ready = true;
 
       const ok = await enableSensors();
       if (!ok) {
-        status.textContent = "Motion denied";
+        status.textContent = "Motion denied — hold still plays";
         status.classList.add("warn");
-        return;
+      } else {
+        status.textContent = "Hold screen & tilt";
+        status.classList.add("ok");
       }
-      status.textContent = "Tilt to play";
-      status.classList.add("ok");
       onMotion(({ x, y, z }) => {
-        if (!running) return;
+        if (!ready || !holding) return;
         const n = normalizeAccel(x, y, z);
         const tilt = (n.y + 1) / 2;
         filter.frequency.setTargetAtTime(150 + tilt * 3500, ctx.currentTime, 0.03);
