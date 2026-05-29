@@ -16,14 +16,13 @@ Built for workshops and concerts where you want to explore **different ways of m
 
 ### GitHub Pages
 
-Live site (after deploy): **https://alexarje.github.io/Oslo-Mobile-Orchestra/**
+Live site: **https://alexarje.github.io/Oslo-Mobile-Orchestra/**
 
-1. Push this repo to `main` on GitHub.
-2. In the repo: **Settings → Pages → Build and deployment → Source** → choose **GitHub Actions**.
-3. The [Pages workflow](.github/workflows/pages.yml) runs on every push to `main`; first deploy may take 1–2 minutes.
-4. Share the URL above with musicians (works over HTTPS — required for motion sensors on iOS).
+1. Push to `main` (the [workflow](.github/workflows/pages.yml) updates the `gh-pages` branch).
+2. **One-time:** [Settings → Pages](https://github.com/alexarje/Oslo-Mobile-Orchestra/settings/pages) → **Build and deployment** → **Source:** *Deploy from a branch* → **Branch:** `gh-pages` / `/ (root)` → **Save**.
+3. Wait ~1 minute after the workflow is green, then open the URL above.
 
-To redeploy manually: **Actions → Deploy GitHub Pages → Run workflow**.
+HTTPS is required for motion sensors on iPhone. Redeploy: push to `main` or **Actions → Deploy GitHub Pages → Run workflow**.
 
 ## Apps
 

@@ -1,5 +1,5 @@
-# Deploy static site to GitHub Pages (repo root — index.html hub).
-# After push: Settings → Pages → Source should show "GitHub Actions".
+# Publishes the site to the gh-pages branch. Enable Pages once:
+# Settings → Pages → Deploy from a branch → gh-pages / (root)
 name: Deploy GitHub Pages
 
 on:
@@ -8,9 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -18,22 +16,17 @@ concurrency:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages branch
+        uses: JamesIves/github-pages-deploy-action@v4.7.2
         with:
-          path: .
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          folder: .
+          branch: gh-pages
+          clean: true
+          single-commit: true
+          exclude_assets: |
+            .github
