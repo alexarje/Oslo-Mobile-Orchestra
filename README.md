@@ -28,7 +28,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Additive Bells](apps/additive-bells/) | Bell tones | 8 partials |
 | [Wavetable Scan](apps/wavetable-scan/) | Timbral sweep | Swipe waves |
 | [Filter Ladder](apps/filter-ladder/) | Subtractive | 24 dB LP + tilt |
-| [Motion Wah](apps/motion-wah/) | Filter sweeps | Hold or continuous + tilt |
+| [Motion Wah](apps/motion-wah/) | Filter sweeps | Hold + tilt ↕ (wah) ↔ (resonance) |
 | [Compass Wah](apps/compass-wah/) | Orientation filter | Alpha → lowpass |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Hold sustain, ±5 st pad, cents |
 | [Gyro Compass](apps/gyro-compass/) | Spatial pan | Heading → stereo |

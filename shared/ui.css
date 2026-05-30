@@ -995,6 +995,24 @@ body.hub {
 
 .touch-zone .meter { width: 70%; }
 
+.motion-wah-app .touch-zone {
+  touch-action: manipulation;
+}
+
+.motion-wah-app .motion-meters {
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.motion-wah-app .motion-meter-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-align: left;
+  width: 100%;
+}
+
 .touch-zone.active {
   background: rgba(110, 231, 183, 0.08);
   border-color: var(--accent-dim);
