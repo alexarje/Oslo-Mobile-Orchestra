@@ -836,9 +836,21 @@ body.hub {
   color: #fb923c;
 }
 
+.pred-display.sway {
+  color: #a78bfa;
+}
+
 .btn-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0 0.5rem 0.35rem;
+  flex-shrink: 0;
+}
+
+.btn-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 0.35rem;
   padding: 0 0.5rem 0.35rem;
   flex-shrink: 0;

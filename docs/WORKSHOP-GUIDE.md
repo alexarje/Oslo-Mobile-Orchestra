@@ -22,9 +22,9 @@ Open hub → **Synth Pad**. Everyone finds one note. Conductor counts 1–2–3�
 **Motion Wah** — “Tilt = vowel.” Conductor points up/down; group sweeps together without looking at screens.
 
 ### AI (10 min)
-**Train & Shake** — collect 5+ still and 5+ shake examples per phone (or pair-share one trained phone per pair).
+**Train & Shake** — record **still**, **sway**, and **shake** (3+ each), or **Export set** on one phone and **Import set** on others for a shared demo.
 - Ask: *What could confuse the model?* (walking, laughing, low battery throttle)
-- Perform: conductor only uses hands; ensemble reacts.
+- Perform: conductor mimes three gestures; ensemble reacts (still = tone, sway = blended, shake = noise).
 
 ### Ensemble (15 min)
 1. Conductor sets 96 BPM, **Start countdown**, share link (AirDrop, QR, shout URL shortener).
@@ -38,7 +38,7 @@ All screens down; one sustained drone from a single phone. Discuss what felt “
 ## Accessibility
 
 - Large touch targets (48px+); no fine motor precision required for drones/grid.
-- **Train & Shake** can be adapted: record “low” vs “high” phone position instead of shake.
+- **Train & Shake** can be adapted: relabel classes (e.g. “low” / “mid” / “high” phone position) — same three-button flow.
 - Deaf/Hard of Hearing: grid cells flash on steps; haptics on Android optional future add.
 
 ## Troubleshooting

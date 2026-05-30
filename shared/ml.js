@@ -94,3 +94,53 @@ export function extractMotionFeatures({ x, y, z }, history = []) {
   }
   return [x / 10, y / 10, z / 10, mag / 10, Math.sqrt(variance) / 5];
 }
+
+/** @typedef {{ version: number, app: string, k: number, featureDim: number, normalizer: object, samples: { label: string, features: number[] }[] }} TrainingSetExport */
+
+export function exportTrainingSet(classifier, normalizer, extra = {}) {
+  return {
+    version: 1,
+    app: "omo-train-shake",
+    k: classifier.k,
+    featureDim: normalizer.dim,
+    normalizer: {
+      count: normalizer.count,
+      mean: Array.from(normalizer.mean),
+      m2: Array.from(normalizer.m2),
+    },
+    samples: classifier.samples.map((s) => ({
+      label: s.label,
+      features: s.features.slice(),
+    })),
+    exportedAt: new Date().toISOString(),
+    ...extra,
+  };
+}
+
+/**
+ * @param {unknown} data
+ * @param {KNNClassifier} classifier
+ * @param {FeatureNormalizer} normalizer
+ * @returns {string|null} Error message, or null on success
+ */
+export function importTrainingSet(data, classifier, normalizer) {
+  if (!data || typeof data !== "object") return "Invalid file";
+  const d = /** @type {TrainingSetExport} */ (data);
+  if (d.app !== "omo-train-shake" || d.version !== 1) return "Not a Train & Shake dataset";
+  if (!Array.isArray(d.samples) || d.samples.length === 0) return "No samples in file";
+  if (!d.normalizer || d.normalizer.count < 2) return "Missing normalizer stats";
+
+  classifier.k = typeof d.k === "number" ? d.k : classifier.k;
+  classifier.clear();
+  normalizer.count = d.normalizer.count;
+  normalizer.mean = new Float32Array(d.normalizer.mean);
+  normalizer.m2 = new Float32Array(d.normalizer.m2);
+
+  for (const s of d.samples) {
+    if (!s.label || !Array.isArray(s.features) || s.features.length !== normalizer.dim) {
+      return "Bad sample in file";
+    }
+    classifier.addSample(s.features, s.label);
+  }
+  return null;
+}

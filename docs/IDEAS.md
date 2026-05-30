@@ -25,7 +25,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 - **Drone Choir** — hold-to-sustain gate; show cents + semitone ruler on pad
 - **Motion Wah** — optional continuous mode vs hold (toggle in Learn)
 - **Pulse Grid** — pattern copy/paste row; share pattern via URL hash
-- **Train & Shake** — third class (“sway”); export/import training set for classroom demo
+- ~~**Train & Shake** sway + export/import~~ — shipped in [Train & Shake](../apps/train-shake/)
 - **Conductor** — QR code for musician link; visual metronome flash at downbeat
 - **Synth Pad** — aftertouch-style pressure (if `force` / `radius` available)
 - **Granular Tilt** — hold pad to freeze grain buffer; upload short sample (File API)

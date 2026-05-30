@@ -22,7 +22,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM |
 | [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
-| [Train & Shake](apps/train-shake/) | Gesture performance | k-NN classifier on motion features |
+| [Train & Shake](apps/train-shake/) | Gesture performance | k-NN on still / sway / shake; export/import training sets |
 | [Granular Tilt](apps/granular-tilt/) | Textures / clouds | Granular synthesis + orientation |
 | [Photo Sonifier](apps/photo-sonifier/) | Texture from environment | Camera brightness map → grain density (consent / workshop mode) |
 | [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step sequencer, drum synthesis |
@@ -38,7 +38,7 @@ Each app has a **Learn** panel with short explanations (where applicable). Piano
 - 1× **Conductor** — one downbeat, no rush
 
 ### 2. “Human ML” (15 min)
-- Everyone on **Train & Shake**: 2 min collect still/shake examples, 5 min perform in sections (conductor mimes “still” / “shake”).
+- Everyone on **Train & Shake**: collect still / sway / shake (3+ each), or **import** a teacher’s demo set; perform in three sections.
 - Discuss: training data, labels, misclassification, bias (what if someone holds the phone differently?).
 
 ### 3. “Synthesis tour” (20 min)
