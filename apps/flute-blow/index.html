@@ -90,6 +90,14 @@
       }
     }
 
+    function onHoleTap(i, e) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleHole(i);
+      primeMicStream();
+      void enableAudio();
+    }
+
     function toggleHole(i) {
       holesCovered[i] = !holesCovered[i];
       applyFingering();
@@ -99,12 +107,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "flute-hole covered";
-      btn.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-        primeMicStream();
-        void enableAudio();
-        toggleHole(i);
-      });
+      btn.addEventListener("pointerdown", (e) => onHoleTap(i, e));
       fluteTube.appendChild(btn);
       holeBtns.push(btn);
     }
@@ -227,7 +230,7 @@
     document.getElementById("fluteBody").addEventListener("pointerdown", (e) => {
       if (e.target.closest(".flute-hole")) return;
       primeMicStream();
-      if (!ready) void enableAudio();
+      if (!ready && !booting) void enableAudio();
     });
   </script>
 </body>
