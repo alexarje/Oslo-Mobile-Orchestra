@@ -9,6 +9,7 @@ const ASSETS = [
   "./shared/ml.js",
   "./shared/workshop.js",
   "./shared/pitch.js",
+  "./shared/ks.js",
   "./manifest.webmanifest",
 ];
 

@@ -26,85 +26,31 @@
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
+    import { createKSPool, karplusPluck } from "../../shared/ks.js";
 
     bindLearn();
     const pad = document.getElementById("pad");
     let ctx, master, built = false;
-    const voices = [];
-    const MAX = 4;
+    const pool = createKSPool(3);
 
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const mapX = (nx) => 55 * Math.pow(880 / 55, nx);
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.55));
+      ({ master } = createMasterBus(c, 0.5));
       built = true;
-    }
-
-    function pluck(freq) {
-      const sr = ctx.sampleRate;
-      const now = ctx.currentTime;
-      const n = Math.ceil(sr / freq);
-      const buf = ctx.createBuffer(1, n, sr);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * 0.85;
-
-      const exc = ctx.createBufferSource();
-      exc.buffer = buf;
-      const delay = ctx.createDelay(0.5);
-      delay.delayTime.value = 1 / freq;
-      const lpf = ctx.createBiquadFilter();
-      lpf.type = "lowpass";
-      lpf.frequency.value = Math.min(8000, freq * 6);
-      lpf.Q.value = 0.5;
-      const fb = ctx.createGain();
-      fb.gain.value = 0.965;
-      const out = ctx.createGain();
-      out.gain.value = 0.9;
-
-      while (voices.length >= MAX) {
-        const old = voices.shift();
-        try {
-          old.fb.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
-          setTimeout(() => {
-            try {
-              old.out.disconnect();
-              old.fb.disconnect();
-            } catch { /* noop */ }
-          }, 280);
-        } catch { /* noop */ }
-      }
-      voices.push({ out, fb });
-
-      exc.connect(delay);
-      delay.connect(lpf);
-      lpf.connect(fb);
-      fb.connect(delay);
-      lpf.connect(out);
-      out.connect(master);
-      exc.start(now);
-      exc.stop(now + 1 / freq + 0.002);
-
-      setTimeout(() => {
-        const i = voices.findIndex((v) => v.out === out);
-        if (i !== -1) voices.splice(i, 1);
-        try {
-          lpf.disconnect();
-          fb.disconnect();
-          out.disconnect();
-        } catch { /* noop */ }
-      }, 3500);
-
-      document.getElementById("freqOut").textContent = freq.toFixed(0);
     }
 
     pad.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
       await startAudio(!built ? buildAudio : undefined);
+      if (!built) return;
       const r = pad.getBoundingClientRect();
       const nx = clamp((e.clientX - r.left) / r.width, 0, 1);
-      pluck(mapX(nx));
+      const freq = mapX(nx);
+      karplusPluck(ctx, master, pool, freq, { strength: 0.5, level: 0.3 });
+      document.getElementById("freqOut").textContent = freq.toFixed(0);
       const ripple = document.createElement("div");
       ripple.className = "pluck-ripple";
       ripple.style.left = `${e.clientX - r.left}px`;
