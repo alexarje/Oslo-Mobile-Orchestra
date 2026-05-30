@@ -65,6 +65,17 @@
     const SENSOR_OPTS = { needMotion: false, needOrientation: true };
     const MAX_RECORD_MS = 6000;
     const MIN_RECORD_SAMPLES = 2048;
+    const BETA_MIN = 0;
+    const BETA_MAX = 90;
+    const GAMMA_MIN = -90;
+    const GAMMA_MAX = 90;
+    const GRAIN_INTERVAL_MIN_MS = 24;
+    const GRAIN_INTERVAL_MAX_MS = 400;
+    const PITCH_RATE_MIN = 0.35;
+    const PITCH_RATE_MAX = 2.5;
+
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    const safeNum = (v, fallback) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 
     let ctx, master, buffer;
     let built = false;
@@ -103,6 +114,41 @@
       return b;
     }
 
+    function tiltBeta() {
+      return clamp(safeNum(beta, 45), BETA_MIN, BETA_MAX);
+    }
+
+    function tiltGamma() {
+      return clamp(safeNum(gamma, 0), GAMMA_MIN, GAMMA_MAX);
+    }
+
+    function grainsPerSec() {
+      const b = tiltBeta();
+      return 5 + (b / BETA_MAX) * 25;
+    }
+
+    function grainPitchRate() {
+      const g = tiltGamma();
+      return clamp(0.5 + ((g + 90) / 180) * 1.5, PITCH_RATE_MIN, PITCH_RATE_MAX);
+    }
+
+    function scheduleIntervalMs() {
+      return clamp(1000 / grainsPerSec(), GRAIN_INTERVAL_MIN_MS, GRAIN_INTERVAL_MAX_MS);
+    }
+
+    function updateTiltReadout() {
+      document.getElementById("rateOut").textContent = grainsPerSec().toFixed(0);
+      document.getElementById("pitchOut").textContent = grainPitchRate().toFixed(2);
+    }
+
+    function applyOrientation(o) {
+      const b = safeNum(o.beta, beta);
+      const g = safeNum(o.gamma, gamma);
+      if (Number.isFinite(b)) beta = b;
+      if (Number.isFinite(g)) gamma = g;
+      updateTiltReadout();
+    }
+
     function draw() {
       if (!grainsOn) return;
       resizeCanvas();
@@ -114,7 +160,7 @@
       g.beginPath();
       for (let i = 0; i < 40; i++) {
         const x = (i / 40) * w;
-        const y = h / 2 + Math.sin(i * 0.5 + performance.now() / 200) * (beta / 90) * h * 0.3;
+        const y = h / 2 + Math.sin(i * 0.5 + performance.now() / 200) * (tiltBeta() / BETA_MAX) * h * 0.3;
         if (i === 0) g.moveTo(x, y);
         else g.lineTo(x, y);
       }
@@ -129,10 +175,9 @@
       const maxOff = buffer.duration - dur - 0.002;
       if (maxOff <= 0) return;
       const offset = frozen ? Math.min(freezePos, maxOff) : Math.random() * maxOff;
-      const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
       const src = ctx.createBufferSource();
       src.buffer = buffer;
-      src.playbackRate.value = rate;
+      src.playbackRate.value = grainPitchRate();
       const gn = ctx.createGain();
       const t = ctx.currentTime;
       src.connect(gn);
@@ -140,14 +185,21 @@
       gn.gain.setValueAtTime(0, t);
       gn.gain.linearRampToValueAtTime(0.42, t + 0.004);
       gn.gain.linearRampToValueAtTime(0, t + dur);
-      src.start(t, offset, dur);
+      try {
+        src.start(t, offset, dur);
+      } catch {
+        /* invalid offset/rate at extreme tilt — skip grain */
+      }
     }
 
     function schedule() {
       if (!grainsOn) return;
-      spawnGrain();
-      const interval = 1000 / (5 + (beta / 90) * 25);
-      scheduleTimer = setTimeout(schedule, interval);
+      try {
+        spawnGrain();
+      } catch {
+        /* keep scheduler alive */
+      }
+      scheduleTimer = setTimeout(schedule, scheduleIntervalMs());
     }
 
     function stopSchedule() {
@@ -177,17 +229,8 @@
     async function initSensors() {
       if (sensorsReady) return;
       const ok = await enableSensors(SENSOR_OPTS);
-      if (ok) {
-        onOrientation((o) => {
-          beta = o.beta ?? 45;
-          gamma = o.gamma ?? 0;
-          document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
-          document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
-        });
-      } else {
-        document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
-        document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
-      }
+      if (ok) onOrientation(applyOrientation);
+      else updateTiltReadout();
       sensorsReady = true;
     }
 
