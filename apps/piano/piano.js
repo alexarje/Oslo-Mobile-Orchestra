@@ -1,4 +1,4 @@
-/* piano.js – Web Audio piano (two octaves, mobile touch) */
+/* piano.js – Web Audio piano (three octaves, mobile touch) */
 
 (function () {
   'use strict';
@@ -13,8 +13,9 @@
   const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
   const BLACK_SEMIS = new Set([1, 3, 6, 8, 10]);
   const KEY_BY_SEMI = { 0: 'a', 1: 'w', 2: 's', 3: 'e', 4: 'd', 5: 'f', 6: 't', 7: 'g', 8: 'y', 9: 'h', 10: 'u', 11: 'j' };
-  const OCTAVES_ON_KEYBOARD = 2;
-  const RELEASE_SEC = 0.07;
+  const OCTAVES_ON_KEYBOARD = 3;
+  const RELEASE_SEC = 0.1;
+  const ATTACK_SEC = 0.012;
 
   const volumeSlider = document.getElementById('volume');
   const reverbSlider = document.getElementById('reverb');
@@ -24,8 +25,8 @@
   const statusEl = document.getElementById('status');
   const slideModeEl = document.getElementById('slideMode');
 
-  const WHITE_W = 33; // key 32px + 1px gap
-  const BLACK_NUDGE = 24;
+  const WHITE_W = 28; // key 27px + 1px gap — fits 3 octaves with scroll
+  const BLACK_NUDGE = 20;
 
   function pingIOS(c) {
     const buf = c.createBuffer(1, 1, c.sampleRate);
@@ -36,6 +37,8 @@
     src.stop();
   }
 
+  let iosUnlocked = false;
+
   function ensureCtx() {
     if (!ctx) {
       ctx = new AudioContext();
@@ -43,14 +46,17 @@
     } else if (ctx.state === 'suspended') {
       void ctx.resume();
     }
-    pingIOS(ctx);
+    if (!iosUnlocked) {
+      pingIOS(ctx);
+      iosUnlocked = true;
+    }
   }
 
   function markReady() {
     if (statusEl) {
       statusEl.textContent = slideModeEl.checked
-        ? 'C4–B5 · hold & slide (chromatic)'
-        : 'C4–B5 · tap or drag keys';
+        ? 'C4–B6 · hold & slide (chromatic)'
+        : 'C4–B6 · tap or drag keys';
     }
   }
 
@@ -142,6 +148,7 @@
   const activeVoices = {};
   const heldSemis = new Set();
   const pointerNotes = new Map();
+  const pointerVoices = new Map();
   let slideVoice = null;
   let slidePointerId = null;
   let slideSemi = null;
@@ -176,9 +183,9 @@
     const env = ctx.createGain();
     osc.type = waveformSelect.value;
     osc.frequency.setValueAtTime(freq, t);
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(0.75, t + 0.012);
-    env.gain.exponentialRampToValueAtTime(0.35, t + 0.12);
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(0.75, t + ATTACK_SEC);
+    env.gain.linearRampToValueAtTime(0.35, t + ATTACK_SEC + 0.1);
     osc.connect(env);
     env.connect(dryGain);
     env.connect(reverbNode);
@@ -187,10 +194,11 @@
   }
 
   function releaseVoice(voice) {
-    if (!voice) return;
+    if (!voice || voice.releasing) return;
+    voice.releasing = true;
     const { osc, env } = voice;
     const t = ctx.currentTime;
-    const stopAt = t + RELEASE_SEC + 0.03;
+    const stopAt = t + RELEASE_SEC + 0.02;
     env.gain.cancelScheduledValues(t);
     env.gain.setValueAtTime(Math.max(env.gain.value, 0.0001), t);
     env.gain.linearRampToValueAtTime(0, t + RELEASE_SEC);
@@ -200,7 +208,27 @@
         osc.disconnect();
         env.disconnect();
       } catch (_) { /* already disconnected */ }
-    }, (RELEASE_SEC + 0.05) * 1000);
+    }, (RELEASE_SEC + 0.04) * 1000);
+  }
+
+  function trackVoice(pointerId, semi, voice) {
+    pointerVoices.set(pointerId, { voice, semi });
+    activeVoices[semi] = voice;
+  }
+
+  function untrackVoice(pointerId) {
+    const pv = pointerVoices.get(pointerId);
+    if (!pv) return;
+    if (activeVoices[pv.semi] === pv.voice) delete activeVoices[pv.semi];
+    pointerVoices.delete(pointerId);
+  }
+
+  function glideVoice(voice, semi) {
+    voice.osc.frequency.setTargetAtTime(
+      noteFreq(semi, octaveShift()),
+      ctx.currentTime,
+      0.008
+    );
   }
 
   function updateSlideHighlight(semi) {
@@ -220,32 +248,48 @@
 
     if (legato && slideVoice) {
       slideSemi = newSemi;
-      slideVoice.osc.frequency.setValueAtTime(
+      slideVoice.osc.frequency.setTargetAtTime(
         noteFreq(newSemi, octaveShift()),
-        ctx.currentTime
+        ctx.currentTime,
+        0.008
       );
       updateSlideHighlight(newSemi);
       pointerNotes.set(pointerId, newSemi);
       return;
     }
 
-    if (oldSemi != null) {
-      heldSemis.delete(oldSemi);
-      setKeyActive(oldSemi, false);
-      stopNote(oldSemi);
+    const pv = pointerVoices.get(pointerId);
+    if (pv && pv.semi === newSemi) return;
+
+    if (pv) {
+      setKeyActive(pv.semi, false);
+      if (activeVoices[pv.semi] === pv.voice) delete activeVoices[pv.semi];
+      pv.semi = newSemi;
+      activeVoices[newSemi] = pv.voice;
+      glideVoice(pv.voice, newSemi);
+    } else {
+      const voice = createVoice(noteFreq(newSemi, octaveShift()));
+      trackVoice(pointerId, newSemi, voice);
     }
+
     pointerNotes.set(pointerId, newSemi);
+    if (oldSemi != null) heldSemis.delete(oldSemi);
     heldSemis.add(newSemi);
     setKeyActive(newSemi, true);
-    playNote(newSemi);
   }
 
   function releasePointer(pointerId) {
     const semi = pointerNotes.get(pointerId);
     if (semi == null) return;
+    const pv = pointerVoices.get(pointerId);
+    if (pv) {
+      releaseVoice(pv.voice);
+      untrackVoice(pointerId);
+    } else {
+      stopNote(semi);
+    }
     heldSemis.delete(semi);
     setKeyActive(semi, false);
-    stopNote(semi);
     pointerNotes.delete(pointerId);
   }
 
@@ -319,7 +363,8 @@
       heldSemis.add(semi);
       pointerNotes.set(e.pointerId, semi);
       el.setPointerCapture(e.pointerId);
-      playNote(semi);
+      const voice = createVoice(noteFreq(semi, octaveShift()));
+      trackVoice(e.pointerId, semi, voice);
       el.classList.add('active');
     });
 

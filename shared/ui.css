@@ -489,7 +489,7 @@ body.hub {
 }
 
 .piano-key.white {
-  width: 32px;
+  width: 27px;
   height: 118px;
   background: #e2e8f0;
   border: 1px solid #64748b;
@@ -505,7 +505,7 @@ body.hub {
 
 .piano-key.black {
   position: absolute;
-  width: 22px;
+  width: 18px;
   height: 70px;
   background: #1e293b;
   border: 1px solid #0f172a;
