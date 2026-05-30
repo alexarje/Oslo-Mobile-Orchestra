@@ -14,12 +14,17 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Mic → pitch</h2>
-    <p>Turn <strong>Audio on</strong> and allow the mic. Hum or sing — pitch drives the tone. <strong>Hold the pad</strong> to hear it; slide <strong>up/down</strong> for volume.</p>
-    <p>Watch <strong>Mic level</strong> move when you make sound (if it stays flat, check permissions).</p>
+    <p>Tap <strong>Audio on</strong> (or the pad) and allow the mic. Hum or sing — pitch drives the tone. <strong>Hold the pad</strong> to hear it; slide <strong>up/down</strong> for volume.</p>
+    <p>If the <strong>Mic</strong> bar stays empty, check browser mic permission for this site.</p>
   </div>
-  <p class="status-bar" id="status"></p>
+  <p class="status-bar" id="status">Tap Audio on or the pad to start</p>
+  <div class="breath-row">
+    <label>Mic</label>
+    <div class="breath-meter" id="micMeterWrap">
+      <div class="breath-meter-fill" id="micMeter"></div>
+    </div>
+  </div>
   <div class="readout-row">
-    <p class="value-chip">Mic <strong id="levelOut">—</strong></p>
     <p class="value-chip">Pitch <strong id="hzOut">—</strong></p>
     <p class="value-chip">Note <strong id="noteOut">—</strong></p>
   </div>
@@ -27,8 +32,8 @@
     <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, startAudio, registerAudioBoot } from "../../shared/app.js";
-    import { createMasterBus, connectMicAnalyser } from "../../shared/audio.js";
+    import { bindLearn, setStatus, createAudioBoot, registerAudioBoot } from "../../shared/app.js";
+    import { createMasterBus, connectMicAnalyser, getMicStream, primeMicStream } from "../../shared/audio.js";
     import { detectPitchHz, hzToMidi } from "../../shared/pitch.js";
 
     bindLearn();
@@ -36,9 +41,7 @@
     const dot = document.getElementById("dot");
     let ctx, master, osc, amp, analyser, micStream, buf;
     let built = false;
-    let booting = false;
     let holding = false;
-    let raf = 0;
     let lastHz = null;
 
     const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
@@ -51,8 +54,21 @@
       return Math.sqrt(s / buf.length);
     }
 
+    function micTrackLive() {
+      const track = micStream?.getAudioTracks?.()[0];
+      return track && track.readyState === "live" && !track.muted;
+    }
+
     async function build(c) {
-      if (built) return;
+      if (built && micTrackLive()) {
+        tick();
+        return;
+      }
+      if (built) {
+        micStream?.getTracks?.().forEach((t) => t.stop());
+        micStream = null;
+        built = false;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
         setStatus("status", "Mic not supported", "warn");
         throw new Error("no mic");
@@ -68,18 +84,15 @@
       osc.start();
       analyser = ctx.createAnalyser();
       analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.3;
+      analyser.smoothingTimeConstant = 0.2;
       buf = new Float32Array(analyser.fftSize);
       try {
-        micStream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-          video: false,
-        });
+        micStream = await getMicStream();
       } catch {
         setStatus("status", "Mic denied — allow in Settings", "warn");
         throw new Error("denied");
       }
-      connectMicAnalyser(ctx, micStream, analyser);
+      connectMicAnalyser(ctx, micStream, analyser, { inputGain: 2.5 });
       built = true;
       setStatus("status", "Mic live — hold pad to play", "ok");
       tick();
@@ -88,9 +101,11 @@
     function tick() {
       if (!built) return;
       const rms = getRms();
-      document.getElementById("levelOut").textContent = rms > 0.0005 ? `${(rms * 100).toFixed(0)}%` : "—";
+      const pct = Math.min(100, (rms / 0.08) * 100);
+      document.getElementById("micMeter").style.width = `${pct}%`;
+      document.getElementById("micMeter").classList.toggle("blowing", rms > 0.004);
 
-      const hz = rms > 0.008 ? detectPitchHz(buf, ctx.sampleRate) : null;
+      const hz = rms > 0.003 ? detectPitchHz(buf, ctx.sampleRate) : null;
       if (hz) {
         lastHz = lastHz ? lastHz * 0.35 + hz * 0.65 : hz;
         const t = ctx.currentTime;
@@ -98,25 +113,16 @@
         document.getElementById("hzOut").textContent = lastHz.toFixed(0);
         const m = Math.round(hzToMidi(lastHz));
         document.getElementById("noteOut").textContent = `${names[((m % 12) + 12) % 12]}${Math.floor(m / 12) - 1}`;
-      } else if (rms <= 0.008) {
+      } else if (rms <= 0.003) {
         document.getElementById("hzOut").textContent = "—";
         document.getElementById("noteOut").textContent = "—";
       }
 
-      raf = requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     }
 
-    async function ensureAudio() {
-      if (built || booting) return;
-      booting = true;
-      try {
-        await startAudio(build);
-      } finally {
-        booting = false;
-      }
-    }
-
-    registerAudioBoot(build);
+    const ensureAudio = createAudioBoot(build, { screenTap: true, mic: true });
+    registerAudioBoot(build, { mic: true });
 
     function setVolumeFromY(clientY) {
       const r = pad.getBoundingClientRect();
@@ -128,14 +134,16 @@
       amp.gain.setTargetAtTime(vol, ctx.currentTime, 0.02);
     }
 
-    pad.addEventListener("pointerdown", async (e) => {
+    pad.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      await ensureAudio();
-      if (!built) return;
-      holding = true;
-      pad.setPointerCapture(e.pointerId);
-      pad.classList.add("active");
-      setVolumeFromY(e.clientY);
+      primeMicStream();
+      void ensureAudio().then(() => {
+        if (!built) return;
+        holding = true;
+        pad.setPointerCapture(e.pointerId);
+        pad.classList.add("active");
+        setVolumeFromY(e.clientY);
+      });
     });
 
     pad.addEventListener("pointermove", (e) => {
@@ -146,7 +154,7 @@
     const stop = () => {
       if (!holding) return;
       holding = false;
-      amp.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+      if (amp && ctx) amp.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
       pad.classList.remove("active");
       dot.style.opacity = "0";
     };

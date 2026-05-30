@@ -55,12 +55,54 @@ export function applyEnvelope(gain, ctx, { attack = 0.02, decay = 0.1, sustain =
   };
 }
 
+let micPrimePromise = null;
+
+/**
+ * Start getUserMedia on the same user gesture (before any await). iOS Safari drops the
+ * mic if getUserMedia runs after unlockAudio().
+ */
+export function primeMicStream() {
+  if (!navigator.mediaDevices?.getUserMedia) return null;
+  if (!micPrimePromise) {
+    micPrimePromise = navigator.mediaDevices
+      .getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        video: false,
+      })
+      .catch((err) => {
+        micPrimePromise = null;
+        throw err;
+      });
+  }
+  return micPrimePromise;
+}
+
+/** Mic stream from primeMicStream() or a fresh request. */
+export async function getMicStream() {
+  if (micPrimePromise) {
+    const stream = await micPrimePromise;
+    micPrimePromise = null;
+    return stream;
+  }
+  return navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    video: false,
+  });
+}
+
 /**
  * Mic → analyser (iOS needs a path to destination or levels stay at zero).
  */
-export function connectMicAnalyser(ctx, stream, analyser) {
+export function connectMicAnalyser(ctx, stream, analyser, { inputGain = 1 } = {}) {
   const src = ctx.createMediaStreamSource(stream);
-  src.connect(analyser);
+  let input = src;
+  if (inputGain !== 1) {
+    const boost = ctx.createGain();
+    boost.gain.value = inputGain;
+    src.connect(boost);
+    input = boost;
+  }
+  input.connect(analyser);
   const silent = ctx.createGain();
   silent.gain.value = 0;
   analyser.connect(silent);

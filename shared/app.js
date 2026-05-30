@@ -1,12 +1,13 @@
 /**
  * Shared UI helpers — learn panel, status, iOS-safe audio unlock.
  */
-import { getAudioContext, unlockAudio } from "./audio.js";
+import { getAudioContext, primeMicStream, unlockAudio } from "./audio.js";
 
 const AUDIO_TOGGLE_ID = "audioToggle";
 const HEADER_CONTROLS_ID = "headerControls";
 let audioOn = false;
 let optionalBootFn = null;
+let bootNeedsMic = false;
 
 /** Group Learn + Audio on/off in the header (upper right). */
 export function initHeaderControls() {
@@ -66,8 +67,9 @@ export function bindLearn(learnBtnId = "learnBtn", panelId = "learnPanel") {
 }
 
 /** Optional full setup (mic, graph) when user turns audio on from the header toggle. */
-export function registerAudioBoot(fn) {
+export function registerAudioBoot(fn, { mic = false } = {}) {
   optionalBootFn = fn;
+  bootNeedsMic = mic;
 }
 
 /** @deprecated Use initHeaderControls */
@@ -97,6 +99,7 @@ export function setAudioActive(on = true) {
 }
 
 export async function setAudioOn() {
+  if (bootNeedsMic) primeMicStream();
   return startAudio(optionalBootFn || undefined);
 }
 
@@ -142,10 +145,11 @@ export async function startAudio(initFn) {
 }
 
 /** Unlock audio on first tap anywhere (header, controls, stage, etc.). */
-export function bindScreenAudioBoot(ensureReady, onReady) {
+export function bindScreenAudioBoot(ensureReady, onReady, { mic = false } = {}) {
   document.body.addEventListener(
     "pointerdown",
     () => {
+      if (mic) primeMicStream();
       void ensureReady().then(() => onReady?.());
     },
     { once: true, capture: true }
@@ -157,7 +161,7 @@ export function bindScreenAudioBoot(ensureReady, onReady) {
  * @param {object} [opts]
  * @param {boolean} [opts.screenTap=true] First tap anywhere on the page runs init (not only the play pad).
  */
-export function createAudioBoot(initFn, { screenTap = true } = {}) {
+export function createAudioBoot(initFn, { screenTap = true, mic = false } = {}) {
   let done = false;
   let pending = null;
 
@@ -177,7 +181,7 @@ export function createAudioBoot(initFn, { screenTap = true } = {}) {
     return pending;
   }
 
-  if (screenTap) bindScreenAudioBoot(ensureReady);
+  if (screenTap) bindScreenAudioBoot(ensureReady, undefined, { mic });
 
   return ensureReady;
 }

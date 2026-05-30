@@ -90,7 +90,7 @@
 
   <script type="module">
     import { bindLearn, createAudioBoot, setStatus, registerAudioBoot } from "../../shared/app.js";
-    import { connectMicAnalyser, createMasterBus } from "../../shared/audio.js";
+    import { connectMicAnalyser, createMasterBus, getMicStream } from "../../shared/audio.js";
     import { KNNClassifier } from "../../shared/ml.js";
 
     bindLearn();
@@ -177,17 +177,14 @@
       analyser.smoothingTimeConstant = 0.4;
       freqBuf = new Uint8Array(analyser.frequencyBinCount);
       timeBuf = new Float32Array(analyser.fftSize);
-      micStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-        video: false,
-      });
+      micStream = await getMicStream();
       connectMicAnalyser(ctx, micStream, analyser);
       setStatus("status", "Hold each teach button — then Listen", "ok");
       startMonitor();
     }
 
-    registerAudioBoot(bootMic);
-    const ensureReady = createAudioBoot(bootMic);
+    registerAudioBoot(bootMic, { mic: true });
+    const ensureReady = createAudioBoot(bootMic, { mic: true });
 
     function counts() {
       return LABELS.map((l) => clf.samples.filter((s) => s.label === l).length);
