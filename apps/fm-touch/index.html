@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>FM Touch Synth — OMO</title>
+  <style>
+    .omo-back {
+      position: fixed;
+      top: max(8px, env(safe-area-inset-top));
+      left: 8px;
+      z-index: 20;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    :root {
+      --bg1: #082032;
+      --bg2: #2c394b;
+      --bg3: #334756;
+      --ink: #f6f7fb;
+      --muted: #c5c9d6;
+      --accent: #f0a500;
+      --card: rgba(255, 255, 255, 0.08);
+      --border: rgba(255, 255, 255, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(240, 165, 0, 0.18), transparent 40%),
+        radial-gradient(circle at 80% 30%, rgba(32, 226, 220, 0.18), transparent 45%),
+        linear-gradient(160deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(4px);
+      padding: 10px 12px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+
+    .status {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--accent);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .playArea {
+      position: relative;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+      background-size: 24px 24px, 24px 24px, auto;
+      overflow: hidden;
+      min-height: 240px;
+    }
+
+    .dot {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      margin-left: -17px;
+      margin-top: -17px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: rgba(240, 165, 0, 0.35);
+      box-shadow: 0 0 0 10px rgba(240, 165, 0, 0.1);
+      pointer-events: none;
+      transform: translate3d(0, 0, 0);
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 0.92rem;
+    }
+
+    .value {
+      margin: 0;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      line-height: 1.25;
+    }
+
+    .value strong {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <a class="omo-back" href="../../">← Orchestra</a>
+  <main class="app">
+    <section class="panel header">
+      <div>
+        <h1 class="title">FM Touch Synth</h1>
+        <p class="hint">Tap and drag. X controls carrier pitch, Y controls modulator pitch.</p>
+      </div>
+      <p class="status" id="status">Tap screen to start audio</p>
+    </section>
+
+    <section class="playArea" id="playArea" aria-label="Touch area for FM synth control">
+      <div class="dot" id="dot"></div>
+    </section>
+
+    <section class="panel readout">
+      <p class="value">Carrier: <strong id="carrierHz">220.0</strong> Hz</p>
+      <p class="value">Modulator: <strong id="modHz">110.0</strong> Hz</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      let audioCtx;
+      let carrierOsc;
+      let modOsc;
+      let modGain;
+      let ampGain;
+      let ready = false;
+      let activePointerId = null;
+
+      const playArea = document.getElementById("playArea");
+      const dot = document.getElementById("dot");
+      const statusEl = document.getElementById("status");
+      const carrierEl = document.getElementById("carrierHz");
+      const modEl = document.getElementById("modHz");
+
+      const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+      function mapXToCarrier(normX) {
+        // 90..880 Hz gives a broad melodic range across the width.
+        const minHz = 90;
+        const maxHz = 880;
+        return minHz * Math.pow(maxHz / minHz, normX);
+      }
+
+      function mapYToMod(normY) {
+        // Invert Y so top is high pitch, bottom is low pitch.
+        const minHz = 40;
+        const maxHz = 1200;
+        const inv = 1 - normY;
+        return minHz * Math.pow(maxHz / minHz, inv);
+      }
+
+      function initAudio() {
+        if (ready) {
+          return;
+        }
+
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        carrierOsc = audioCtx.createOscillator();
+        modOsc = audioCtx.createOscillator();
+        modGain = audioCtx.createGain();
+        ampGain = audioCtx.createGain();
+
+        carrierOsc.type = "sine";
+        modOsc.type = "sine";
+
+        carrierOsc.frequency.value = 220;
+        modOsc.frequency.value = 110;
+
+        // Modulation depth controls FM intensity.
+        modGain.gain.value = 180;
+        ampGain.gain.value = 0;
+
+        modOsc.connect(modGain);
+        modGain.connect(carrierOsc.frequency);
+
+        carrierOsc.connect(ampGain);
+        ampGain.connect(audioCtx.destination);
+
+        carrierOsc.start();
+        modOsc.start();
+
+        ready = true;
+        statusEl.textContent = "Ready";
+      }
+
+      function setSynthFromEvent(ev) {
+        const rect = playArea.getBoundingClientRect();
+        const x = clamp(ev.clientX - rect.left, 0, rect.width);
+        const y = clamp(ev.clientY - rect.top, 0, rect.height);
+        const nx = rect.width > 0 ? x / rect.width : 0;
+        const ny = rect.height > 0 ? y / rect.height : 0;
+
+        const carrierHz = mapXToCarrier(nx);
+        const modHz = mapYToMod(ny);
+
+        const now = audioCtx.currentTime;
+        carrierOsc.frequency.setTargetAtTime(carrierHz, now, 0.02);
+        modOsc.frequency.setTargetAtTime(modHz, now, 0.02);
+
+        // Increase modulation depth with Y for more dramatic timbre changes.
+        const depth = 40 + (1 - ny) * 420;
+        modGain.gain.setTargetAtTime(depth, now, 0.03);
+
+        carrierEl.textContent = carrierHz.toFixed(1);
+        modEl.textContent = modHz.toFixed(1);
+
+        dot.style.left = x + "px";
+        dot.style.top = y + "px";
+      }
+
+      function gateOn() {
+        const now = audioCtx.currentTime;
+        ampGain.gain.cancelScheduledValues(now);
+        ampGain.gain.setTargetAtTime(0.24, now, 0.01);
+        statusEl.textContent = "Playing";
+      }
+
+      function gateOff() {
+        const now = audioCtx.currentTime;
+        ampGain.gain.cancelScheduledValues(now);
+        ampGain.gain.setTargetAtTime(0, now, 0.03);
+        statusEl.textContent = "Ready";
+      }
+
+      playArea.addEventListener("pointerdown", async (ev) => {
+        ev.preventDefault();
+
+        if (!ready) {
+          initAudio();
+        }
+
+        if (audioCtx.state !== "running") {
+          await audioCtx.resume();
+        }
+
+        activePointerId = ev.pointerId;
+        playArea.setPointerCapture(activePointerId);
+
+        dot.style.opacity = "1";
+        setSynthFromEvent(ev);
+        gateOn();
+      });
+
+      playArea.addEventListener("pointermove", (ev) => {
+        if (!ready || ev.pointerId !== activePointerId) {
+          return;
+        }
+        ev.preventDefault();
+        setSynthFromEvent(ev);
+      });
+
+      const pointerStop = (ev) => {
+        if (!ready || ev.pointerId !== activePointerId) {
+          return;
+        }
+        ev.preventDefault();
+        gateOff();
+        dot.style.opacity = "0";
+        activePointerId = null;
+      };
+
+      playArea.addEventListener("pointerup", pointerStop);
+      playArea.addEventListener("pointercancel", pointerStop);
+      playArea.addEventListener("pointerleave", pointerStop);
+    })();
+  </script>
+</body>
+</html>

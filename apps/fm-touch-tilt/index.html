@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>FM Touch + Tilt — OMO</title>
+  <style>
+    .omo-back {
+      position: fixed;
+      top: max(8px, env(safe-area-inset-top));
+      left: 8px;
+      z-index: 20;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    :root {
+      --bg1: #1d2b53;
+      --bg2: #7e2553;
+      --bg3: #008751;
+      --ink: #f6f7fb;
+      --muted: #d4daec;
+      --accent: #ffcd38;
+      --card: rgba(255, 255, 255, 0.09);
+      --border: rgba(255, 255, 255, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(255, 205, 56, 0.2), transparent 42%),
+        radial-gradient(circle at 80% 80%, rgba(0, 196, 140, 0.2), transparent 40%),
+        linear-gradient(155deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(5px);
+      padding: 10px 12px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--muted);
+      line-height: 1.32;
+      max-width: 40ch;
+    }
+
+    .status {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--accent);
+      text-align: right;
+    }
+
+    .unlockBtn {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.14);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .playArea {
+      position: relative;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+        linear-gradient(130deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+      background-size: 26px 26px, 26px 26px, auto;
+      overflow: hidden;
+      min-height: 240px;
+    }
+
+    .dot {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      margin-left: -17px;
+      margin-top: -17px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: rgba(255, 205, 56, 0.35);
+      box-shadow: 0 0 0 10px rgba(255, 205, 56, 0.1);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .value {
+      margin: 0;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      line-height: 1.2;
+    }
+
+    .value strong {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    @media (max-width: 460px) {
+      .readout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="omo-back" href="../../">← Orchestra</a>
+  <main class="app">
+    <section class="panel header">
+      <div>
+        <h1 class="title">FM Touch + Tilt Synth</h1>
+        <p class="hint">Tap and drag. X controls pitch, Y controls amplitude, and phone tilt controls modulation frequency.</p>
+      </div>
+      <div>
+        <button class="unlockBtn" id="unlockBtn" type="button">Enable Audio + Tilt</button>
+        <p class="status" id="status">Tap button to start on iPhone</p>
+      </div>
+    </section>
+
+    <section class="playArea" id="playArea" aria-label="Touch area for FM synth control">
+      <div class="dot" id="dot"></div>
+    </section>
+
+    <section class="panel readout">
+      <p class="value">Carrier: <strong id="carrierHz">220.0</strong> Hz</p>
+      <p class="value">Amplitude: <strong id="ampValue">0.00</strong></p>
+      <p class="value">Mod Tilt: <strong id="modHz">110.0</strong> Hz</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      let audioCtx;
+      let carrierOsc;
+      let modOsc;
+      let modGain;
+      let ampGain;
+      let ready = false;
+      let tiltReady = false;
+      let activePointerId = null;
+      let touchAmp = 0;
+      let latestTiltNorm = 0.5;
+      let orientationListenerAdded = false;
+
+      const playArea = document.getElementById("playArea");
+      const dot = document.getElementById("dot");
+      const unlockBtn = document.getElementById("unlockBtn");
+      const statusEl = document.getElementById("status");
+      const carrierEl = document.getElementById("carrierHz");
+      const ampEl = document.getElementById("ampValue");
+      const modEl = document.getElementById("modHz");
+
+      const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+      function mapXToCarrier(normX) {
+        const minHz = 90;
+        const maxHz = 880;
+        return minHz * Math.pow(maxHz / minHz, normX);
+      }
+
+      function mapTiltToMod(normTilt) {
+        const minHz = 30;
+        const maxHz = 1600;
+        return minHz * Math.pow(maxHz / minHz, normTilt);
+      }
+
+      function setModFromTilt(normTilt) {
+        if (!ready) {
+          return;
+        }
+        latestTiltNorm = clamp(normTilt, 0, 1);
+        const modHz = mapTiltToMod(latestTiltNorm);
+        const now = audioCtx.currentTime;
+        modOsc.frequency.setTargetAtTime(modHz, now, 0.04);
+        modEl.textContent = modHz.toFixed(1);
+      }
+
+      function pingIOSAudioUnlock() {
+        // iOS can require a short source start inside a direct gesture.
+        const buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(audioCtx.destination);
+        src.start();
+        src.stop();
+      }
+
+      function initAudio() {
+        if (ready) {
+          return;
+        }
+
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        carrierOsc = audioCtx.createOscillator();
+        modOsc = audioCtx.createOscillator();
+        modGain = audioCtx.createGain();
+        ampGain = audioCtx.createGain();
+
+        carrierOsc.type = "sine";
+        modOsc.type = "sine";
+
+        carrierOsc.frequency.value = 220;
+        modOsc.frequency.value = 110;
+
+        modGain.gain.value = 220;
+        ampGain.gain.value = 0;
+
+        modOsc.connect(modGain);
+        modGain.connect(carrierOsc.frequency);
+
+        carrierOsc.connect(ampGain);
+        ampGain.connect(audioCtx.destination);
+
+        carrierOsc.start();
+        modOsc.start();
+
+        ready = true;
+        statusEl.textContent = "Audio ready";
+      }
+
+      function setSynthFromTouch(ev) {
+        const rect = playArea.getBoundingClientRect();
+        const x = clamp(ev.clientX - rect.left, 0, rect.width);
+        const y = clamp(ev.clientY - rect.top, 0, rect.height);
+        const nx = rect.width > 0 ? x / rect.width : 0;
+        const ny = rect.height > 0 ? y / rect.height : 0;
+
+        const carrierHz = mapXToCarrier(nx);
+        touchAmp = 1 - ny;
+        const outAmp = touchAmp * 0.35;
+
+        const now = audioCtx.currentTime;
+        carrierOsc.frequency.setTargetAtTime(carrierHz, now, 0.02);
+        ampGain.gain.setTargetAtTime(outAmp, now, 0.02);
+
+        carrierEl.textContent = carrierHz.toFixed(1);
+        ampEl.textContent = outAmp.toFixed(2);
+
+        dot.style.left = x + "px";
+        dot.style.top = y + "px";
+      }
+
+      function gateOff() {
+        const now = audioCtx.currentTime;
+        ampGain.gain.cancelScheduledValues(now);
+        ampGain.gain.setTargetAtTime(0, now, 0.04);
+        ampEl.textContent = "0.00";
+        statusEl.textContent = tiltReady ? "Ready (tilt active)" : "Ready (tilt unavailable)";
+      }
+
+      function handleOrientation(ev) {
+        if (!ready) {
+          return;
+        }
+
+        const beta = typeof ev.beta === "number" ? ev.beta : 0;
+        const gamma = typeof ev.gamma === "number" ? ev.gamma : 0;
+
+        // Approximate overall tilt amount from front/back and left/right angles.
+        const tiltAmount = Math.sqrt(beta * beta + gamma * gamma);
+        const normTilt = clamp(tiltAmount / 90, 0, 1);
+        setModFromTilt(normTilt);
+      }
+
+      async function ensureTiltPermission() {
+        if (tiltReady) {
+          return true;
+        }
+
+        if (!window.isSecureContext) {
+          statusEl.textContent = "Tilt needs HTTPS on iOS";
+          return false;
+        }
+
+        if (typeof window.DeviceOrientationEvent === "undefined") {
+          statusEl.textContent = "No orientation sensor on this device";
+          return false;
+        }
+
+        try {
+          if (typeof DeviceOrientationEvent.requestPermission === "function") {
+            const result = await DeviceOrientationEvent.requestPermission();
+            if (result !== "granted") {
+              statusEl.textContent = "Orientation permission denied";
+              return false;
+            }
+          }
+
+          if (!orientationListenerAdded) {
+            window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+            orientationListenerAdded = true;
+          }
+          tiltReady = true;
+          statusEl.textContent = "Tilt linked to modulation";
+          setModFromTilt(latestTiltNorm);
+          return true;
+        } catch (err) {
+          statusEl.textContent = "Could not enable orientation";
+          return false;
+        }
+      }
+
+      function getTouchPoint(ev) {
+        if (!ev || !ev.touches || ev.touches.length === 0) {
+          return null;
+        }
+        return ev.touches[0];
+      }
+
+      async function unlockAudioAndTilt() {
+        if (!ready) {
+          initAudio();
+        }
+        if (audioCtx.state !== "running") {
+          await audioCtx.resume();
+        }
+        pingIOSAudioUnlock();
+        await ensureTiltPermission();
+        if (ready) {
+          statusEl.textContent = tiltReady ? "Ready (tilt active)" : "Ready (tilt unavailable)";
+        }
+      }
+
+      playArea.addEventListener("pointerdown", async (ev) => {
+        ev.preventDefault();
+        await unlockAudioAndTilt();
+
+        activePointerId = ev.pointerId;
+        playArea.setPointerCapture(activePointerId);
+
+        dot.style.opacity = "1";
+        setSynthFromTouch(ev);
+        statusEl.textContent = "Playing";
+      });
+
+      playArea.addEventListener("pointermove", (ev) => {
+        if (!ready || ev.pointerId !== activePointerId) {
+          return;
+        }
+        ev.preventDefault();
+        setSynthFromTouch(ev);
+      });
+
+      const pointerStop = (ev) => {
+        if (!ready || ev.pointerId !== activePointerId) {
+          return;
+        }
+        ev.preventDefault();
+        dot.style.opacity = "0";
+        activePointerId = null;
+        gateOff();
+      };
+
+      playArea.addEventListener("pointerup", pointerStop);
+      playArea.addEventListener("pointercancel", pointerStop);
+      playArea.addEventListener("pointerleave", pointerStop);
+
+      // iOS fallback for environments where pointer events are unreliable.
+      playArea.addEventListener("touchstart", async (ev) => {
+        ev.preventDefault();
+        await unlockAudioAndTilt();
+        const t = getTouchPoint(ev);
+        if (!t) {
+          return;
+        }
+        dot.style.opacity = "1";
+        setSynthFromTouch(t);
+        statusEl.textContent = "Playing";
+      }, { passive: false });
+
+      playArea.addEventListener("touchmove", (ev) => {
+        ev.preventDefault();
+        const t = getTouchPoint(ev);
+        if (!t) {
+          return;
+        }
+        setSynthFromTouch(t);
+      }, { passive: false });
+
+      playArea.addEventListener("touchend", (ev) => {
+        ev.preventDefault();
+        dot.style.opacity = "0";
+        gateOff();
+      }, { passive: false });
+
+      unlockBtn.addEventListener("click", async () => {
+        await unlockAudioAndTilt();
+        unlockBtn.textContent = "Enabled";
+      });
+    })();
+  </script>
+</body>
+</html>

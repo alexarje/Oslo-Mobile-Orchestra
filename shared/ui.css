@@ -298,6 +298,7 @@ a {
 /* Hub (scrollable list) */
 body.hub {
   min-height: 100dvh;
+  overflow-y: auto;
 }
 
 .hub-header {

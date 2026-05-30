@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Piano — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <link rel="stylesheet" href="../../shared/web-instruments.css" />
+  <style>
+    .keyboard-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding: 0.35rem 0.5rem;
+      display: flex;
+      align-items: flex-end;
+    }
+    .keyboard-wrap {
+      position: relative;
+      display: inline-flex;
+      user-select: none;
+      touch-action: manipulation;
+      flex-shrink: 0;
+    }
+    .key {
+      position: relative;
+      border-radius: 0 0 6px 6px;
+      cursor: pointer;
+      transition: background 0.06s;
+      touch-action: manipulation;
+    }
+    .key.white {
+      width: 36px;
+      height: 120px;
+      background: #f0ede8;
+      border: 1px solid #999;
+      border-top: none;
+      margin-right: 1px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 4px;
+    }
+    .key.white:active, .key.white.active { background: #c8daf7; }
+    .key.black {
+      position: absolute;
+      width: 24px;
+      height: 72px;
+      background: #222;
+      border: 1px solid #000;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      z-index: 1;
+    }
+    .key.black:active, .key.black.active { background: #3a5fa0; }
+    .key-note { font-size: 8px; pointer-events: none; opacity: 0.7; color: #666; }
+    .wi-controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 0.25rem 0.5rem;
+      flex-shrink: 0;
+      font-size: 0.75rem;
+    }
+    .wi-controls label { color: var(--muted); }
+    .wi-controls select, .wi-controls input[type="range"] {
+      min-height: 32px;
+      font-size: 0.8rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid #475569;
+      border-radius: 6px;
+    }
+    .wi-controls input[type="range"] { width: 72px; }
+    .octave-btns button {
+      min-height: 32px;
+      min-width: 32px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid #475569;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Piano</h1>
+  </header>
+  <p class="status-bar">Tap keys · scroll keyboard sideways if needed</p>
+  <div class="wi-controls">
+    <label>Wave <select id="waveform">
+      <option value="triangle" selected>Tri</option>
+      <option value="sine">Sin</option>
+      <option value="sawtooth">Saw</option>
+      <option value="square">Sqr</option>
+    </select></label>
+    <label>Vol <input type="range" id="volume" min="0" max="1" step="0.01" value="0.6" /></label>
+    <label>Rev <input type="range" id="reverb" min="0" max="1" step="0.01" value="0.2" /></label>
+    <span>Oct <button type="button" id="octave-down">−</button><span id="octave-display">4</span><button type="button" id="octave-up">+</button></span>
+  </div>
+  <div class="main-stage">
+    <div class="keyboard-scroll">
+      <div class="keyboard-wrap" id="keyboard"></div>
+    </div>
+  </div>
+  <script src="piano.js"></script>
+</body>
+</html>

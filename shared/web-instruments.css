@@ -1,0 +1,62 @@
+/* Shared styles for web_instruments */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+}
+
+header {
+  background: #16213e;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 2px solid #0f3460;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: 0.05em;
+}
+
+header a.back {
+  color: #a0c4ff;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+header a.back:hover {
+  text-decoration: underline;
+}
+
+.instrument-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+  gap: 1.5rem;
+}
+
+.instructions {
+  background: #16213e;
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: #aac;
+  max-width: 780px;
+  width: 100%;
+  line-height: 1.6;
+}
+
+.instructions strong {
+  color: #a0c4ff;
+}

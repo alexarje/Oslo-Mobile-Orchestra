@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>KS String — OMO</title>
+  <style>
+    .omo-back {
+      position: fixed;
+      top: max(8px, env(safe-area-inset-top));
+      left: 8px;
+      z-index: 20;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    :root {
+      --bg1: #150a00;
+      --bg2: #3b1c00;
+      --bg3: #6b3a10;
+      --ink: #f6ead4;
+      --muted: #c9ae88;
+      --accent: #e8a020;
+      --panel: rgba(255, 220, 140, 0.09);
+      --border: rgba(255, 190, 90, 0.24);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(232, 160, 32, 0.22), transparent 40%),
+        radial-gradient(circle at 80% 85%, rgba(180, 100, 20, 0.2), transparent 45%),
+        linear-gradient(160deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      backdrop-filter: blur(5px);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
+    }
+
+    .hint {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.3;
+      max-width: 44ch;
+    }
+
+    .status {
+      margin: 0;
+      color: var(--accent);
+      font-size: 0.82rem;
+      text-align: right;
+      min-width: 9ch;
+    }
+
+    .pad {
+      position: relative;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      min-height: 280px;
+      touch-action: none;
+      /* Faint horizontal string lines for visual metaphor */
+      background:
+        repeating-linear-gradient(
+          180deg,
+          transparent,
+          transparent 29px,
+          rgba(255, 190, 90, 0.1) 30px
+        ),
+        linear-gradient(130deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    }
+
+    /* Brief ripple when a string is plucked */
+    .ripple {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      margin-left: -10px;
+      margin-top: -10px;
+      border-radius: 50%;
+      border: 2px solid rgba(232, 160, 32, 0.9);
+      background: rgba(232, 160, 32, 0.2);
+      pointer-events: none;
+      animation: ripple 600ms ease-out forwards;
+    }
+
+    @keyframes ripple {
+      from { transform: scale(0.5); opacity: 1; }
+      to   { transform: scale(3.0); opacity: 0; }
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .value {
+      margin: 0;
+      padding: 7px 9px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 0.88rem;
+      line-height: 1.2;
+    }
+
+    .value strong {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 500px) {
+      .readout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <a class="omo-back" href="../../">← Orchestra</a>
+  <main class="app">
+    <section class="panel header">
+      <div>
+        <h1 class="title">KS String Touch</h1>
+        <p class="hint">Tap and hold. X controls pitch, Y controls pluck strength. Tilt the phone to change damping (decay speed).</p>
+      </div>
+      <p class="status" id="status">Tap to start</p>
+    </section>
+
+    <section class="pad" id="pad" aria-label="Karplus-Strong string pad"></section>
+
+    <section class="panel readout">
+      <p class="value">Pitch: <strong id="freqEl">110</strong> Hz</p>
+      <p class="value">Pluck: <strong id="pluckEl">0.50</strong></p>
+      <p class="value">Damp tilt: <strong id="dampEl">4000</strong> Hz</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const statusEl = document.getElementById("status");
+      const pad      = document.getElementById("pad");
+      const freqEl   = document.getElementById("freqEl");
+      const pluckEl  = document.getElementById("pluckEl");
+      const dampEl   = document.getElementById("dampEl");
+
+      let audioCtx      = null;
+      let compressor    = null;
+      let reverbConv    = null;
+      let reverbWet     = null;
+      let tiltReady     = false;
+      let activeId      = null;
+      let holdTimer     = null;
+      let holdX         = 0;
+      let holdY         = 0;
+      // Damping filter cutoff driven by tilt (Hz). Default: fairly bright.
+      let currentDamp   = 4000;
+      // Active voice pool — hard limit prevents runaway accumulation.
+      const MAX_VOICES  = 3;
+      const voices      = []; // each entry: { out, fb }
+
+      const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+      // Exponential map: X (0..1) → frequency.
+      // Safe range for Web Audio feedback-loop KS: ~40 Hz..300 Hz.
+      // (Min delay = one render quantum ≈ 128/sampleRate; at 44100 Hz → ~345 Hz max.)
+      function mapXToFreq(nx) {
+        const lo = 40, hi = 300;
+        return lo * Math.pow(hi / lo, nx);
+      }
+
+      // Tilt magnitude (0..1) → damping cutoff.
+      // Flat = bright / long sustain; tilted = dark / fast decay.
+      function mapTiltToDamp(normTilt) {
+        const lo = 300, hi = 8000;
+        return hi * Math.pow(lo / hi, normTilt); // hi when flat, lo when tilted
+      }
+
+      function createReverbBuffer(ctx, decaySec) {
+        const sr  = ctx.sampleRate;
+        const len = Math.floor(sr * Math.max(0.05, decaySec));
+        const buf = ctx.createBuffer(2, len, sr);
+        for (let ch = 0; ch < 2; ch++) {
+          const d = buf.getChannelData(ch);
+          for (let i = 0; i < len; i++) {
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+          }
+        }
+        return buf;
+      }
+
+      function ensureAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+          // Soft limiter so stacked plucks don't clip
+          compressor = audioCtx.createDynamicsCompressor();
+          compressor.threshold.value = -6;
+          compressor.knee.value      = 6;
+          compressor.ratio.value     = 8;
+          compressor.attack.value    = 0.003;
+          compressor.release.value   = 0.15;
+          compressor.connect(audioCtx.destination);
+
+          // Reverb
+          reverbConv = audioCtx.createConvolver();
+          reverbWet  = audioCtx.createGain();
+          reverbConv.buffer = createReverbBuffer(audioCtx, 1.2);
+          reverbWet.gain.value = 0.3;
+          reverbConv.connect(reverbWet);
+          reverbWet.connect(audioCtx.destination);
+
+          statusEl.textContent = "Audio ready";
+        }
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        return audioCtx;
+      }
+
+      function pluck(freq, strength) {
+        const ctx = ensureAudio();
+        const sr  = ctx.sampleRate;
+        const now = ctx.currentTime;
+
+        // One period of noise fills the delay line (Karplus-Strong excitation).
+        const periodSamples = Math.ceil(sr / freq);
+        const noiseBuf = ctx.createBuffer(1, periodSamples, sr);
+        const data     = noiseBuf.getChannelData(0);
+        for (let i = 0; i < periodSamples; i++) {
+          data[i] = (Math.random() * 2 - 1) * strength;
+        }
+
+        const exciter = ctx.createBufferSource();
+        exciter.buffer = noiseBuf;
+
+        // Delay node — pitch determined by delay time (1 / freq).
+        const delay = ctx.createDelay(0.5);
+        delay.delayTime.value = 1 / freq;
+
+        // Lowpass filter in feedback path — determines damping / decay rate.
+        const lpf = ctx.createBiquadFilter();
+        lpf.type            = "lowpass";
+        lpf.frequency.value = currentDamp;
+        lpf.Q.value         = 0.5;
+
+        // Kill oldest voice if at the limit before adding a new one.
+        while (voices.length >= MAX_VOICES) {
+          const old = voices.shift();
+          try {
+            old.fb.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+            setTimeout(() => { try { old.out.disconnect(); old.fb.disconnect(); } catch (_) {} }, 300);
+          } catch (_) {}
+        }
+
+        // Feedback gain — moderate decay per loop.
+        const fb = ctx.createGain();
+        fb.gain.value = 0.96;
+
+        // Output gain
+        const out = ctx.createGain();
+        out.gain.value = 1.0;
+
+        // Register voice so it can be culled later.
+        voices.push({ out, fb });
+
+        // Signal flow:
+        //   exciter ──→ delay ──→ lpf ──→ fb ──→ delay (loop)
+        //                                 lpf ──→ out ──→ compressor
+        //                                          out ──→ reverbConv
+        exciter.connect(delay);
+        delay.connect(lpf);
+        lpf.connect(fb);
+        fb.connect(delay);       // feedback loop
+        lpf.connect(out);
+        out.connect(compressor);
+        out.connect(reverbConv);
+
+        exciter.start(now);
+        // Exciter only fires for one period; feedback sustains the sound.
+        exciter.stop(now + 1 / freq + 0.002);
+
+        // Remove from pool and disconnect after decay window (~4s).
+        setTimeout(() => {
+          const idx = voices.indexOf({ out, fb });
+          if (idx !== -1) voices.splice(idx, 1);
+          try { lpf.disconnect(); fb.disconnect(); out.disconnect(); } catch (_) {}
+        }, 4000);
+
+        freqEl.textContent  = freq.toFixed(0);
+        pluckEl.textContent = strength.toFixed(2);
+      }
+
+      function showRipple(x, y) {
+        const el = document.createElement("div");
+        el.className = "ripple";
+        el.style.left = x + "px";
+        el.style.top  = y + "px";
+        pad.appendChild(el);
+        setTimeout(() => el.remove(), 650);
+      }
+
+      function triggerFromCoords(x, y) {
+        const rect = pad.getBoundingClientRect();
+        const nx = rect.width  > 0 ? x / rect.width  : 0;
+        const ny = rect.height > 0 ? y / rect.height : 0;
+
+        const freq     = mapXToFreq(nx);
+        const strength = 0.05 + (1 - ny) * 0.95; // top = hard pluck
+        pluck(freq, strength);
+        showRipple(x, y);
+      }
+
+      function updateHoldPos(ev) {
+        const rect = pad.getBoundingClientRect();
+        holdX = clamp(ev.clientX - rect.left, 0, rect.width);
+        holdY = clamp(ev.clientY - rect.top,  0, rect.height);
+      }
+
+      function stopHold() {
+        if (holdTimer) { clearInterval(holdTimer); holdTimer = null; }
+        activeId = null;
+        statusEl.textContent = tiltReady ? "Ready (tilt active)" : "Ready";
+      }
+
+      // ── Orientation / tilt ──────────────────────────────────────────────────
+
+      function handleOrientation(ev) {
+        if (!audioCtx) return;
+        const beta  = typeof ev.beta  === "number" ? ev.beta  : 0;
+        const gamma = typeof ev.gamma === "number" ? ev.gamma : 0;
+        const tiltMag  = Math.sqrt(beta * beta + gamma * gamma);
+        const normTilt = clamp(tiltMag / 90, 0, 1);
+        currentDamp = mapTiltToDamp(normTilt);
+        dampEl.textContent = currentDamp.toFixed(0);
+      }
+
+      async function ensureTiltPermission() {
+        if (tiltReady) return true;
+        if (typeof window.DeviceOrientationEvent === "undefined") {
+          statusEl.textContent = "Playing (no tilt sensor)";
+          return false;
+        }
+        try {
+          if (typeof DeviceOrientationEvent.requestPermission === "function") {
+            const res = await DeviceOrientationEvent.requestPermission();
+            if (res !== "granted") {
+              statusEl.textContent = "Playing (tilt denied)";
+              return false;
+            }
+          }
+          window.addEventListener("deviceorientation", handleOrientation, { passive: true });
+          tiltReady = true;
+          statusEl.textContent = "Playing (tilt active)";
+          return true;
+        } catch (_) {
+          statusEl.textContent = "Playing (tilt unavailable)";
+          return false;
+        }
+      }
+
+      // ── Pointer events ───────────────────────────────────────────────────────
+
+      pad.addEventListener("pointerdown", async (ev) => {
+        ev.preventDefault();
+        ensureAudio();
+        await ensureTiltPermission();
+
+        stopHold();
+        activeId = ev.pointerId;
+        pad.setPointerCapture(activeId);
+
+        updateHoldPos(ev);
+        triggerFromCoords(holdX, holdY);
+        statusEl.textContent = tiltReady ? "Playing (tilt active)" : "Playing";
+
+        // Re-pluck while held — slow enough not to flood voices.
+        holdTimer = setInterval(() => triggerFromCoords(holdX, holdY), 400);
+      });
+
+      pad.addEventListener("pointermove", (ev) => {
+        if (ev.pointerId !== activeId) return;
+        ev.preventDefault();
+        updateHoldPos(ev);
+      });
+
+      const stopPointer = (ev) => {
+        if (ev.pointerId !== activeId) return;
+        ev.preventDefault();
+        stopHold();
+      };
+
+      pad.addEventListener("pointerup",     stopPointer);
+      pad.addEventListener("pointercancel", stopPointer);
+      pad.addEventListener("pointerleave",  stopPointer);
+
+      window.addEventListener("beforeunload", () => {
+        stopHold();
+        if (audioCtx) audioCtx.close();
+      });
+    })();
+  </script>
+</body>
+</html>

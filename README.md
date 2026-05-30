@@ -12,6 +12,11 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 |-----|----------------|----------------|
 | [Conductor](apps/conductor/) | Shared downbeat | URL-encoded start time + BPM |
 | [Pentatonic Flute](apps/flute-blow/) | Melody by breath | Mic level → sound; slide → pentatonic pitch |
+| [Piano](apps/piano/) | Melody / harmony | Web Audio keyboard + reverb |
+| [Drum Machine](apps/drums/) | Rhythm hits | 8 synthesized drum pads |
+| [FM Touch Synth](apps/fm-touch/) | Timbre exploration | Touch XY → carrier + modulator (FM) |
+| [FM Touch + Tilt](apps/fm-touch-tilt/) | Expressive FM | Touch pitch/amp; tilt → mod frequency |
+| [Karplus–Strong String](apps/ks-string/) | Plucked strings | KS delay line; tilt → damping |
 | [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM |
 | [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
@@ -19,7 +24,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Granular Tilt](apps/granular-tilt/) | Textures / clouds | Granular synthesis + orientation |
 | [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step sequencer, drum synthesis |
 
-Each app has a **Learn** panel with short explanations for performers and audience.
+Each app has a **Learn** panel with short explanations (where applicable). Piano, drums, FM, and KS string apps are adapted from [web_instruments/mobile](https://github.com/alexarje/web_instruments/tree/main/mobile).
 
 ## Workshop scenarios (20 players)
 
