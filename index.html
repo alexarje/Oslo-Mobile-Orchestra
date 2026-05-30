@@ -12,8 +12,18 @@
 <body class="hub">
   <header class="hub-header">
     <h1>Oslo Mobile Orchestra</h1>
-    <p>Tap an app · <strong>touch to play</strong> (mic/motion when asked).</p>
+    <p>Tap an app · touch to play (mic/motion when asked).</p>
   </header>
+
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Oslo Mobile Orchestra</h2>
+    <p>Pick an instrument below. In each app use <strong>Learn</strong> and <strong>Audio on/off</strong> in the top-right corner.</p>
+    <p><strong>iPhone:</strong> Allow mic, camera and motion when asked; turn silent switch off.</p>
+    <p><strong>Volume:</strong> About 70% for twenty phones in a room.</p>
+    <p><strong>Parts:</strong> <a href="apps/part/?part=1">Part 1</a> … <a href="apps/part/?part=20">Part 20</a> · <a href="apps/conductor/">Conductor</a> for shared countdown.</p>
+    <p><strong>Install:</strong> Add to Home Screen for full-screen (works offline for core pages).</p>
+    <p>Filter by section or open <strong>Larger UI</strong> below for workshop accessibility.</p>
+  </div>
 
   <div id="partBanner" class="hub-banner hidden"></div>
 
@@ -33,18 +43,11 @@
 
   <ul class="app-list" id="appList"></ul>
 
-  <details class="hub-tips panel">
-    <summary>Setup tips</summary>
-    <p><strong>iPhone:</strong> Allow mic, camera &amp; motion when asked; silent switch off.</p>
-    <p><strong>Volume:</strong> ~70% for 20 phones in a room.</p>
-    <p><strong>Parts:</strong> <a href="apps/part/?part=1">Part 1</a> … <a href="apps/part/?part=20">Part 20</a> · <a href="apps/conductor/">Conductor</a> QR</p>
-    <p><strong>Install:</strong> Add to Home Screen for full-screen (PWA).</p>
-  </details>
-
   <script type="module">
-    import "./shared/app.js";
+    import { bindLearn } from "./shared/app.js";
     import { SECTIONS, getPartFromUrl, getSectionFromUrl, applyA11y, loadA11yPreference } from "./shared/workshop.js";
 
+    bindLearn();
     loadA11yPreference();
 
     const APPS = [

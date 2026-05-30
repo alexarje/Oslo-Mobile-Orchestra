@@ -1,6 +1,8 @@
 /* piano.js – Web Audio piano (three octaves, mobile touch) */
 
-import { startAudio } from '../../shared/app.js';
+import { bindLearn, startAudio } from '../../shared/app.js';
+
+bindLearn();
 
 (function () {
   'use strict';

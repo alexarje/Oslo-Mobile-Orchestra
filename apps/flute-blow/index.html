@@ -11,11 +11,11 @@
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Pentatonic Flute</h1>
-    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
   </header>
   <div class="learn-panel panel" id="learnPanel">
-    <h2>Breath + pentatonic</h2>
-    <p>Turn <strong>Audio on</strong> (top right), allow the mic, then blow past the yellow line. Slide the pad for pitch (C major pentatonic).</p>
+    <h2>Breath + finger holes</h2>
+    <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>blow</strong> past the yellow line.</p>
+    <p><strong>Tap a hole</strong> to cover or uncover it. Lift fingers from the <strong>bottom</strong> hole upward for higher notes (C → D → E → G → A → C). Top = near mouthpiece.</p>
   </div>
   <p class="status-bar" id="status"></p>
   <div class="breath-row">
@@ -25,10 +25,9 @@
     </div>
   </div>
   <div class="main-stage">
-    <div id="flutePad" class="stage-fill play-grid">
+    <div id="fluteBody" class="stage-fill flute-body">
       <span class="pad-readout" id="readout">C4</span>
-      <span class="axis-hint">high<br>↑<br>↓<br>low</span>
-      <div class="finger-dot" id="finger" style="top:50%;left:50%"></div>
+      <div class="flute-tube" id="fluteTube" aria-label="Finger holes"></div>
     </div>
   </div>
   <script type="module">
@@ -39,36 +38,76 @@
     const PENTA = [0, 2, 4, 7, 9];
     const ROOT_MIDI = 60;
     const NOTE_NAMES = ["C", "D", "E", "G", "A"];
-    const STEPS = 10;
-    const flutePad = document.getElementById("flutePad");
-    const finger = document.getElementById("finger");
+    const HOLE_COUNT = 5;
+    /** Open holes count (0–5) → pentatonic step index (0–9). */
+    const OPEN_TO_INDEX = [0, 2, 4, 6, 8, 9];
+
+    const fluteTube = document.getElementById("fluteTube");
     let ctx, master, analyser, micStream;
     let toneGain, toneOsc, noiseGain, noiseSrc;
     let blowThreshold = 0.02;
     let currentMidi = 60;
-    let noteIndex = 5;
+    let noteIndex = 0;
     let ready = false;
     let booting = false;
     let timeData = new Float32Array(2048);
+    /** true = hole covered (finger down). */
+    const holesCovered = [true, true, true, true, true];
+    const holeBtns = [];
 
     function indexToMidi(i) {
-      const idx = Math.max(0, Math.min(STEPS - 1, Math.round(i)));
+      const idx = Math.max(0, Math.min(9, Math.round(i)));
       return ROOT_MIDI + Math.floor(idx / 5) * 12 + PENTA[idx % 5];
     }
 
     function labelFromIndex(i) {
-      const idx = Math.max(0, Math.min(STEPS - 1, Math.round(i)));
+      const idx = Math.max(0, Math.min(9, Math.round(i)));
       return `${NOTE_NAMES[idx % 5]}${4 + Math.floor(idx / 5)}`;
     }
 
-    function placeFinger(ny) {
-      finger.style.top = `${ny * 100}%`;
-      finger.style.left = "50%";
-      noteIndex = (1 - ny) * (STEPS - 1);
+    /** Open holes from the bottom of the tube upward (hole 5 → 1). */
+    function openStepsFromBottom() {
+      let n = 0;
+      for (let i = HOLE_COUNT - 1; i >= 0; i--) {
+        if (!holesCovered[i]) n++;
+        else break;
+      }
+      return n;
+    }
+
+    function applyFingering() {
+      noteIndex = OPEN_TO_INDEX[openStepsFromBottom()];
       currentMidi = indexToMidi(noteIndex);
       document.getElementById("readout").textContent = labelFromIndex(noteIndex);
-      if (toneOsc && ctx) toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), ctx.currentTime, 0.03);
+      holeBtns.forEach((btn, i) => {
+        btn.classList.toggle("open", !holesCovered[i]);
+        btn.classList.toggle("covered", holesCovered[i]);
+        btn.setAttribute("aria-pressed", holesCovered[i] ? "true" : "false");
+        btn.setAttribute("aria-label", `Hole ${i + 1} ${holesCovered[i] ? "covered" : "open"}`);
+      });
+      if (toneOsc && ctx) {
+        toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), ctx.currentTime, 0.03);
+      }
     }
+
+    function toggleHole(i) {
+      holesCovered[i] = !holesCovered[i];
+      applyFingering();
+    }
+
+    for (let i = 0; i < HOLE_COUNT; i++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "flute-hole covered";
+      btn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        void ensureAudio();
+        toggleHole(i);
+      });
+      fluteTube.appendChild(btn);
+      holeBtns.push(btn);
+    }
+    applyFingering();
 
     function getRms() {
       if (!analyser) return 0;
@@ -171,7 +210,7 @@
       setStatus("status", "Calibrating… stay quiet", "");
       await calibrate();
       ready = true;
-      setStatus("status", "Blow past yellow line", "ok");
+      setStatus("status", "Blow · tap holes for pitch", "ok");
       tick();
     }
 
@@ -187,25 +226,10 @@
 
     registerAudioBoot(boot);
 
-    flutePad.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      if (!ready) {
-        void enableAudio().then(() => {
-          if (!ready) return;
-          flutePad.setPointerCapture(e.pointerId);
-          placeFinger(Math.max(0, Math.min(1, (e.clientY - flutePad.getBoundingClientRect().top) / flutePad.offsetHeight)));
-        });
-        return;
-      }
-      flutePad.setPointerCapture(e.pointerId);
-      placeFinger(Math.max(0, Math.min(1, (e.clientY - flutePad.getBoundingClientRect().top) / flutePad.offsetHeight)));
+    document.getElementById("fluteBody").addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".flute-hole")) return;
+      if (!ready) void enableAudio();
     });
-    flutePad.addEventListener("pointermove", (e) => {
-      if (!flutePad.hasPointerCapture(e.pointerId)) return;
-      placeFinger(Math.max(0, Math.min(1, (e.clientY - flutePad.getBoundingClientRect().top) / flutePad.offsetHeight)));
-    });
-
-    placeFinger(0.5);
   </script>
 </body>
 </html>

@@ -33,13 +33,17 @@
     <a class="back-link" href="../../">←</a>
     <h1>Audience</h1>
   </header>
-  <p class="status-bar" style="text-align:center">One button · join the swell</p>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Audience swell</h2>
+    <p>Turn <strong>Audio on</strong>, then <strong>hold</strong> the big button to add your phone to a collective drone swell. Release to fade out.</p>
+  </div>
   <div class="audience-stage">
     <button type="button" class="btn" id="swellBtn">Hold<br />to swell</button>
   </div>
   <script type="module">
-    import "../../shared/app.js";
-    import { startAudio } from "../../shared/app.js";
+    import { bindLearn, startAudio } from "../../shared/app.js";
+
+    bindLearn();
     import { createMasterBus } from "../../shared/audio.js";
 
     let ctx, master, osc, gain, built = false;

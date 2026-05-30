@@ -4,14 +4,65 @@
 import { getAudioContext, unlockAudio } from "./audio.js";
 
 const AUDIO_TOGGLE_ID = "audioToggle";
+const HEADER_CONTROLS_ID = "headerControls";
 let audioOn = false;
 let optionalBootFn = null;
 
+/** Group Learn + Audio on/off in the header (upper right). */
+export function initHeaderControls() {
+  const header = document.querySelector(".app-header, .hub-header");
+  if (!header || document.getElementById(HEADER_CONTROLS_ID)) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "header-controls";
+  wrap.id = HEADER_CONTROLS_ID;
+
+  const panel = document.getElementById("learnPanel");
+  let learnBtn = document.getElementById("learnBtn");
+  if (panel) {
+    if (!learnBtn) {
+      learnBtn = document.createElement("button");
+      learnBtn.type = "button";
+      learnBtn.id = "learnBtn";
+      learnBtn.className = "learn-toggle";
+      learnBtn.textContent = "Learn";
+    } else {
+      learnBtn.remove();
+    }
+    wrap.appendChild(learnBtn);
+  }
+
+  if (!document.getElementById(AUDIO_TOGGLE_ID)) {
+    const audioWrap = document.createElement("div");
+    audioWrap.className = "audio-toggle-wrap";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = AUDIO_TOGGLE_ID;
+    btn.className = "audio-toggle is-off";
+    btn.setAttribute("aria-pressed", "false");
+    btn.setAttribute("aria-label", "Audio off");
+    btn.innerHTML = '<span class="audio-toggle-label">Audio off</span>';
+    btn.addEventListener("click", () => {
+      void (audioOn ? setAudioOff() : setAudioOn());
+    });
+    audioWrap.appendChild(btn);
+    wrap.appendChild(audioWrap);
+    setAudioActive(false);
+  }
+
+  if (wrap.childElementCount > 0) header.appendChild(wrap);
+}
+
 export function bindLearn(learnBtnId = "learnBtn", panelId = "learnPanel") {
-  document.getElementById(learnBtnId)?.addEventListener("click", () => {
-    document.getElementById(panelId)?.classList.toggle("open");
+  initHeaderControls();
+  const btn = document.getElementById(learnBtnId);
+  const panel = document.getElementById(panelId);
+  btn?.addEventListener("click", () => {
+    panel?.classList.toggle("open");
+    const open = panel?.classList.contains("open");
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
   });
-  initAudioToggle();
+  btn?.setAttribute("aria-controls", panelId);
 }
 
 /** Optional full setup (mic, graph) when user turns audio on from the header toggle. */
@@ -19,33 +70,14 @@ export function registerAudioBoot(fn) {
   optionalBootFn = fn;
 }
 
-/** Header control — upper right on every app page. */
+/** @deprecated Use initHeaderControls */
 export function initAudioToggle() {
-  const header = document.querySelector(".app-header, .hub-header");
-  if (!header || document.getElementById(AUDIO_TOGGLE_ID)) return;
-
-  const wrap = document.createElement("div");
-  wrap.className = "audio-toggle-wrap";
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.id = AUDIO_TOGGLE_ID;
-  btn.className = "audio-toggle is-off";
-  btn.setAttribute("aria-pressed", "false");
-  btn.setAttribute("aria-label", "Audio off");
-  btn.innerHTML = '<span class="audio-toggle-label">Audio off</span>';
-  btn.addEventListener("click", () => {
-    void (audioOn ? setAudioOff() : setAudioOn());
-  });
-
-  wrap.appendChild(btn);
-  header.appendChild(wrap);
-  setAudioActive(false);
+  initHeaderControls();
 }
 
-/** @deprecated Use initAudioToggle — kept for piano/drumkit imports */
+/** @deprecated Use initHeaderControls */
 export function ensureAudioBadge() {
-  initAudioToggle();
+  initHeaderControls();
 }
 
 export function isAudioActive() {
@@ -150,14 +182,14 @@ export function createAudioBoot(initFn, { screenTap = true } = {}) {
   return ensureReady;
 }
 
-function autoInitAudioToggle() {
-  if (document.querySelector(".app-header, .hub-header")) initAudioToggle();
+function autoInitHeaderControls() {
+  if (document.querySelector(".app-header, .hub-header")) initHeaderControls();
 }
 
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", autoInitAudioToggle);
+    document.addEventListener("DOMContentLoaded", autoInitHeaderControls);
   } else {
-    autoInitAudioToggle();
+    autoInitHeaderControls();
   }
 }

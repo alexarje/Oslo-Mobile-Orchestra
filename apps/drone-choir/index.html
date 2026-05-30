@@ -11,13 +11,12 @@
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Drone Choir</h1>
-    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Ensemble harmony</h2>
-    <p>Pick chord tone · <strong>hold</strong> pad to sustain · slide ±5 semitones · rotate to detune (cents ruler).</p>
+    <p>Turn <strong>Audio on</strong>. Pick a chord tone (F minor), <strong>hold</strong> the pad to sustain, slide <strong>up/down</strong> for ±5 semitones, rotate to detune in cents.</p>
   </div>
-  <p class="pick-label">F minor — pick one</p>
+  <p class="pick-label" aria-hidden="true">F minor</p>
   <div class="note-grid" id="notes"></div>
   <div class="main-stage">
     <div id="pitchPad" class="stage-fill play-grid">
@@ -25,7 +24,6 @@
         <span>+5</span><span>+3</span><span>0</span><span>−3</span><span>−5</span>
       </div>
       <span class="pad-readout" id="readout">—</span>
-      <span class="axis-hint">high<br>↑<br>↓<br>low</span>
       <div class="finger-dot" id="finger" style="top:50%;left:50%;opacity:0"></div>
     </div>
   </div>

@@ -20,6 +20,12 @@
     <a class="back-link" href="../../">←</a>
     <h1>Conductor</h1>
   </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Conductor</h2>
+    <p><strong>Conduct</strong> — set BPM, run a 5-second countdown, share the musician link or QR. Everyone opens the link for the same start time.</p>
+    <p><strong>Play</strong> — musician view with countdown and Pulse Grid link. Scan the QR to join without typing the URL.</p>
+    <p>Turn <strong>Audio on</strong> for the downbeat beep at “Go!”.</p>
+  </div>
   <div class="role-tabs">
     <button type="button" id="tabCond" class="active">Conduct</button>
     <button type="button" id="tabMus">Play</button>
@@ -36,7 +42,6 @@
     <div class="scroll-panel hidden" id="sharePanel">
       <div class="qr-share">
         <canvas id="shareQr" role="img" aria-label="QR code — scan to join"></canvas>
-        <p class="qr-caption">Scan to join · same countdown</p>
       </div>
       <p style="margin:0 0 0.35rem;font-size:0.75rem;color:var(--muted);">Musician link</p>
       <div class="link-box" id="musicianLink"></div>
@@ -61,7 +66,9 @@
   </div>
 
   <script type="module">
-    import { startAudio } from "../../shared/app.js";
+    import { bindLearn, startAudio } from "../../shared/app.js";
+
+    bindLearn();
     import { renderQrCanvas } from "../../shared/qr.js";
 
     const params = new URLSearchParams(location.search);

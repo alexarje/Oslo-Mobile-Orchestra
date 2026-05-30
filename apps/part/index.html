@@ -12,17 +12,24 @@
     <a class="back-link" href="../../">←</a>
     <h1>Your Part</h1>
   </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Your part</h2>
+    <p>Open with <code>?part=1</code> … <code>?part=20</code> from a QR or score card. Each part suggests a section and instrument.</p>
+    <p>Turn <strong>Audio on</strong> in the app you open.</p>
+  </div>
   <div class="scroll-panel" style="padding:0.75rem">
     <p id="partTitle" style="font-size:1.1rem;font-weight:600;margin:0 0 0.5rem">—</p>
-    <p id="partDesc" style="color:var(--muted);font-size:0.8rem;margin:0 0 1rem">Open with <code>?part=1</code> … <code>?part=20</code> from the conductor QR or score card.</p>
+    <p id="partDesc" style="color:var(--muted);font-size:0.8rem;margin:0 0 1rem"></p>
     <a class="btn" id="goApp" href="../../" style="display:block;text-align:center;text-decoration:none;margin-bottom:0.75rem">Open instrument</a>
     <a class="btn-secondary btn" href="../../" style="display:block;text-align:center;text-decoration:none">All apps</a>
     <h2 style="font-size:0.85rem;margin:1rem 0 0.5rem">All parts</h2>
     <ul class="app-list" id="partList"></ul>
   </div>
   <script type="module">
-    import "../../shared/app.js";
+    import { bindLearn } from "../../shared/app.js";
     import { PARTS, SECTIONS, getPartFromUrl } from "../../shared/workshop.js";
+
+    bindLearn();
 
     const part = getPartFromUrl();
     const go = document.getElementById("goApp");

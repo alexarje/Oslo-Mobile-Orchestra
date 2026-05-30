@@ -100,12 +100,14 @@
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Train &amp; Shake</h1>
-    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Machine learning</h2>
-    <p>Record <strong>still</strong>, <strong>sway</strong>, and <strong>shake</strong> → compare <strong>k-NN</strong> vs a <strong>tiny 2-layer net</strong> (runs on your phone, no server).</p>
-    <p>Open <strong>Teach</strong> for a live feature map and leave-one-out confusion matrix. Adjust <strong>k</strong> and hear labels change.</p>
+    <p>Turn <strong>Audio on</strong>. Record <strong>still</strong>, <strong>sway</strong>, and <strong>shake</strong> (at least three of each), then <strong>Listen</strong>.</p>
+    <p>Compare <strong>k-NN</strong> vs a <strong>tiny 2-layer net</strong> — all on your phone, no server.</p>
+    <p><strong>Feature map</strong> — each dot is one example (mag vs jitter). White ring = live reading while listening.</p>
+    <p><strong>Confusion matrix</strong> — rows = true label, columns = predicted; off-diagonal = mislabels on your training set.</p>
+    <p><strong>Ethics</strong> — data stays on device until you export JSON. Different grips and phone models change readings; discuss bias before trusting the sound. Export only when the class agrees.</p>
   </div>
 
   <div class="pred-display still" id="pred">—</div>
@@ -146,7 +148,6 @@
     <details class="teach-details" open>
       <summary>Teach · feature map</summary>
       <div class="teach-body">
-        <p>Each dot is one recorded example in 2D (<strong>mag</strong> vs <strong>jitter</strong>). White ring = live reading while listening.</p>
         <div class="legend-dots">
           <span class="legend-still">still</span>
           <span class="legend-sway">sway</span>
@@ -159,18 +160,13 @@
     <details class="teach-details">
       <summary>Confusion matrix (leave-one-out)</summary>
       <div class="teach-body" id="confusionWrap">
-        <p>Rows = true label, columns = predicted. Off-diagonal cells are mislabels on your training set.</p>
         <div id="confusion"></div>
       </div>
     </details>
 
     <details class="teach-details">
       <summary>Ethics · on-device</summary>
-      <div class="teach-body ethics-card">
-        <p><strong>Data stays on your phone.</strong> Examples live in browser memory until you clear or export a JSON file. Nothing is sent to a cloud API for training.</p>
-        <p><strong>Crowd training is uneven.</strong> Different grips, pockets, and phone models change motion readings. A set that works for one group may fail for another — discuss bias before trusting the sound.</p>
-        <p><strong>Export is opt-in.</strong> Sharing a training file is like sharing homework: only do it when the class agrees.</p>
-      </div>
+      <div class="teach-body ethics-card"></div>
     </details>
   </div>
 

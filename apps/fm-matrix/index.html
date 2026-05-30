@@ -27,15 +27,15 @@
     .matrix-grid .muted { color: var(--muted); font-size: 0.62rem; }
   </style>
 </head>
-<body class="app-shell">
+<body class="app-shell fm-matrix-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>FM Matrix</h1>
-    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>2×2 FM routing</h2>
-    <p>Workshop presets for how <strong>M</strong> (modulator) and <strong>C</strong> (carrier) interact. Hold pad: <strong>X</strong> = pitch, <strong>Y</strong> = depth.</p>
+    <p>Turn <strong>Audio on</strong>. Pick a routing preset, then hold the pad — <strong>X</strong> = pitch, <strong>Y</strong> = depth.</p>
+    <p><strong>M → C</strong> classic FM · <strong>M → M</strong> self-mod · <strong>Parallel</strong> C+M out · <strong>Chaos</strong> M→C + feedback.</p>
   </div>
   <div class="matrix-grid" id="matrix">
     <button type="button" data-p="0" class="active">M → C<br /><span class="muted">Classic FM</span></button>

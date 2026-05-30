@@ -78,23 +78,21 @@
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Photo Sonifier</h1>
-    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Camera → grains</h2>
-    <p>Each video frame becomes a <strong>brightness map</strong>. Brighter areas spawn more granular “grains” — a texture of your surroundings.</p>
-    <p><strong>Workshop mode:</strong> rear camera, low resolution, nothing leaves the device.</p>
+    <p>Turn <strong>Audio on</strong>, then <strong>Start camera</strong>. Each frame becomes a brightness map — brighter pixels spawn more grains.</p>
+    <p>Camera is used <strong>only while open</strong>. Nothing is recorded, uploaded, or saved. <strong>Workshop mode</strong> uses the rear camera at low resolution.</p>
   </div>
 
   <div id="consentGate" class="consent-gate">
     <div class="consent-card">
-      <h2>Camera consent</h2>
-      <p>This app uses your camera <strong>only while open</strong>. Frames are analyzed on your phone for sound. Nothing is recorded, uploaded, or saved.</p>
+      <h2>Camera</h2>
       <label>
         <input type="checkbox" id="workshopMode" checked />
-        <span><strong>Workshop mode</strong> — rear camera, low resolution (recommended in class)</span>
+        <span>Workshop mode (rear · low res)</span>
       </label>
-      <button type="button" class="btn" id="consentBtn">Start camera &amp; sound</button>
+      <button type="button" class="btn" id="consentBtn">Start camera</button>
     </div>
   </div>
 

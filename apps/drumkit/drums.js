@@ -1,6 +1,8 @@
 /* drums.js – Web Audio drum machine */
 
-import { startAudio } from '../../shared/app.js';
+import { bindLearn, startAudio } from '../../shared/app.js';
+
+bindLearn();
 
 (function () {
   'use strict';
