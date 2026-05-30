@@ -19,6 +19,17 @@ export function getAudioContext() {
  */
 export async function unlockAudio(ctx = getAudioContext()) {
   if (ctx.state === "suspended") await ctx.resume();
+  // Short silent blip — some iOS builds stay muted after resume() alone.
+  try {
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start();
+    src.stop();
+  } catch {
+    /* ignore */
+  }
   return ctx;
 }
 

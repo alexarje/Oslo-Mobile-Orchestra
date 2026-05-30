@@ -11,7 +11,7 @@
 1. Test Wi‑Fi or mobile hotspot; phones need the same host URL.
 2. Conductor phone: full volume, Do Not Disturb on.
 3. Pre-assign roles on a slide (optional): row A = drones, row B = rhythm, etc.
-4. Demo once: tap **Start sound** → iOS permission for motion if asked.
+4. Demo once: **tap anywhere** on the app screen → allow mic or motion when prompted.
 
 ## Facilitator script (45 min)
 
@@ -45,7 +45,7 @@ All screens down; one sustained drone from a single phone. Discuss what felt “
 
 | Problem | Fix |
 |---------|-----|
-| No sound | Tap **Start sound** again; check mute switch (iOS) |
+| No sound | Tap anywhere on the screen first; check mute switch (iOS) |
 | Motion flat | Reload; Settings → Safari → Motion & Orientation |
 | Out of sync | Use Conductor link; accept ~50–100 ms spread without server |
 | Harsh room | Lower phone volume to 50%; fewer “shake” noise players |

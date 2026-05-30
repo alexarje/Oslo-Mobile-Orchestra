@@ -17,7 +17,7 @@
     <h2>Granular synthesis</h2>
     <p>Tap to start grain cloud. Tilt = rate; roll = pitch.</p>
   </div>
-  <p class="status-bar" id="status">Tap view to start</p>
+  <p class="status-bar" id="status">Tap screen to start</p>
   <div class="readout-row">
     <p class="value-chip">Rate <strong id="rateOut">—</strong>/s</p>
     <p class="value-chip">Pitch <strong id="pitchOut">—</strong>×</p>
@@ -105,7 +105,6 @@
     });
 
     new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
-    tapZone.addEventListener("pointerdown", async () => { await ensureReady(); });
   </script>
 </body>
 </html>

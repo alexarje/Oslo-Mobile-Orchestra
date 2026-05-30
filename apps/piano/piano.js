@@ -22,6 +22,7 @@
   const keyboard = document.getElementById('keyboard');
   const octaveDisplay = document.getElementById('octave-display');
   const statusEl = document.getElementById('status');
+  const slideModeEl = document.getElementById('slideMode');
 
   const WHITE_W = 33; // key 32px + 1px gap
   const BLACK_NUDGE = 24;
@@ -40,13 +41,17 @@
       ctx = new AudioContext();
       buildReverb();
     } else if (ctx.state === 'suspended') {
-      ctx.resume();
+      void ctx.resume();
     }
     pingIOS(ctx);
   }
 
   function markReady() {
-    if (statusEl) statusEl.textContent = 'C4–B5 · tap keys';
+    if (statusEl) {
+      statusEl.textContent = slideModeEl.checked
+        ? 'C4–B5 · hold & slide (chromatic)'
+        : 'C4–B5 · tap or drag keys';
+    }
   }
 
   document.body.addEventListener('pointerdown', () => {
@@ -136,34 +141,205 @@
   const keyMap = {};
   const activeVoices = {};
   const heldSemis = new Set();
+  const pointerNotes = new Map();
+  let slideVoice = null;
+  let slidePointerId = null;
+  let slideSemi = null;
+
+  function clamp(v, lo, hi) {
+    return Math.min(hi, Math.max(lo, v));
+  }
+
+  function semiFromClientX(clientX) {
+    const rect = keyboard.getBoundingClientRect();
+    if (rect.width <= 0) return 0;
+    const nx = clamp((clientX - rect.left) / rect.width, 0, 1);
+    return Math.round(nx * (NOTE_DEFS.length - 1));
+  }
+
+  /** Nearest chromatic key under the finger (black keys included). */
+  function semiFromPointer(clientX, clientY) {
+    const hit = document.elementFromPoint(clientX, clientY);
+    const key = hit?.closest?.('.piano-key');
+    if (key) return parseInt(key.dataset.semi, 10);
+    return semiFromClientX(clientX);
+  }
+
+  function setKeyActive(semi, on) {
+    const el = keyboard.querySelector(`.piano-key[data-semi="${semi}"]`);
+    if (el) el.classList.toggle('active', on);
+  }
+
+  function createVoice(freq) {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.type = waveformSelect.value;
+    osc.frequency.setValueAtTime(freq, t);
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(0.75, t + 0.012);
+    env.gain.exponentialRampToValueAtTime(0.35, t + 0.12);
+    osc.connect(env);
+    env.connect(dryGain);
+    env.connect(reverbNode);
+    osc.start(t);
+    return { osc, env };
+  }
+
+  function releaseVoice(voice) {
+    if (!voice) return;
+    const { osc, env } = voice;
+    const t = ctx.currentTime;
+    const stopAt = t + RELEASE_SEC + 0.03;
+    env.gain.cancelScheduledValues(t);
+    env.gain.setValueAtTime(Math.max(env.gain.value, 0.0001), t);
+    env.gain.linearRampToValueAtTime(0, t + RELEASE_SEC);
+    osc.stop(stopAt);
+    setTimeout(() => {
+      try {
+        osc.disconnect();
+        env.disconnect();
+      } catch (_) { /* already disconnected */ }
+    }, (RELEASE_SEC + 0.05) * 1000);
+  }
+
+  function updateSlideHighlight(semi) {
+    keyboard.querySelectorAll('.piano-key').forEach((el) => {
+      el.classList.toggle('active', parseInt(el.dataset.semi, 10) === semi);
+    });
+  }
+
+  function clearSlideHighlight() {
+    keyboard.querySelectorAll('.piano-key.active').forEach((el) => el.classList.remove('active'));
+  }
+
+  function chromaticMove(pointerId, clientX, clientY, legato) {
+    const newSemi = semiFromPointer(clientX, clientY);
+    const oldSemi = pointerNotes.get(pointerId);
+    if (oldSemi === newSemi) return;
+
+    if (legato && slideVoice) {
+      slideSemi = newSemi;
+      slideVoice.osc.frequency.setValueAtTime(
+        noteFreq(newSemi, octaveShift()),
+        ctx.currentTime
+      );
+      updateSlideHighlight(newSemi);
+      pointerNotes.set(pointerId, newSemi);
+      return;
+    }
+
+    if (oldSemi != null) {
+      heldSemis.delete(oldSemi);
+      setKeyActive(oldSemi, false);
+      stopNote(oldSemi);
+    }
+    pointerNotes.set(pointerId, newSemi);
+    heldSemis.add(newSemi);
+    setKeyActive(newSemi, true);
+    playNote(newSemi);
+  }
+
+  function releasePointer(pointerId) {
+    const semi = pointerNotes.get(pointerId);
+    if (semi == null) return;
+    heldSemis.delete(semi);
+    setKeyActive(semi, false);
+    stopNote(semi);
+    pointerNotes.delete(pointerId);
+  }
+
+  function startSlide(semi) {
+    ensureCtx();
+    stopSlide();
+    slideSemi = semi;
+    pointerNotes.set(slidePointerId, semi);
+    slideVoice = createVoice(noteFreq(semi, octaveShift()));
+    updateSlideHighlight(semi);
+  }
+
+  function stopSlide() {
+    if (slideVoice) {
+      releaseVoice(slideVoice);
+      slideVoice = null;
+    }
+    if (slidePointerId != null) {
+      pointerNotes.delete(slidePointerId);
+    }
+    slideSemi = null;
+    clearSlideHighlight();
+  }
+
+  function bindSlideMode() {
+    keyboard.addEventListener('pointerdown', (e) => {
+      if (!slideModeEl.checked) return;
+      e.preventDefault();
+      ensureCtx();
+      slidePointerId = e.pointerId;
+      keyboard.setPointerCapture(e.pointerId);
+      startSlide(semiFromPointer(e.clientX, e.clientY));
+    });
+
+    keyboard.addEventListener('pointermove', (e) => {
+      if (!slideModeEl.checked || e.pointerId !== slidePointerId) return;
+      e.preventDefault();
+      chromaticMove(e.pointerId, e.clientX, e.clientY, true);
+    });
+
+    const endSlide = (e) => {
+      if (!slideModeEl.checked || e.pointerId !== slidePointerId) return;
+      if (keyboard.hasPointerCapture(e.pointerId)) {
+        keyboard.releasePointerCapture(e.pointerId);
+      }
+      slidePointerId = null;
+      stopSlide();
+    };
+
+    keyboard.addEventListener('pointerup', endSlide);
+    keyboard.addEventListener('pointercancel', endSlide);
+    keyboard.addEventListener('lostpointercapture', () => {
+      slidePointerId = null;
+      stopSlide();
+    });
+  }
+
+  slideModeEl.addEventListener('change', () => {
+    stopSlide();
+    markReady();
+  });
+
+  keyboard.style.touchAction = 'none';
 
   function bindKey(el, semi) {
     el.addEventListener('pointerdown', (e) => {
+      if (slideModeEl.checked) return;
       e.preventDefault();
       ensureCtx();
       if (heldSemis.has(semi)) return;
       heldSemis.add(semi);
+      pointerNotes.set(e.pointerId, semi);
       el.setPointerCapture(e.pointerId);
       playNote(semi);
       el.classList.add('active');
+    });
+
+    el.addEventListener('pointermove', (e) => {
+      if (slideModeEl.checked || !el.hasPointerCapture(e.pointerId)) return;
+      e.preventDefault();
+      chromaticMove(e.pointerId, e.clientX, e.clientY, false);
     });
 
     const release = (e) => {
       if (e && e.pointerId != null && el.hasPointerCapture(e.pointerId)) {
         el.releasePointerCapture(e.pointerId);
       }
-      if (!heldSemis.has(semi)) return;
-      heldSemis.delete(semi);
-      el.classList.remove('active');
-      stopNote(semi);
+      releasePointer(e.pointerId);
     };
 
     el.addEventListener('pointerup', release);
     el.addEventListener('pointercancel', release);
-    el.addEventListener('lostpointercapture', () => {
-      heldSemis.delete(semi);
-      el.classList.remove('active');
-      stopNote(semi);
+    el.addEventListener('lostpointercapture', (e) => {
+      releasePointer(e.pointerId);
     });
   }
 
@@ -197,54 +373,19 @@
   }
 
   buildKeyboard();
+  bindSlideMode();
 
   function playNote(semi) {
     ensureCtx();
     if (activeVoices[semi]) return;
-
-    const freq = noteFreq(semi, octaveShift());
-    const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const env = ctx.createGain();
-
-    osc.type = waveformSelect.value;
-    osc.frequency.setValueAtTime(freq, t);
-
-    // Start above zero — exponential ramps cannot target 0 (causes clicks).
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(0.75, t + 0.012);
-    env.gain.exponentialRampToValueAtTime(0.35, t + 0.12);
-
-    osc.connect(env);
-    env.connect(dryGain);
-    env.connect(reverbNode);
-    osc.start(t);
-
-    activeVoices[semi] = { osc, env };
+    activeVoices[semi] = createVoice(noteFreq(semi, octaveShift()));
   }
 
   function stopNote(semi) {
     const voice = activeVoices[semi];
     if (!voice) return;
-
-    const { osc, env } = voice;
-    const t = ctx.currentTime;
-    const stopAt = t + RELEASE_SEC + 0.03;
-
-    env.gain.cancelScheduledValues(t);
-    env.gain.setValueAtTime(Math.max(env.gain.value, 0.0001), t);
-    // Linear ramp to true silence before stopping the oscillator (avoids end click).
-    env.gain.linearRampToValueAtTime(0, t + RELEASE_SEC);
-    osc.stop(stopAt);
-
+    releaseVoice(voice);
     delete activeVoices[semi];
-
-    setTimeout(() => {
-      try {
-        osc.disconnect();
-        env.disconnect();
-      } catch (_) { /* already disconnected */ }
-    }, (RELEASE_SEC + 0.05) * 1000);
   }
 
   document.addEventListener('keydown', (e) => {

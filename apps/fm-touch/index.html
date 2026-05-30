@@ -28,7 +28,7 @@
     <p class="value-chip">Mod <strong id="modHz">110</strong> Hz</p>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot, bindScreenAudioBoot } from "../../shared/app.js";
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
 
     bindLearn();
@@ -58,7 +58,6 @@
       modOsc.start();
       setStatus("status", "Drag to play", "ok");
     });
-    bindScreenAudioBoot(ensureReady);
 
     function setFromEvent(ev) {
       const rect = playArea.getBoundingClientRect();

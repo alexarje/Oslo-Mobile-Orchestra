@@ -26,7 +26,7 @@
       masterGain.gain.value = parseFloat(volumeSlider.value);
       masterGain.connect(ctx.destination);
     } else if (ctx.state === 'suspended') {
-      ctx.resume();
+      void ctx.resume();
     }
     pingIOS(ctx);
   }

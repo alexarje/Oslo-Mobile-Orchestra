@@ -27,7 +27,7 @@
     <p class="value-chip">Damp <strong id="dampEl">4000</strong> Hz</p>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot, bindScreenAudioBoot } from "../../shared/app.js";
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
     bindLearn();
@@ -72,7 +72,6 @@
       }
       setStatus("status", "Hold pad to pluck", "ok");
     });
-    bindScreenAudioBoot(ensureReady);
 
     function pluck(freq, strength) {
       const sr = ctx.sampleRate;

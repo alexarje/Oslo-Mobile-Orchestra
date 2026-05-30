@@ -28,11 +28,16 @@ export function bindScreenAudioBoot(ensureReady, onReady) {
   );
 }
 
-/** One-shot audio + app init on first user gesture (iOS-safe). */
-export function createAudioBoot(initFn) {
+/**
+ * One-shot audio + app init on first user gesture (iOS-safe).
+ * @param {object} [opts]
+ * @param {boolean} [opts.screenTap=true] First tap anywhere on the page runs init (not only the play pad).
+ */
+export function createAudioBoot(initFn, { screenTap = true } = {}) {
   let done = false;
   let pending = null;
-  return async function ensureReady() {
+
+  async function ensureReady() {
     if (done) {
       const ctx = getAudioContext();
       await unlockAudio(ctx);
@@ -40,15 +45,26 @@ export function createAudioBoot(initFn) {
     }
     if (!pending) {
       pending = (async () => {
-        const ctx = getAudioContext();
-        await unlockAudio(ctx);
-        await initFn(ctx);
-        done = true;
-        return ctx;
+        try {
+          const ctx = getAudioContext();
+          await unlockAudio(ctx);
+          await initFn(ctx);
+          done = true;
+          return ctx;
+        } catch (err) {
+          pending = null;
+          throw err;
+        }
       })();
     }
     return pending;
-  };
+  }
+
+  if (screenTap) {
+    bindScreenAudioBoot(ensureReady);
+  }
+
+  return ensureReady;
 }
 
 export function pingIOSUnlock(ctx) {

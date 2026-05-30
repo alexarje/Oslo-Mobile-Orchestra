@@ -169,7 +169,7 @@
       ready = true;
       tick();
       setStatus("status", "Blow · slide pitch", "ok");
-    });
+    }, { screenTap: false });
 
     flutePad.addEventListener("pointerdown", async (e) => {
       flutePad.setPointerCapture(e.pointerId);
