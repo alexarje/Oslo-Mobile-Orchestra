@@ -18,7 +18,7 @@ export function detectPitchHz(samples, sampleRate, minHz = 80, maxHz = 1200) {
       bestLag = lag;
     }
   }
-  if (bestCorr < 0.01) return null;
+  if (bestCorr < 0.002) return null;
   return sampleRate / bestLag;
 }
 
