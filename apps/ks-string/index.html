@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>KS String — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>KS String</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Karplus–Strong</h2>
+    <p>Hold to pluck. <strong>X</strong> = pitch, <strong>Y</strong> = strength. Tilt = damping.</p>
+  </div>
+  <p class="status-bar" id="status">Tap &amp; hold pad</p>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"></div>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Pitch <strong id="freqEl">110</strong> Hz</p>
+    <p class="value-chip">Pluck <strong id="pluckEl">0.5</strong></p>
+    <p class="value-chip">Damp <strong id="dampEl">4000</strong> Hz</p>
+  </div>
+  <script type="module">
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+
+    bindLearn();
+    const pad = document.getElementById("pad");
+    let ctx, compressor, reverbConv, reverbWet;
+    let currentDamp = 4000;
+    let activeId = null;
+    let holdTimer = null;
+    let holdX = 0, holdY = 0;
+    const voices = [];
+    const MAX_VOICES = 3;
+
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    const mapX = (nx) => 40 * Math.pow(300 / 40, nx);
+
+    function reverbBuf(c, sec) {
+      const len = Math.floor(c.sampleRate * sec);
+      const b = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = b.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2;
+      }
+      return b;
+    }
+
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
+      compressor = ctx.createDynamicsCompressor();
+      compressor.connect(ctx.destination);
+      reverbConv = ctx.createConvolver();
+      reverbConv.buffer = reverbBuf(ctx, 1.2);
+      reverbWet = ctx.createGain();
+      reverbWet.gain.value = 0.3;
+      reverbConv.connect(reverbWet);
+      reverbWet.connect(ctx.destination);
+      if (await enableSensors()) {
+        onOrientation((o) => {
+          const t = clamp(Math.sqrt((o.beta || 0) ** 2 + (o.gamma || 0) ** 2) / 90, 0, 1);
+          currentDamp = 8000 * (300 / 8000) ** t;
+          document.getElementById("dampEl").textContent = currentDamp.toFixed(0);
+        });
+      }
+      setStatus("status", "Hold pad to pluck", "ok");
+    });
+
+    function pluck(freq, strength) {
+      const sr = ctx.sampleRate;
+      const now = ctx.currentTime;
+      const n = Math.ceil(sr / freq);
+      const buf = ctx.createBuffer(1, n, sr);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * strength;
+      const exc = ctx.createBufferSource();
+      exc.buffer = buf;
+      const delay = ctx.createDelay(0.5);
+      delay.delayTime.value = 1 / freq;
+      const lpf = ctx.createBiquadFilter();
+      lpf.type = "lowpass";
+      lpf.frequency.value = currentDamp;
+      const fb = ctx.createGain();
+      fb.gain.value = 0.96;
+      const out = ctx.createGain();
+      while (voices.length >= MAX_VOICES) voices.shift()?.disconnect?.();
+      voices.push(out);
+      exc.connect(delay);
+      delay.connect(lpf);
+      lpf.connect(fb);
+      fb.connect(delay);
+      lpf.connect(out);
+      out.connect(compressor);
+      out.connect(reverbConv);
+      exc.start(now);
+      exc.stop(now + 1 / freq + 0.002);
+      document.getElementById("freqEl").textContent = freq.toFixed(0);
+      document.getElementById("pluckEl").textContent = strength.toFixed(2);
+    }
+
+    function ripple(x, y) {
+      const el = document.createElement("div");
+      el.className = "pluck-ripple";
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      pad.appendChild(el);
+      setTimeout(() => el.remove(), 600);
+    }
+
+    function trigger(x, y) {
+      const r = pad.getBoundingClientRect();
+      const nx = x / r.width;
+      const ny = y / r.height;
+      pluck(mapX(nx), 0.05 + (1 - ny) * 0.95);
+      ripple(x, y);
+    }
+
+    pad.addEventListener("pointerdown", async (ev) => {
+      ev.preventDefault();
+      await ensureReady();
+      activeId = ev.pointerId;
+      pad.setPointerCapture(activeId);
+      pad.classList.add("active");
+      const r = pad.getBoundingClientRect();
+      holdX = clamp(ev.clientX - r.left, 0, r.width);
+      holdY = clamp(ev.clientY - r.top, 0, r.height);
+      trigger(holdX, holdY);
+      holdTimer = setInterval(() => trigger(holdX, holdY), 400);
+    });
+    pad.addEventListener("pointermove", (ev) => {
+      if (ev.pointerId !== activeId) return;
+      const r = pad.getBoundingClientRect();
+      holdX = clamp(ev.clientX - r.left, 0, r.width);
+      holdY = clamp(ev.clientY - r.top, 0, r.height);
+    });
+    const stop = (ev) => {
+      if (ev.pointerId !== activeId) return;
+      clearInterval(holdTimer);
+      holdTimer = null;
+      activeId = null;
+      pad.classList.remove("active");
+    };
+    pad.addEventListener("pointerup", stop);
+    pad.addEventListener("pointercancel", stop);
+  </script>
+</body>
+</html>

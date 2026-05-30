@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>FM Touch Synth — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>FM Touch Synth</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>FM synthesis</h2>
+    <p><strong>X</strong> = carrier pitch. <strong>Y</strong> = modulator pitch &amp; depth. Hold to play.</p>
+  </div>
+  <p class="status-bar" id="status">Tap pad to play</p>
+  <div class="main-stage">
+    <div id="playArea" class="stage-fill play-grid">
+      <div class="touch-dot" id="dot"></div>
+    </div>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Carrier <strong id="carrierHz">220</strong> Hz</p>
+    <p class="value-chip">Mod <strong id="modHz">110</strong> Hz</p>
+  </div>
+  <script type="module">
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+
+    bindLearn();
+    const playArea = document.getElementById("playArea");
+    const dot = document.getElementById("dot");
+    let carrierOsc, modOsc, modGain, ampGain, master;
+    let activePointerId = null;
+
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const mapX = (nx) => 90 * Math.pow(880 / 90, nx);
+    const mapY = (ny) => 40 * Math.pow(1200 / 40, 1 - ny);
+
+    const ensureReady = createAudioBoot(async (ctx) => {
+      ({ master } = createMasterBus(ctx, 0.55));
+      carrierOsc = ctx.createOscillator();
+      modOsc = ctx.createOscillator();
+      modGain = ctx.createGain();
+      ampGain = ctx.createGain();
+      carrierOsc.type = modOsc.type = "sine";
+      modGain.gain.value = 180;
+      ampGain.gain.value = 0;
+      modOsc.connect(modGain);
+      modGain.connect(carrierOsc.frequency);
+      carrierOsc.connect(ampGain);
+      ampGain.connect(master);
+      carrierOsc.start();
+      modOsc.start();
+      setStatus("status", "Drag to play", "ok");
+    });
+
+    function setFromEvent(ev) {
+      const rect = playArea.getBoundingClientRect();
+      const x = clamp(ev.clientX - rect.left, 0, rect.width);
+      const y = clamp(ev.clientY - rect.top, 0, rect.height);
+      const nx = x / rect.width;
+      const ny = y / rect.height;
+      const t = carrierOsc.context.currentTime;
+      carrierOsc.frequency.setTargetAtTime(mapX(nx), t, 0.02);
+      modOsc.frequency.setTargetAtTime(mapY(ny), t, 0.02);
+      modGain.gain.setTargetAtTime(40 + (1 - ny) * 420, t, 0.03);
+      document.getElementById("carrierHz").textContent = mapX(nx).toFixed(0);
+      document.getElementById("modHz").textContent = mapY(ny).toFixed(0);
+      dot.style.left = `${(nx * 100).toFixed(2)}%`;
+      dot.style.top = `${(ny * 100).toFixed(2)}%`;
+    }
+
+    playArea.addEventListener("pointerdown", async (ev) => {
+      ev.preventDefault();
+      await ensureReady();
+      activePointerId = ev.pointerId;
+      playArea.setPointerCapture(activePointerId);
+      playArea.classList.add("active");
+      setFromEvent(ev);
+      ampGain.gain.setTargetAtTime(0.24, carrierOsc.context.currentTime, 0.01);
+      setStatus("status", "Playing", "ok");
+    });
+    playArea.addEventListener("pointermove", (ev) => {
+      if (ev.pointerId !== activePointerId) return;
+      setFromEvent(ev);
+    });
+    const stop = (ev) => {
+      if (ev.pointerId !== activePointerId) return;
+      playArea.classList.remove("active");
+      ampGain?.gain.setTargetAtTime(0, carrierOsc.context.currentTime, 0.03);
+      setStatus("status", "Drag to play", "ok");
+      activePointerId = null;
+    };
+    playArea.addEventListener("pointerup", stop);
+    playArea.addEventListener("pointercancel", stop);
+  </script>
+</body>
+</html>

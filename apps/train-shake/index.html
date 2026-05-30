@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Train &amp; Shake — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Train &amp; Shake</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Machine learning</h2>
+    <p>Record still vs shake examples → k-NN classifier on motion features.</p>
+  </div>
+  <p class="status-bar" id="status">Record 3+ each, then listen</p>
+  <div class="pred-display still" id="pred">—</div>
+  <p class="status-bar" id="counts">Still: 0 · Shake: 0</p>
+  <div class="btn-grid-2">
+    <button type="button" class="btn-secondary btn btn-sm" id="recStill">Record still</button>
+    <button type="button" class="btn-secondary btn btn-sm" id="recShake">Record shake</button>
+    <button type="button" class="btn btn-sm" id="playBtn" disabled>Listen</button>
+    <button type="button" class="btn-danger btn btn-sm" id="clearBtn">Clear</button>
+  </div>
+  <script type="module">
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { enableSensors, onMotion } from "../../shared/sensors.js";
+    import { KNNClassifier, FeatureNormalizer, extractMotionFeatures } from "../../shared/ml.js";
+
+    const classifier = new KNNClassifier(5);
+    const normalizer = new FeatureNormalizer(5);
+    const magHistory = [];
+    let ctx, master, listening = false;
+    let padGain, noiseGain;
+
+    bindLearn();
+
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
+      ({ master } = createMasterBus(ctx, 0.45));
+      padGain = ctx.createGain();
+      padGain.gain.value = 0;
+      const padOsc = ctx.createOscillator();
+      padOsc.type = "sine";
+      padOsc.frequency.value = 220;
+      padOsc.connect(padGain);
+      padGain.connect(master);
+      padOsc.start();
+      noiseGain = ctx.createGain();
+      noiseGain.gain.value = 0;
+      const bufferSize = 2 * ctx.sampleRate;
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+      noise.connect(noiseGain);
+      noiseGain.connect(master);
+      noise.start();
+    });
+
+    async function ensureAudio() {
+      await ensureReady();
+    }
+
+    function updateCounts() {
+      const still = classifier.samples.filter((s) => s.label === "still").length;
+      const shake = classifier.samples.filter((s) => s.label === "shake").length;
+      document.getElementById("counts").textContent = `Still: ${still} · Shake: ${shake}`;
+      document.getElementById("playBtn").disabled = still < 3 || shake < 3;
+    }
+
+    function recordLabel(label, durationMs = 0) {
+      const samples = [];
+      const handler = (e) => {
+        const a = e.accelerationIncludingGravity || e.acceleration;
+        if (!a) return;
+        const f = extractMotionFeatures({ x: a.x, y: a.y, z: a.z }, magHistory);
+        magHistory.push(Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2));
+        if (magHistory.length > 12) magHistory.shift();
+        samples.push(f);
+        normalizer.push(f);
+      };
+      window.addEventListener("devicemotion", handler);
+      const done = () => {
+        window.removeEventListener("devicemotion", handler);
+        samples.forEach((f) => classifier.addSample(normalizer.normalize(f), label));
+        updateCounts();
+        document.getElementById("status").textContent = `+${samples.length} ${label}`;
+      };
+      setTimeout(done, durationMs > 0 ? durationMs : 1500);
+    }
+
+    document.getElementById("recStill").onclick = async () => {
+      await ensureAudio();
+      if (!(await enableSensors())) return;
+      document.getElementById("status").textContent = "Hold still…";
+      recordLabel("still");
+    };
+
+    document.getElementById("recShake").onclick = async () => {
+      await ensureAudio();
+      if (!(await enableSensors())) return;
+      document.getElementById("status").textContent = "Shake!";
+      recordLabel("shake", 3000);
+    };
+
+    document.getElementById("clearBtn").onclick = () => {
+      classifier.clear();
+      updateCounts();
+    };
+
+    document.getElementById("playBtn").onclick = async () => {
+      await ensureAudio();
+      listening = true;
+      document.getElementById("status").textContent = "Perform";
+      document.getElementById("status").classList.add("ok");
+      onMotion((e) => {
+        if (!listening) return;
+        const f = extractMotionFeatures(e, magHistory);
+        magHistory.push(Math.sqrt(e.x ** 2 + e.y ** 2 + e.z ** 2));
+        if (magHistory.length > 12) magHistory.shift();
+        const { label, confidence } = classifier.predict(normalizer.normalize(f));
+        const el = document.getElementById("pred");
+        el.textContent = label ? `${label.toUpperCase()} ${(confidence * 100).toFixed(0)}%` : "—";
+        el.className = `pred-display ${label || "still"}`;
+        const t = ctx.currentTime;
+        if (label === "still") {
+          padGain.gain.setTargetAtTime(0.35, t, 0.08);
+          noiseGain.gain.setTargetAtTime(0, t, 0.05);
+        } else if (label === "shake") {
+          padGain.gain.setTargetAtTime(0, t, 0.05);
+          noiseGain.gain.setTargetAtTime(0.25, t, 0.02);
+        }
+      });
+    };
+
+    updateCounts();
+  </script>
+</body>
+</html>

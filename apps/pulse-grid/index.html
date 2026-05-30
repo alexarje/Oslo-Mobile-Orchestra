@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Pulse Grid — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Pulse Grid</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Step sequencer</h2>
+    <p>16 steps = one bar. Assign different sounds across the ensemble.</p>
+  </div>
+  <div class="control-row">
+    <label for="color">Sound</label>
+    <select id="color">
+      <option value="kick">Kick</option>
+      <option value="snare">Snare</option>
+      <option value="hat">Hat</option>
+      <option value="tone">Tone</option>
+    </select>
+    <label for="bpm">BPM</label>
+    <input type="range" id="bpm" min="60" max="140" value="100" />
+    <span id="bpmVal">100</span>
+    <button type="button" class="btn btn-play" id="playBtn">▶</button>
+  </div>
+  <p class="status-bar" id="status">Toggle steps · tap ▶</p>
+  <div class="main-stage">
+    <div class="seq-grid" id="grid"></div>
+  </div>
+  <script type="module">
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { createMasterBus, midiToFreq } from "../../shared/audio.js";
+
+    bindLearn();
+
+    const steps = Array(16).fill(false);
+    const grid = document.getElementById("grid");
+    let ctx, master, playing = false, stepIndex = 0, nextTime = 0;
+
+    for (let i = 0; i < 16; i++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cell";
+      btn.setAttribute("aria-label", `Step ${i + 1}`);
+      btn.onclick = () => {
+        steps[i] = !steps[i];
+        btn.classList.toggle("on", steps[i]);
+      };
+      grid.appendChild(btn);
+    }
+
+    bindLearn();
+
+    document.getElementById("bpm").oninput = (e) => {
+      document.getElementById("bpmVal").textContent = e.target.value;
+    };
+
+    const urlBpm = new URLSearchParams(location.search).get("bpm");
+    const urlStart = new URLSearchParams(location.search).get("start");
+    if (urlBpm) {
+      document.getElementById("bpm").value = urlBpm;
+      document.getElementById("bpmVal").textContent = urlBpm;
+    }
+
+    function playSound(type) {
+      const t = ctx.currentTime;
+      const g = ctx.createGain();
+      g.connect(master);
+      if (type === "kick") {
+        const o = ctx.createOscillator();
+        o.frequency.setValueAtTime(150, t);
+        o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+        g.gain.setValueAtTime(0.8, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.connect(g);
+        o.start(t);
+        o.stop(t + 0.2);
+      } else if (type === "snare") {
+        const n = ctx.createBufferSource();
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        n.buffer = buf;
+        g.gain.value = 0.4;
+        n.connect(g);
+        n.start(t);
+      } else if (type === "hat") {
+        const o = ctx.createOscillator();
+        o.type = "square";
+        o.frequency.value = 8000;
+        const f = ctx.createBiquadFilter();
+        f.type = "highpass";
+        f.frequency.value = 7000;
+        g.gain.setValueAtTime(0.15, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        o.connect(f);
+        f.connect(g);
+        o.start(t);
+        o.stop(t + 0.05);
+      } else {
+        const o = ctx.createOscillator();
+        o.frequency.value = midiToFreq(60 + (stepIndex % 4) * 2);
+        g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        o.connect(g);
+        o.start(t);
+        o.stop(t + 0.12);
+      }
+    }
+
+    function scheduler() {
+      if (!playing) return;
+      const bpm = +document.getElementById("bpm").value;
+      const stepSec = 60 / bpm / 4;
+      while (nextTime < ctx.currentTime + 0.1) {
+        const cells = grid.children;
+        cells[stepIndex]?.classList.remove("playing");
+        if (steps[stepIndex]) {
+          playSound(document.getElementById("color").value);
+          cells[stepIndex]?.classList.add("playing");
+        }
+        stepIndex = (stepIndex + 1) % 16;
+        nextTime += stepSec;
+      }
+      requestAnimationFrame(scheduler);
+    }
+
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
+      ({ master } = createMasterBus(ctx, 0.6));
+    });
+
+    document.getElementById("playBtn").onclick = async () => {
+      await ensureReady();
+      if (playing) {
+        playing = false;
+        document.getElementById("playBtn").classList.remove("active");
+        document.getElementById("playBtn").textContent = "▶";
+        setStatus("status", "Paused", "");
+        return;
+      }
+      playing = true;
+      stepIndex = 0;
+      document.getElementById("playBtn").classList.add("active");
+      document.getElementById("playBtn").textContent = "■";
+      if (urlStart) {
+        const startMs = parseInt(urlStart, 10);
+        nextTime = ctx.currentTime + Math.max(0, (startMs - Date.now()) / 1000);
+      } else {
+        nextTime = ctx.currentTime + 0.05;
+      }
+      scheduler();
+      setStatus("status", "Playing", "ok");
+    };
+  </script>
+</body>
+</html>

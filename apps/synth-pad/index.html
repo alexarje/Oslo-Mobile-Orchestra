@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Synth Pad — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Synth Pad</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Sound synthesis</h2>
+    <p><strong>X</strong> = pitch. <strong>Y</strong> = filter. <strong>FM</strong> = frequency modulation.</p>
+  </div>
+  <p class="status-bar" id="status">Tap pad to play</p>
+  <div class="control-row">
+    <label for="wave">Wave</label>
+    <select id="wave">
+      <option value="sine">Sine</option>
+      <option value="square">Square</option>
+      <option value="sawtooth">Saw</option>
+      <option value="fm">FM</option>
+    </select>
+  </div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="cursor"></div></div>
+  </div>
+  <script type="module">
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { applyEnvelope, createMasterBus, midiToFreq } from "../../shared/audio.js";
+
+    bindLearn();
+    const pad = document.getElementById("pad");
+    const cursor = document.getElementById("cursor");
+    const waveSel = document.getElementById("wave");
+    let ctx, master, voice = null;
+
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
+      ({ master } = createMasterBus(ctx));
+      setStatus("status", "Drag pad", "ok");
+    });
+
+    function stopVoice() {
+      if (!voice) return;
+      voice.env.release();
+      setTimeout(() => voice.nodes.forEach((n) => { try { n.disconnect(); } catch {} }), 400);
+      voice = null;
+    }
+
+    function startVoice(freq, cutoff) {
+      stopVoice();
+      const t = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.connect(master);
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = cutoff;
+      filter.Q.value = 8;
+      filter.connect(gain);
+      const env = applyEnvelope(gain, ctx, { peak: 0.5, sustain: 0.4, release: 0.25 });
+      const nodes = [gain, filter];
+      let osc;
+      if (waveSel.value === "fm") {
+        const carrier = ctx.createOscillator();
+        const mod = ctx.createOscillator();
+        const modGain = ctx.createGain();
+        mod.frequency.value = freq * 1.5;
+        modGain.gain.value = freq * 0.8;
+        mod.connect(modGain);
+        modGain.connect(carrier.frequency);
+        carrier.frequency.value = freq;
+        carrier.type = mod.type = "sine";
+        carrier.connect(filter);
+        carrier.start(t);
+        mod.start(t);
+        nodes.push(carrier, mod, modGain);
+        osc = carrier;
+      } else {
+        osc = ctx.createOscillator();
+        osc.type = waveSel.value;
+        osc.frequency.value = freq;
+        osc.connect(filter);
+        osc.start(t);
+        nodes.push(osc);
+      }
+      voice = { env, nodes, filter, osc };
+    }
+
+    function pointer(e) {
+      const rect = pad.getBoundingClientRect();
+      const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      cursor.style.left = `${nx * 100}%`;
+      cursor.style.top = `${ny * 100}%`;
+      const freq = midiToFreq(48 + nx * 24);
+      const cutoff = 200 + (1 - ny) * 8000;
+      if (!voice) startVoice(freq, cutoff);
+      else {
+        voice.osc.frequency.setTargetAtTime(freq, ctx.currentTime, 0.02);
+        voice.filter.frequency.setTargetAtTime(cutoff, ctx.currentTime, 0.02);
+      }
+    }
+
+    pad.addEventListener("pointerdown", async (e) => {
+      await ensureReady();
+      pad.setPointerCapture(e.pointerId);
+      pad.classList.add("active");
+      pointer(e);
+    });
+    pad.addEventListener("pointermove", (e) => { if (pad.classList.contains("active")) pointer(e); });
+    pad.addEventListener("pointerup", () => { pad.classList.remove("active"); stopVoice(); });
+    pad.addEventListener("pointercancel", () => { pad.classList.remove("active"); stopVoice(); });
+  </script>
+</body>
+</html>
