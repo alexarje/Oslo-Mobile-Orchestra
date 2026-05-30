@@ -569,36 +569,34 @@ body.hub {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 0.35rem 0.5rem;
   overflow-y: auto;
 }
 
 .drum-seq-row {
   flex: 1;
-  min-height: 36px;
+  min-height: 52px;
   display: grid;
-  grid-template-columns: 46px repeat(8, 1fr);
-  gap: 4px;
+  grid-template-columns: 40px repeat(8, 1fr);
+  gap: 6px;
 }
 
 .drum-row-label {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  font-size: 0.55rem;
-  color: var(--muted);
-  line-height: 1.1;
   pointer-events: none;
 }
 
-.drum-row-label .pad-icon { font-size: 0.95rem; }
+.drum-row-label .pad-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
 
 .drum-seq-cell {
-  min-height: 0;
-  border-radius: 6px;
+  min-height: 44px;
+  border-radius: 8px;
   border: 1px solid #334155;
   background: #334155;
   padding: 0;

@@ -46,7 +46,9 @@
 
       const label = document.createElement("div");
       label.className = "drum-row-label";
-      label.innerHTML = `<span class="pad-icon">${row.icon}</span><span class="pad-name">${row.name}</span>`;
+      label.innerHTML = `<span class="pad-icon">${row.icon}</span>`;
+      label.setAttribute("aria-label", row.name);
+
       rowEl.appendChild(label);
 
       cells[ri] = [];
@@ -57,9 +59,12 @@
         btn.dataset.row = ri;
         btn.dataset.col = ci;
         btn.setAttribute("aria-label", `${row.name} step ${ci + 1}`);
-        btn.addEventListener("click", () => {
+        btn.addEventListener("pointerdown", async (e) => {
+          e.preventDefault();
+          await ensureReady();
           pattern[ri][ci] = !pattern[ri][ci];
           btn.classList.toggle("on", pattern[ri][ci]);
+          if (pattern[ri][ci]) DRUM_SEQ_ROWS[ri].play(ctx, master);
         });
         rowEl.appendChild(btn);
         cells[ri][ci] = btn;
@@ -77,39 +82,43 @@
     });
 
     function scheduler() {
-      if (!playing) return;
+      if (!playing || !ctx) return;
       const bpm = +document.getElementById("bpm").value;
       const stepSec = 60 / bpm / 2;
-      while (nextTime < ctx.currentTime + 0.12) {
+      const now = ctx.currentTime;
+      while (nextTime <= now + 0.05) {
+        const col = stepIndex;
         cells.forEach((row) => row.forEach((c) => c.classList.remove("playing")));
         for (let ri = 0; ri < DRUM_SEQ_ROWS.length; ri++) {
-          if (pattern[ri][stepIndex]) DRUM_SEQ_ROWS[ri].play(ctx, master);
-          cells[ri][stepIndex]?.classList.add("playing");
+          if (pattern[ri][col]) DRUM_SEQ_ROWS[ri].play(ctx, master);
+          cells[ri][col]?.classList.add("playing");
         }
-        stepIndex = (stepIndex + 1) % STEPS;
+        stepIndex = (col + 1) % STEPS;
         nextTime += stepSec;
       }
       requestAnimationFrame(scheduler);
     }
 
-    document.getElementById("playBtn").onclick = async () => {
+    const playBtn = document.getElementById("playBtn");
+    playBtn.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
       await ensureReady();
       if (playing) {
         playing = false;
-        document.getElementById("playBtn").classList.remove("active");
-        document.getElementById("playBtn").textContent = "▶";
+        playBtn.classList.remove("active");
+        playBtn.textContent = "▶";
         cells.forEach((row) => row.forEach((c) => c.classList.remove("playing")));
         setStatus("status", "Paused", "");
         return;
       }
       playing = true;
       stepIndex = 0;
-      nextTime = ctx.currentTime + 0.05;
-      document.getElementById("playBtn").classList.add("active");
-      document.getElementById("playBtn").textContent = "■";
+      nextTime = ctx.currentTime;
+      playBtn.classList.add("active");
+      playBtn.textContent = "■";
       setStatus("status", "Playing", "ok");
       scheduler();
-    };
+    });
   </script>
 </body>
 </html>

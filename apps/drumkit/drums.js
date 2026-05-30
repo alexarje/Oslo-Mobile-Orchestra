@@ -8,7 +8,6 @@
   let masterGain = null;
 
   const volumeSlider = document.getElementById('volume');
-  const statusEl = document.getElementById('status');
 
   function pingIOS(c) {
     const buf = c.createBuffer(1, 1, c.sampleRate);
@@ -31,13 +30,8 @@
     pingIOS(ctx);
   }
 
-  function markReady() {
-    if (statusEl) statusEl.textContent = 'Tap pads';
-  }
-
   document.body.addEventListener('pointerdown', () => {
     ensureCtx();
-    markReady();
   }, { once: true, capture: true });
   volumeSlider.addEventListener('input', () => {
     if (masterGain) masterGain.gain.value = parseFloat(volumeSlider.value);
