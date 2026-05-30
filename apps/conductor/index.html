@@ -33,6 +33,10 @@
     </div>
     <div class="countdown-lg" id="countdown">Ready</div>
     <div class="scroll-panel hidden" id="sharePanel">
+      <div class="qr-share">
+        <canvas id="shareQr" role="img" aria-label="QR code — scan to join"></canvas>
+        <p class="qr-caption">Scan to join · same countdown</p>
+      </div>
       <p style="margin:0 0 0.35rem;font-size:0.75rem;color:var(--muted);">Musician link</p>
       <div class="link-box" id="musicianLink"></div>
     </div>
@@ -56,6 +60,8 @@
   </div>
 
   <script type="module">
+    import { renderQrCanvas } from "../../shared/qr.js";
+
     const params = new URLSearchParams(location.search);
     const isMusician = params.has("start");
 
@@ -98,6 +104,7 @@
       const url = buildMusicianUrl(startMs, bpm);
       document.getElementById("sharePanel").classList.remove("hidden");
       document.getElementById("musicianLink").textContent = url;
+      renderQrCanvas(document.getElementById("shareQr"), url, { scale: 4, border: 2 });
       document.getElementById("copyBtn").classList.remove("hidden");
       runCountdown(document.getElementById("countdown"), startMs, () => {
         document.getElementById("countdown").textContent = "Go!";

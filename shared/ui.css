@@ -929,3 +929,27 @@ body.hub {
   border-radius: 6px;
   margin-top: 0.35rem;
 }
+
+.qr-share {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.qr-share canvas {
+  display: block;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 2px #334155;
+  max-width: min(78vw, 240px);
+  width: 100%;
+  height: auto;
+}
+
+.qr-caption {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+}
