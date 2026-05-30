@@ -22,7 +22,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM, aftertouch (force / touch size) |
 | [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
-| [Train & Shake](apps/train-shake/) | Gesture performance | k-NN on still / sway / shake; export/import training sets |
+| [Train & Shake](apps/train-shake/) | Gesture performance | k-NN vs tiny net; feature plot, confusion matrix, ethics panel |
 | [Granular Tilt](apps/granular-tilt/) | Textures / clouds | Granular synthesis + orientation |
 | [Photo Sonifier](apps/photo-sonifier/) | Texture from environment | Camera brightness map → grain density (consent / workshop mode) |
 | [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step sequencer, drum synthesis |
@@ -82,7 +82,7 @@ Full backlog with tables and priorities: **[docs/IDEAS.md](docs/IDEAS.md)**
 - Haptics on steps (Android) · accessibility mode (larger UI, high contrast)
 
 ### Education & AI showcase
-- Live feature plot + confusion matrix for k-NN · compare k-NN vs tiny neural net
+- ~~Live feature plot + confusion matrix~~ — in [Train & Shake](apps/train-shake/)
 - “Data stays on device” ethics note for classroom discussion
 
 ### Synthesis demos

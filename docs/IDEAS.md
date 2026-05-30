@@ -46,11 +46,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 
 ## AI & education (showcase)
 
-- **Teachable moment panel** — live plot of feature vectors (Train & Shake)
-- **Confusion matrix** — after training, show still/shake mislabels
-- **“What if?” sliders** — change k in k-NN and hear classification change
-- **On-device ethics card** — data stays on phone; when crowd training fails for some bodies/phones
-- **Compare models** — k-NN vs tiny neural net (TensorFlow.js layers) same gestures
+- ~~Teachable panel, confusion matrix, k slider, ethics, k-NN vs tiny net~~ — [Train & Shake](../apps/train-shake/) (2-layer net in pure JS, no TF.js bundle)
 
 ---
 

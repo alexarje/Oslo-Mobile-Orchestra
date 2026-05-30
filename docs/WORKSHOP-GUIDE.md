@@ -22,8 +22,8 @@ Open hub → **Synth Pad**. Everyone finds one note. Conductor counts 1–2–3�
 **Motion Wah** — “Tilt = vowel.” Conductor points up/down; group sweeps together without looking at screens.
 
 ### AI (10 min)
-**Train & Shake** — record **still**, **sway**, and **shake** (3+ each), or **Export set** on one phone and **Import set** on others for a shared demo.
-- Ask: *What could confuse the model?* (walking, laughing, low battery throttle)
+**Train & Shake** — record **still**, **sway**, and **shake** (3+ each), or **Export set** / **Import set** for a shared demo. Open **Teach** (feature map + confusion matrix), try **k** slider and **Compare both** models.
+- Ask: *What could confuse the model?* Read **Ethics · on-device** — bias across phones and bodies.
 - Perform: conductor mimes three gestures; ensemble reacts (still = tone, sway = blended, shake = noise).
 
 ### Ensemble (15 min)
