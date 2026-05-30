@@ -18,8 +18,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Hum vs Clap](apps/hum-clap/) | Call-and-response | k-NN on mic features |
 | [Piano](apps/piano/) | Melody / harmony | Keyboard + reverb |
 | [Drumkit](apps/drumkit/) | Rhythm hits | 8 drum pads |
-| [Drum Sequencer](apps/drum-sequencer/) | Patterns | 4×8 steps |
-| [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step seq, hash share, haptics |
+| [Drum Sequencer](apps/drum-sequencer/) | Patterns | 4×8 steps, swing |
 | [Delay Throw](apps/delay-throw/) | Echo layers | Tap sample + tilt delay |
 | [Sampler](apps/sampler/) | Loop textures | Mic loop + tilt FX |
 | [FM Touch / + Tilt](apps/fm-touch/) | FM timbre | Touch + optional tilt mod |
@@ -46,7 +45,7 @@ Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache
 ### 1. “Spectrum” (10 min)
 - 8× **Drone Choir** (different chord tones)
 - 6× **Motion Wah** or **Compass Wah**
-- 4× **Pulse Grid** (kick / hat / snare / tone)
+- 4× **Drum Sequencer** or **Drumkit**
 - 1× **Conductor** — QR + countdown
 
 ### 2. “Human ML” (15 min)
@@ -55,8 +54,8 @@ Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache
 ### 3. “Synthesis tour” (20 min)
 - **Synth Pad** → **Wavetable Scan** → **Filter Ladder** → **Additive Bells**
 
-### 4. “Grid orchestra”
-- Assign colors on **Pulse Grid**; share patterns via URL hash; Conductor `start` + `bpm`.
+### 4. “Rhythm section”
+- Split **Drumkit** / **Drum Sequencer** / **Delay Throw**; Conductor `start` + `bpm` in the musician link.
 
 ### 5. “Spatial circle”
 - 20× **Gyro Compass** — each phone pans by compass heading in the room.
@@ -69,7 +68,6 @@ Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache
 | Motion | Usually automatic | Tap to allow |
 | Orientation | Often available | iOS 13+ permission |
 | PWA / offline | Service worker | Add to Home Screen |
-| Haptics | Pulse Grid vibrate | Limited |
 
 ## Ideas still open
 

@@ -1,5 +1,5 @@
 /**
- * Workshop URL helpers — parts, sections, pulse patterns, accessibility.
+ * Workshop URL helpers — parts, sections, accessibility.
  */
 
 export const SECTIONS = {
@@ -11,7 +11,7 @@ export const SECTIONS = {
   rhythm: {
     name: "Rhythm",
     color: "#fb923c",
-    apps: ["pulse-grid", "drumkit", "drum-sequencer", "delay-throw"],
+    apps: ["drumkit", "drum-sequencer", "delay-throw"],
   },
   melody: {
     name: "Melody",
@@ -62,27 +62,6 @@ export function getPartFromUrl(search = location.search) {
 
 export function getSectionFromUrl(search = location.search) {
   return new URLSearchParams(search).get("section") || null;
-}
-
-/** Pulse grid: #p=kick:10101010,snare:... (16 chars 0/1 per sound) */
-export function encodePulsePattern(stepsBySound) {
-  const parts = Object.entries(stepsBySound).map(
-    ([k, arr]) => `${k}:${arr.map((b) => (b ? "1" : "0")).join("")}`
-  );
-  return `p=${parts.join(",")}`;
-}
-
-export function decodePulsePattern(hash) {
-  const h = hash.replace(/^#/, "");
-  const m = h.match(/p=([^&]+)/) || h.match(/^([^&]+)/);
-  if (!m) return null;
-  const out = {};
-  for (const chunk of m[1].split(",")) {
-    const [name, bits] = chunk.split(":");
-    if (!name || !bits) continue;
-    out[name] = [...bits].map((c) => c === "1");
-  }
-  return out;
 }
 
 export function applyA11y(enabled) {

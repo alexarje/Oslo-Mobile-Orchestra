@@ -26,7 +26,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 
 - ~~**Drone Choir**~~ — hold-to-sustain; cents ruler on pad
 - ~~**Motion Wah**~~ — continuous mode toggle
-- ~~**Pulse Grid**~~ — copy row, URL hash pattern, haptics
+- ~~**Pulse Grid**~~ — removed from hub (use Drum Sequencer instead)
 - ~~**Train & Shake** sway + export/import~~ — [train-shake](../apps/train-shake/)
 - ~~**Conductor**~~ — QR + visual metronome flash at downbeat
 - ~~**Synth Pad** aftertouch~~ — [synth-pad](../apps/synth-pad/)
@@ -68,7 +68,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 | Orientation | Compass wah / tilt | Compass Wah, Granular Tilt |
 | Light (ambient) | Volume cap | Open |
 | Proximity | Cover → mute | Open |
-| ~~Haptics~~ | Pulse Grid steps | Android `vibrate` |
+| Haptics | Drum Sequencer steps | Android `vibrate` (optional) |
 | Touch pressure | iOS force | Synth Pad |
 
 ---
@@ -96,7 +96,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 ## Priority (suggested)
 
 1. ~~Mic Theremin~~ — done  
-2. ~~Conductor QR + Pulse Grid URL patterns~~ — done  
+2. ~~Conductor QR + sync URLs~~ — done  
 3. ~~PWA / offline~~ — basic SW  
 4. **WebRTC room** — when URL sync isn’t enough  
 5. ~~Hum/clap classifier~~ — done (k-NN, no TF.js bundle)  

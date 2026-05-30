@@ -29,7 +29,7 @@ Open hub → **Synth Pad**. Everyone finds one note. Conductor counts 1–2–3�
 ### Ensemble (15 min)
 1. Conductor sets 96 BPM, **Start countdown**, share link (AirDrop, QR, shout URL shortener).
 2. Drones: **Drone Choir** — assign F / A♭ / C / E♭ counts (5 each).
-3. Rhythm: **Pulse Grid** from conductor’s pulse link — split kick/snare/hat/tone.
+3. Rhythm: **Drum Sequencer** or **Drumkit** — split roles; use conductor link `start` + `bpm` if needed.
 4. Texture: 4 players **Granular Tilt** behind the group.
 
 ### Cool-down (5 min)
@@ -37,9 +37,9 @@ All screens down; one sustained drone from a single phone. Discuss what felt “
 
 ## Accessibility
 
-- Large touch targets (48px+); no fine motor precision required for drones/grid.
+- Large touch targets (48px+); no fine motor precision required for drones and rhythm apps.
 - **Train & Shake** can be adapted: relabel classes (e.g. “low” / “mid” / “high” phone position) — same three-button flow.
-- Deaf/Hard of Hearing: grid cells flash on steps; haptics on Android optional future add.
+- Deaf/Hard of Hearing: visual readouts and step LEDs on sequencers where available.
 
 ## Troubleshooting
 
