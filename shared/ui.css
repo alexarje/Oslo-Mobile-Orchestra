@@ -628,6 +628,19 @@ body.hub {
 .drum-pad[data-pad="6"] { background: linear-gradient(135deg, #0f766e, #042f2e); }
 .drum-pad[data-pad="7"] { background: linear-gradient(135deg, #475569, #1e293b); }
 
+/* Mic theremin — tappable pad + visible header controls */
+.mic-theremin-app .mic-theremin-pad {
+  touch-action: manipulation;
+}
+
+.mic-theremin-app .app-header h1 {
+  font-size: 0.82rem;
+}
+
+.mic-theremin-app .header-controls {
+  max-width: 52%;
+}
+
 /* Additive bells — compact strike pad, all partial sliders on screen */
 .additive-bells-app .bells-partials {
   flex: 1 1 auto;

@@ -7,17 +7,20 @@
   <title>Mic Theremin — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell mic-theremin-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Mic Theremin</h1>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Mic → pitch</h2>
-    <p>Tap <strong>Audio on</strong> (or the pad) and allow the mic. Hum or sing — pitch drives the tone. <strong>Hold the pad</strong> to hear it; slide <strong>up/down</strong> for volume.</p>
-    <p>If the <strong>Mic</strong> bar stays empty, check browser mic permission for this site.</p>
+    <p>Tap <strong>Start mic</strong> (or <strong>Audio on</strong> in the header) and allow the microphone. Hum or sing — pitch drives the tone.</p>
+    <p><strong>Hold the pad</strong> to hear it; slide <strong>up/down</strong> for volume. Watch the <strong>Mic</strong> bar move when you make sound.</p>
   </div>
-  <p class="status-bar" id="status">Tap Audio on or the pad to start</p>
+  <div class="app-toolbar">
+    <button type="button" class="btn" id="startBtn">Start mic</button>
+  </div>
+  <p class="status-bar" id="status">Tap Start mic to allow microphone</p>
   <div class="breath-row">
     <label>Mic</label>
     <div class="breath-meter" id="micMeterWrap">
@@ -29,22 +32,41 @@
     <p class="value-chip">Note <strong id="noteOut">—</strong></p>
   </div>
   <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+    <div id="pad" class="stage-fill play-grid mic-theremin-pad"><div class="touch-dot" id="dot"></div></div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot, registerAudioBoot } from "../../shared/app.js";
+    import {
+      bindLearn,
+      setStatus,
+      setAudioOn,
+      setAudioOff,
+      isAudioActive,
+      initHeaderControls,
+      registerAudioBoot,
+    } from "../../shared/app.js";
     import { createMasterBus, connectMicAnalyser, getMicStream, primeMicStream } from "../../shared/audio.js";
     import { detectPitchHz, hzToMidi } from "../../shared/pitch.js";
 
     bindLearn();
+    initHeaderControls();
+
     const pad = document.getElementById("pad");
     const dot = document.getElementById("dot");
+    const startBtn = document.getElementById("startBtn");
     let ctx, master, osc, amp, analyser, micStream, buf;
     let built = false;
+    let booting = false;
     let holding = false;
     let lastHz = null;
 
     const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+
+    function syncStartBtn() {
+      const on = isAudioActive();
+      startBtn.textContent = on ? "Audio on" : "Start mic";
+      startBtn.classList.toggle("btn-play", on);
+      startBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    }
 
     function getRms() {
       if (!analyser) return 0;
@@ -62,6 +84,7 @@
     async function build(c) {
       if (built && micTrackLive()) {
         tick();
+        syncStartBtn();
         return;
       }
       if (built) {
@@ -70,7 +93,7 @@
         built = false;
       }
       if (!navigator.mediaDevices?.getUserMedia) {
-        setStatus("status", "Mic not supported", "warn");
+        setStatus("status", "Mic not supported in this browser", "warn");
         throw new Error("no mic");
       }
       ctx = c;
@@ -86,15 +109,17 @@
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.2;
       buf = new Float32Array(analyser.fftSize);
+      setStatus("status", "Allow microphone when asked…", "");
       try {
         micStream = await getMicStream();
       } catch {
-        setStatus("status", "Mic denied — allow in Settings", "warn");
+        setStatus("status", "Mic denied — allow in browser Settings", "warn");
         throw new Error("denied");
       }
       connectMicAnalyser(ctx, micStream, analyser, { inputGain: 2.5 });
       built = true;
       setStatus("status", "Mic live — hold pad to play", "ok");
+      syncStartBtn();
       tick();
     }
 
@@ -121,8 +146,32 @@
       requestAnimationFrame(tick);
     }
 
-    const ensureAudio = createAudioBoot(build, { screenTap: true, mic: true });
+    async function bootMic() {
+      if (booting) return;
+      booting = true;
+      primeMicStream();
+      try {
+        await setAudioOn();
+      } catch {
+        syncStartBtn();
+      } finally {
+        booting = false;
+      }
+    }
+
     registerAudioBoot(build, { mic: true });
+
+    startBtn.addEventListener("click", () => {
+      if (isAudioActive()) {
+        void setAudioOff().then(syncStartBtn);
+        return;
+      }
+      void bootMic();
+    });
+
+    document.getElementById("audioToggle")?.addEventListener("click", () => {
+      setTimeout(syncStartBtn, 0);
+    });
 
     function setVolumeFromY(clientY) {
       const r = pad.getBoundingClientRect();
@@ -136,8 +185,9 @@
 
     pad.addEventListener("pointerdown", (e) => {
       e.preventDefault();
+      e.stopPropagation();
       primeMicStream();
-      void ensureAudio().then(() => {
+      void bootMic().then(() => {
         if (!built) return;
         holding = true;
         pad.setPointerCapture(e.pointerId);
@@ -160,6 +210,8 @@
     };
     pad.addEventListener("pointerup", stop);
     pad.addEventListener("pointercancel", stop);
+
+    syncStartBtn();
   </script>
 </body>
 </html>

@@ -9,14 +9,18 @@ let audioOn = false;
 let optionalBootFn = null;
 let bootNeedsMic = false;
 
-/** Group Learn + Audio on/off in the header (upper right). */
+/** Group Learn + Audio on/off in the header (upper right). Safe to call more than once. */
 export function initHeaderControls() {
   const header = document.querySelector(".app-header, .hub-header");
-  if (!header || document.getElementById(HEADER_CONTROLS_ID)) return;
+  if (!header) return;
 
-  const wrap = document.createElement("div");
-  wrap.className = "header-controls";
-  wrap.id = HEADER_CONTROLS_ID;
+  let wrap = document.getElementById(HEADER_CONTROLS_ID);
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.className = "header-controls";
+    wrap.id = HEADER_CONTROLS_ID;
+    header.appendChild(wrap);
+  }
 
   const panel = document.getElementById("learnPanel");
   let learnBtn = document.getElementById("learnBtn");
@@ -27,10 +31,10 @@ export function initHeaderControls() {
       learnBtn.id = "learnBtn";
       learnBtn.className = "learn-toggle";
       learnBtn.textContent = "Learn";
-    } else {
+    } else if (learnBtn.parentElement && learnBtn.parentElement !== wrap) {
       learnBtn.remove();
     }
-    wrap.appendChild(learnBtn);
+    if (!wrap.contains(learnBtn)) wrap.appendChild(learnBtn);
   }
 
   if (!document.getElementById(AUDIO_TOGGLE_ID)) {
@@ -50,8 +54,6 @@ export function initHeaderControls() {
     wrap.appendChild(audioWrap);
     setAudioActive(false);
   }
-
-  if (wrap.childElementCount > 0) header.appendChild(wrap);
 }
 
 export function bindLearn(learnBtnId = "learnBtn", panelId = "learnPanel") {
