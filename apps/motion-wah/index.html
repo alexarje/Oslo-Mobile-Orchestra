@@ -17,7 +17,7 @@
     <h2>Resonant filter</h2>
     <p>Hold to play; tilt sweeps a band-pass filter.</p>
   </div>
-  <p class="status-bar" id="status">Tap screen · hold to play</p>
+  <p class="status-bar" id="status">Hold to play · tilt for wah</p>
   <div class="main-stage">
     <div class="touch-zone" id="touchZone">
       <div class="phone-icon" id="phone"></div>
@@ -26,8 +26,8 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
-    import { createMasterBus } from "../../shared/audio.js";
+    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
+    import { createMasterBus, getAudioContext, unlockAudio } from "../../shared/audio.js";
     import { enableSensors, onMotion, normalizeAccel } from "../../shared/sensors.js";
 
     bindLearn();
@@ -35,10 +35,12 @@
     const meter = document.getElementById("meter");
     const phone = document.getElementById("phone");
     let ctx, filter, osc, gate, master;
-    let holding = false;
+    let built = false;
     let sensorsOn = false;
+    let holding = false;
+    let activePointer = null;
 
-    const ensureReady = createAudioBoot(async (c) => {
+    function buildVoice(c) {
       ctx = c;
       ({ master } = createMasterBus(ctx, 0.5));
       gate = ctx.createGain();
@@ -48,39 +50,59 @@
       osc.frequency.value = 110;
       filter = ctx.createBiquadFilter();
       filter.type = "bandpass";
+      filter.frequency.value = 800;
       filter.Q.value = 12;
       osc.connect(filter);
       filter.connect(gate);
       gate.connect(master);
       osc.start();
-      sensorsOn = await enableSensors();
-      if (sensorsOn) {
+      built = true;
+      setStatus("status", "Hold & tilt", "ok");
+    }
+
+    async function enableTilt() {
+      if (sensorsOn) return;
+      if (await enableSensors()) {
+        sensorsOn = true;
         onMotion(({ x, y, z }) => {
-          if (!holding) return;
+          if (!holding || !built) return;
           const tilt = (normalizeAccel(x, y, z).y + 1) / 2;
           filter.frequency.setTargetAtTime(150 + tilt * 3500, ctx.currentTime, 0.03);
           meter.style.width = `${tilt * 100}%`;
           phone.style.transform = `rotateX(${tilt * 40 - 20}deg)`;
         });
+        setStatus("status", "Hold & tilt", "ok");
+      } else {
+        setStatus("status", "Hold (tilt unavailable)", "warn");
       }
-      setStatus("status", sensorsOn ? "Hold & tilt" : "Hold (no motion)", sensorsOn ? "ok" : "warn");
-    });
+    }
 
-    function release() {
+    function release(e) {
+      if (e && e.pointerId !== activePointer) return;
       holding = false;
+      activePointer = null;
       touchZone.classList.remove("active");
-      gate?.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+      if (gate && ctx) gate.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
       meter.style.width = "0%";
       phone.style.transform = "";
     }
 
     touchZone.addEventListener("pointerdown", async (e) => {
-      await ensureReady();
+      e.preventDefault();
+      if (!built) {
+        const c = getAudioContext();
+        pingIOSUnlock(c);
+        buildVoice(c);
+        void enableTilt();
+      }
+      await unlockAudio(ctx);
+      activePointer = e.pointerId;
       touchZone.setPointerCapture(e.pointerId);
       holding = true;
       touchZone.classList.add("active");
       gate.gain.setTargetAtTime(0.5, ctx.currentTime, 0.02);
     });
+
     touchZone.addEventListener("pointerup", release);
     touchZone.addEventListener("pointercancel", release);
     touchZone.addEventListener("lostpointercapture", release);

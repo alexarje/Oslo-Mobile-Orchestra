@@ -17,7 +17,7 @@
     <h2>Karplus–Strong</h2>
     <p>Hold to pluck. <strong>X</strong> = pitch, <strong>Y</strong> = strength. Tilt = damping.</p>
   </div>
-  <p class="status-bar" id="status">Tap screen to start</p>
+  <p class="status-bar" id="status">Hold pad to pluck</p>
   <div class="main-stage">
     <div id="pad" class="stage-fill play-grid"></div>
   </div>
@@ -27,16 +27,20 @@
     <p class="value-chip">Damp <strong id="dampEl">4000</strong> Hz</p>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
+    import { getAudioContext, unlockAudio } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
     bindLearn();
     const pad = document.getElementById("pad");
     let ctx, compressor, reverbConv, reverbWet;
+    let built = false;
+    let tiltReady = false;
     let currentDamp = 4000;
     let activeId = null;
     let holdTimer = null;
-    let holdX = 0, holdY = 0;
+    let holdX = 0;
+    let holdY = 0;
     const voices = [];
     const MAX_VOICES = 3;
 
@@ -53,9 +57,14 @@
       return b;
     }
 
-    const ensureReady = createAudioBoot(async (c) => {
+    function buildAudio(c) {
       ctx = c;
       compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -6;
+      compressor.knee.value = 6;
+      compressor.ratio.value = 8;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.15;
       compressor.connect(ctx.destination);
       reverbConv = ctx.createConvolver();
       reverbConv.buffer = reverbBuf(ctx, 1.2);
@@ -63,23 +72,42 @@
       reverbWet.gain.value = 0.3;
       reverbConv.connect(reverbWet);
       reverbWet.connect(ctx.destination);
+      built = true;
+      setStatus("status", "Hold pad to pluck", "ok");
+    }
+
+    async function enableTilt() {
+      if (tiltReady) return;
       if (await enableSensors()) {
+        tiltReady = true;
         onOrientation((o) => {
           const t = clamp(Math.sqrt((o.beta || 0) ** 2 + (o.gamma || 0) ** 2) / 90, 0, 1);
           currentDamp = 8000 * (300 / 8000) ** t;
           document.getElementById("dampEl").textContent = currentDamp.toFixed(0);
         });
+        setStatus("status", "Hold · tilt for damping", "ok");
       }
-      setStatus("status", "Hold pad to pluck", "ok");
-    });
+    }
+
+    function ensureAudio() {
+      if (!built) {
+        const c = getAudioContext();
+        pingIOSUnlock(c);
+        buildAudio(c);
+        void enableTilt();
+      }
+      return ctx;
+    }
 
     function pluck(freq, strength) {
+      if (!built) return;
       const sr = ctx.sampleRate;
       const now = ctx.currentTime;
       const n = Math.ceil(sr / freq);
       const buf = ctx.createBuffer(1, n, sr);
       const d = buf.getChannelData(0);
       for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * strength;
+
       const exc = ctx.createBufferSource();
       exc.buffer = buf;
       const delay = ctx.createDelay(0.5);
@@ -87,11 +115,26 @@
       const lpf = ctx.createBiquadFilter();
       lpf.type = "lowpass";
       lpf.frequency.value = currentDamp;
+      lpf.Q.value = 0.5;
       const fb = ctx.createGain();
       fb.gain.value = 0.96;
       const out = ctx.createGain();
-      while (voices.length >= MAX_VOICES) voices.shift()?.disconnect?.();
-      voices.push(out);
+      out.gain.value = 1;
+
+      while (voices.length >= MAX_VOICES) {
+        const old = voices.shift();
+        try {
+          old.fb.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+          setTimeout(() => {
+            try {
+              old.out.disconnect();
+              old.fb.disconnect();
+            } catch { /* noop */ }
+          }, 300);
+        } catch { /* noop */ }
+      }
+
+      voices.push({ out, fb });
       exc.connect(delay);
       delay.connect(lpf);
       lpf.connect(fb);
@@ -101,6 +144,17 @@
       out.connect(reverbConv);
       exc.start(now);
       exc.stop(now + 1 / freq + 0.002);
+
+      setTimeout(() => {
+        const idx = voices.findIndex((v) => v.out === out);
+        if (idx !== -1) voices.splice(idx, 1);
+        try {
+          lpf.disconnect();
+          fb.disconnect();
+          out.disconnect();
+        } catch { /* noop */ }
+      }, 4000);
+
       document.getElementById("freqEl").textContent = freq.toFixed(0);
       document.getElementById("pluckEl").textContent = strength.toFixed(2);
     }
@@ -116,6 +170,7 @@
 
     function trigger(x, y) {
       const r = pad.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
       const nx = x / r.width;
       const ny = y / r.height;
       pluck(mapX(nx), 0.05 + (1 - ny) * 0.95);
@@ -124,7 +179,8 @@
 
     pad.addEventListener("pointerdown", async (ev) => {
       ev.preventDefault();
-      await ensureReady();
+      ensureAudio();
+      await unlockAudio(ctx);
       activeId = ev.pointerId;
       pad.setPointerCapture(activeId);
       pad.classList.add("active");
@@ -134,12 +190,14 @@
       trigger(holdX, holdY);
       holdTimer = setInterval(() => trigger(holdX, holdY), 400);
     });
+
     pad.addEventListener("pointermove", (ev) => {
       if (ev.pointerId !== activeId) return;
       const r = pad.getBoundingClientRect();
       holdX = clamp(ev.clientX - r.left, 0, r.width);
       holdY = clamp(ev.clientY - r.top, 0, r.height);
     });
+
     const stop = (ev) => {
       if (ev.pointerId !== activeId) return;
       clearInterval(holdTimer);
@@ -147,8 +205,10 @@
       activeId = null;
       pad.classList.remove("active");
     };
+
     pad.addEventListener("pointerup", stop);
     pad.addEventListener("pointercancel", stop);
+    pad.addEventListener("lostpointercapture", stop);
   </script>
 </body>
 </html>

@@ -17,7 +17,7 @@
     <h2>Sound synthesis</h2>
     <p><strong>X</strong> = pitch. <strong>Y</strong> = filter. <strong>FM</strong> = frequency modulation.</p>
   </div>
-  <p class="status-bar" id="status">Tap screen to start</p>
+  <p class="status-bar" id="status">Hold pad to play</p>
   <div class="control-row">
     <label for="wave">Wave</label>
     <select id="wave">
@@ -31,41 +31,55 @@
     <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="cursor"></div></div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
-    import { applyEnvelope, createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
+    import { applyEnvelope, createMasterBus, getAudioContext, midiToFreq, unlockAudio } from "../../shared/audio.js";
 
     bindLearn();
     const pad = document.getElementById("pad");
     const cursor = document.getElementById("cursor");
     const waveSel = document.getElementById("wave");
     let ctx, master, voice = null;
+    let built = false;
+    let activePointer = null;
 
-    const ensureReady = createAudioBoot(async (c) => {
+    function buildAudio(c) {
       ctx = c;
       ({ master } = createMasterBus(ctx));
-      setStatus("status", "Drag pad", "ok");
-    });
+      built = true;
+      setStatus("status", "Hold & drag", "ok");
+    }
 
     function stopVoice() {
       if (!voice) return;
       voice.env.release();
-      setTimeout(() => voice.nodes.forEach((n) => { try { n.disconnect(); } catch {} }), 400);
+      const nodes = voice.nodes;
+      setTimeout(() => {
+        nodes.forEach((n) => {
+          try {
+            n.disconnect();
+          } catch {
+            /* noop */
+          }
+        });
+      }, 400);
       voice = null;
     }
 
     function startVoice(freq, cutoff) {
+      if (!built) return;
       stopVoice();
       const t = ctx.currentTime;
       const gain = ctx.createGain();
       gain.connect(master);
-      const filter = ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = cutoff;
-      filter.Q.value = 8;
-      filter.connect(gain);
+      const filt = ctx.createBiquadFilter();
+      filt.type = "lowpass";
+      filt.frequency.value = cutoff;
+      filt.Q.value = 8;
+      filt.connect(gain);
       const env = applyEnvelope(gain, ctx, { peak: 0.5, sustain: 0.4, release: 0.25 });
-      const nodes = [gain, filter];
+      const nodes = [gain, filt];
       let osc;
+      let modOsc = null;
       if (waveSel.value === "fm") {
         const carrier = ctx.createOscillator();
         const mod = ctx.createOscillator();
@@ -76,23 +90,25 @@
         modGain.connect(carrier.frequency);
         carrier.frequency.value = freq;
         carrier.type = mod.type = "sine";
-        carrier.connect(filter);
+        carrier.connect(filt);
         carrier.start(t);
         mod.start(t);
         nodes.push(carrier, mod, modGain);
         osc = carrier;
+        modOsc = mod;
       } else {
         osc = ctx.createOscillator();
         osc.type = waveSel.value;
         osc.frequency.value = freq;
-        osc.connect(filter);
+        osc.connect(filt);
         osc.start(t);
         nodes.push(osc);
       }
-      voice = { env, nodes, filter, osc };
+      voice = { env, nodes, filter: filt, osc, modOsc };
     }
 
     function pointer(e) {
+      if (!built) return;
       const rect = pad.getBoundingClientRect();
       const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
@@ -102,20 +118,49 @@
       const cutoff = 200 + (1 - ny) * 8000;
       if (!voice) startVoice(freq, cutoff);
       else {
-        voice.osc.frequency.setTargetAtTime(freq, ctx.currentTime, 0.02);
-        voice.filter.frequency.setTargetAtTime(cutoff, ctx.currentTime, 0.02);
+        const t = ctx.currentTime;
+        voice.osc.frequency.setTargetAtTime(freq, t, 0.02);
+        if (voice.modOsc) {
+          voice.modOsc.frequency.setTargetAtTime(freq * 1.5, t, 0.02);
+        }
+        voice.filter.frequency.setTargetAtTime(cutoff, t, 0.02);
       }
     }
 
     pad.addEventListener("pointerdown", async (e) => {
-      await ensureReady();
+      e.preventDefault();
+      if (!built) {
+        const c = getAudioContext();
+        pingIOSUnlock(c);
+        buildAudio(c);
+      }
+      await unlockAudio(ctx);
+      activePointer = e.pointerId;
       pad.setPointerCapture(e.pointerId);
       pad.classList.add("active");
       pointer(e);
     });
-    pad.addEventListener("pointermove", (e) => { if (pad.classList.contains("active")) pointer(e); });
-    pad.addEventListener("pointerup", () => { pad.classList.remove("active"); stopVoice(); });
-    pad.addEventListener("pointercancel", () => { pad.classList.remove("active"); stopVoice(); });
+
+    pad.addEventListener("pointermove", (e) => {
+      if (!built || e.pointerId !== activePointer) return;
+      e.preventDefault();
+      pointer(e);
+    });
+
+    const stop = (e) => {
+      if (e.pointerId !== activePointer) return;
+      pad.classList.remove("active");
+      stopVoice();
+      activePointer = null;
+    };
+
+    pad.addEventListener("pointerup", stop);
+    pad.addEventListener("pointercancel", stop);
+    pad.addEventListener("lostpointercapture", stop);
+
+    waveSel.addEventListener("change", () => {
+      if (voice && pad.classList.contains("active")) stopVoice();
+    });
   </script>
 </body>
 </html>

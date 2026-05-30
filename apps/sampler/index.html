@@ -69,8 +69,8 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
-    import { createMasterBus } from "../../shared/audio.js";
+    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
+    import { createMasterBus, getAudioContext, unlockAudio } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
     bindLearn();
@@ -80,9 +80,15 @@
 
     let ctx, master, stream, recordTimer;
     let filter, delay, delayFb, delayWet, dryGain;
-    let recordSource, recordProcessor, recordSilent, recordChunks, recordLength;
+    let mediaRecorder = null;
+    let recordChunks = [];
+    let recordSource, recordProcessor, recordSilent, spChunks, spLength;
     let loopBuffer = null;
     let loopSource = null;
+    let built = false;
+    let micReady = false;
+    let tiltReady = false;
+    let useMediaRecorder = typeof MediaRecorder !== "undefined";
     let recording = false;
     let activePointer = null;
     let playbackRate = 1;
@@ -126,29 +132,38 @@
       delayWet.connect(rev);
       rev.connect(revWet);
       revWet.connect(master);
-
-      return filter;
     }
 
-    const ensureReady = createAudioBoot(async (c) => {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setStatus("status", "Mic not supported", "warn");
-        throw new Error("no mic");
-      }
+    function buildAudio(c) {
       ctx = c;
       ({ master } = createMasterBus(ctx, 0.75));
       buildFxChain();
+      built = true;
+    }
+
+    async function ensureMic() {
+      if (micReady) return true;
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("status", "Mic not supported", "warn");
+        return false;
+      }
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
           video: false,
         });
+        micReady = true;
+        return true;
       } catch {
-        setStatus("status", "Mic denied", "warn");
-        throw new Error("denied");
+        setStatus("status", "Mic denied — allow mic in browser", "warn");
+        return false;
       }
-      const sensorsOn = await enableSensors();
-      if (sensorsOn) {
+    }
+
+    async function enableTilt() {
+      if (tiltReady) return;
+      if (await enableSensors()) {
+        tiltReady = true;
         onOrientation(({ beta, gamma }) => {
           const tilt = clamp(Math.sqrt((beta || 0) ** 2 + (gamma || 0) ** 2) / 90, 0, 1);
           const t = ctx.currentTime;
@@ -165,20 +180,28 @@
           document.getElementById("delayOut").textContent = `${(fb * 100).toFixed(0)}%`;
           document.getElementById("pitchOut").textContent = playbackRate.toFixed(2);
         });
+        setStatus("status", "Hold · tilt for FX", "ok");
       }
-      setStatus("status", sensorsOn ? "Hold · tilt for FX" : "Hold to record", sensorsOn ? "ok" : "warn");
-    }, { screenTap: false });
+    }
 
     function stopLoop() {
       if (!loopSource) return;
-      try { loopSource.stop(); } catch { /* already stopped */ }
-      loopSource.disconnect();
+      try {
+        loopSource.stop();
+      } catch {
+        /* already stopped */
+      }
+      try {
+        loopSource.disconnect();
+      } catch {
+        /* noop */
+      }
       loopSource = null;
       pad.classList.remove("looping");
     }
 
     function startLoop() {
-      if (!loopBuffer) return;
+      if (!loopBuffer || !built) return;
       stopLoop();
       loopSource = ctx.createBufferSource();
       loopSource.buffer = loopBuffer;
@@ -191,71 +214,57 @@
       setStatus("status", "Looping · tilt FX", "ok");
     }
 
-    function teardownRecording() {
-      if (recordProcessor) {
-        recordProcessor.onaudioprocess = null;
-        try { recordProcessor.disconnect(); } catch { /* noop */ }
+    function teardownScriptCapture() {
+      if (recordProcessor) recordProcessor.onaudioprocess = null;
+      try {
+        recordProcessor?.disconnect();
+      } catch {
+        /* noop */
       }
-      if (recordSource) {
-        try { recordSource.disconnect(); } catch { /* noop */ }
+      try {
+        recordSource?.disconnect();
+      } catch {
+        /* noop */
       }
-      if (recordSilent) {
-        try { recordSilent.disconnect(); } catch { /* noop */ }
+      try {
+        recordSilent?.disconnect();
+      } catch {
+        /* noop */
       }
       recordProcessor = null;
       recordSource = null;
       recordSilent = null;
     }
 
-    function startRecording() {
-      if (!stream || recording) return;
-      stopLoop();
-      recordChunks = [];
-      recordLength = 0;
-      recordSource = ctx.createMediaStreamSource(stream);
-      recordProcessor = ctx.createScriptProcessor(4096, 1, 1);
-      recordSilent = ctx.createGain();
-      recordSilent.gain.value = 0;
-      recordProcessor.onaudioprocess = (e) => {
-        if (!recording) return;
-        const ch = e.inputBuffer.getChannelData(0);
-        recordChunks.push(Float32Array.from(ch));
-        recordLength += ch.length;
-      };
-      recordSource.connect(recordProcessor);
-      recordProcessor.connect(recordSilent);
-      recordSilent.connect(ctx.destination);
-      recording = true;
-      pad.classList.add("recording");
-      padHint.textContent = "Recording…";
-      setStatus("status", "Recording…", "ok");
-      recordTimer = setTimeout(() => {
-        if (recording && activePointer != null) void finishRecording();
-      }, MAX_RECORD_MS);
-    }
-
-    function bufferFromRecording() {
+    function bufferFromScriptCapture() {
       const minSamples = Math.floor(ctx.sampleRate * 0.08);
-      if (recordLength < minSamples) return null;
-      const buf = ctx.createBuffer(1, recordLength, ctx.sampleRate);
+      if (spLength < minSamples) return null;
+      const buf = ctx.createBuffer(1, spLength, ctx.sampleRate);
       const out = buf.getChannelData(0);
       let off = 0;
-      for (const chunk of recordChunks) {
+      for (const chunk of spChunks) {
         out.set(chunk, off);
         off += chunk.length;
       }
       return buf;
     }
 
-    async function finishRecording() {
-      if (!recording) return;
-      clearTimeout(recordTimer);
-      recording = false;
-      teardownRecording();
-      pad.classList.remove("recording");
+    async function commitLoopFromBlob(blob) {
       padHint.textContent = "Processing…";
+      await unlockAudio(ctx);
+      try {
+        const ab = await blob.arrayBuffer();
+        loopBuffer = await ctx.decodeAudioData(ab);
+        startLoop();
+      } catch {
+        padHint.textContent = "Hold to record · release to loop";
+        setStatus("status", "Too short — try again", "warn");
+      }
+    }
 
-      loopBuffer = bufferFromRecording();
+    async function commitLoopFromScript() {
+      await unlockAudio(ctx);
+      loopBuffer = bufferFromScriptCapture();
       if (!loopBuffer) {
         padHint.textContent = "Hold to record · release to loop";
         setStatus("status", "Too short — try again", "warn");
@@ -264,9 +273,90 @@
       startLoop();
     }
 
+    function recorderMime() {
+      if (typeof MediaRecorder === "undefined") return "";
+      if (MediaRecorder.isTypeSupported("audio/mp4")) return "audio/mp4";
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
+      if (MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
+      return "";
+    }
+
+    function startRecording() {
+      if (!stream || recording) return;
+      stopLoop();
+      recording = true;
+      pad.classList.add("recording");
+      padHint.textContent = "Recording…";
+      setStatus("status", "Recording…", "ok");
+
+      if (useMediaRecorder) {
+        recordChunks = [];
+        const mime = recorderMime();
+        try {
+          mediaRecorder = mime
+            ? new MediaRecorder(stream, { mimeType: mime })
+            : new MediaRecorder(stream);
+        } catch {
+          useMediaRecorder = false;
+          startRecording();
+          return;
+        }
+        mediaRecorder.ondataavailable = (ev) => {
+          if (ev.data.size > 0) recordChunks.push(ev.data);
+        };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType || "audio/mp4" });
+          void commitLoopFromBlob(blob);
+        };
+        mediaRecorder.start(250);
+      } else {
+        spChunks = [];
+        spLength = 0;
+        recordSource = ctx.createMediaStreamSource(stream);
+        recordProcessor = ctx.createScriptProcessor(4096, 1, 1);
+        recordSilent = ctx.createGain();
+        recordSilent.gain.value = 0;
+        recordProcessor.onaudioprocess = (e) => {
+          if (!recording) return;
+          const ch = e.inputBuffer.getChannelData(0);
+          spChunks.push(Float32Array.from(ch));
+          spLength += ch.length;
+        };
+        recordSource.connect(recordProcessor);
+        recordProcessor.connect(recordSilent);
+        recordSilent.connect(ctx.destination);
+      }
+
+      recordTimer = setTimeout(() => {
+        if (recording && activePointer != null) void endRecording();
+      }, MAX_RECORD_MS);
+    }
+
+    async function endRecording() {
+      if (!recording) return;
+      clearTimeout(recordTimer);
+      recording = false;
+      pad.classList.remove("recording");
+
+      if (useMediaRecorder && mediaRecorder?.state === "recording") {
+        mediaRecorder.stop();
+        return;
+      }
+
+      teardownScriptCapture();
+      await commitLoopFromScript();
+    }
+
     pad.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
-      await ensureReady();
+      if (!built) {
+        const c = getAudioContext();
+        pingIOSUnlock(c);
+        buildAudio(c);
+        void enableTilt();
+      }
+      await unlockAudio(ctx);
+      if (!(await ensureMic())) return;
       activePointer = e.pointerId;
       pad.setPointerCapture(e.pointerId);
       startRecording();
@@ -276,13 +366,18 @@
       if (e.pointerId !== activePointer) return;
       activePointer = null;
       if (pad.hasPointerCapture(e.pointerId)) pad.releasePointerCapture(e.pointerId);
-      await finishRecording();
+      pingIOSUnlock(ctx);
+      await unlockAudio(ctx);
+      await endRecording();
     };
 
     pad.addEventListener("pointerup", release);
     pad.addEventListener("pointercancel", release);
     pad.addEventListener("lostpointercapture", () => {
-      if (recording) void finishRecording();
+      if (recording) {
+        pingIOSUnlock(ctx);
+        void unlockAudio(ctx).then(() => endRecording());
+      }
       activePointer = null;
     });
   </script>
