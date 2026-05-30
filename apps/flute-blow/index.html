@@ -15,9 +15,12 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Breath + pentatonic</h2>
-    <p>Tap pad → allow mic → blow past yellow line. Slide for pitch (C major pentatonic).</p>
+    <p>Tap <strong>Audio &amp; mic on</strong>, allow the mic, then blow past the yellow line. Slide the pad for pitch (C major pentatonic).</p>
   </div>
   <p class="status-bar" id="status"></p>
+  <div class="control-row">
+    <button type="button" class="btn" id="enableAudioBtn">Audio &amp; mic on</button>
+  </div>
   <div class="breath-row">
     <label>Breath</label>
     <div class="breath-meter breath-threshold" id="breathWrap" style="--thresh: 35%">
@@ -32,8 +35,8 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
-    import { createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
+    import { createMasterBus, midiToFreq, connectMicAnalyser } from "../../shared/audio.js";
 
     bindLearn();
     const PENTA = [0, 2, 4, 7, 9];
@@ -42,13 +45,15 @@
     const STEPS = 10;
     const flutePad = document.getElementById("flutePad");
     const finger = document.getElementById("finger");
+    const enableBtn = document.getElementById("enableAudioBtn");
     let ctx, master, analyser, micStream;
     let toneGain, toneOsc, noiseGain, noiseSrc;
     let blowThreshold = 0.02;
     let currentMidi = 60;
     let noteIndex = 5;
     let ready = false;
-    const timeData = new Float32Array(2048);
+    let booting = false;
+    let timeData = new Float32Array(2048);
 
     function indexToMidi(i) {
       const idx = Math.max(0, Math.min(STEPS - 1, Math.round(i)));
@@ -66,10 +71,11 @@
       noteIndex = (1 - ny) * (STEPS - 1);
       currentMidi = indexToMidi(noteIndex);
       document.getElementById("readout").textContent = labelFromIndex(noteIndex);
-      if (toneOsc) toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), ctx.currentTime, 0.03);
+      if (toneOsc && ctx) toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), ctx.currentTime, 0.03);
     }
 
     function getRms() {
+      if (!analyser) return 0;
       analyser.getFloatTimeDomainData(timeData);
       let s = 0;
       for (let i = 0; i < timeData.length; i++) s += timeData[i] ** 2;
@@ -144,7 +150,7 @@
       requestAnimationFrame(tick);
     }
 
-    const ensureReady = createAudioBoot(async (c) => {
+    async function boot(c) {
       if (!navigator.mediaDevices?.getUserMedia) {
         setStatus("status", "Mic not supported", "warn");
         throw new Error("no mic");
@@ -157,22 +163,51 @@
           video: false,
         });
       } catch {
-        setStatus("status", "Mic denied", "warn");
+        setStatus("status", "Mic denied — allow in Settings", "warn");
         throw new Error("denied");
       }
       analyser = ctx.createAnalyser();
       analyser.fftSize = 2048;
-      ctx.createMediaStreamSource(micStream).connect(analyser);
+      timeData = new Float32Array(analyser.fftSize);
+      connectMicAnalyser(ctx, micStream, analyser);
       createVoice();
-      setStatus("status", "Calibrating… quiet please", "");
+      setStatus("status", "Calibrating… stay quiet", "");
       await calibrate();
       ready = true;
+      enableBtn.hidden = true;
+      setStatus("status", "Blow past yellow line", "ok");
       tick();
-    }, { screenTap: false });
+    }
 
-    flutePad.addEventListener("pointerdown", async (e) => {
+    async function enableAudio() {
+      if (ready || booting) return;
+      booting = true;
+      enableBtn.disabled = true;
+      try {
+        await startAudio(boot);
+      } catch {
+        enableBtn.disabled = false;
+      } finally {
+        booting = false;
+      }
+    }
+
+    enableBtn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      void enableAudio();
+    });
+
+    flutePad.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (!ready) {
+        void enableAudio().then(() => {
+          if (!ready) return;
+          flutePad.setPointerCapture(e.pointerId);
+          placeFinger(Math.max(0, Math.min(1, (e.clientY - flutePad.getBoundingClientRect().top) / flutePad.offsetHeight)));
+        });
+        return;
+      }
       flutePad.setPointerCapture(e.pointerId);
-      await ensureReady();
       placeFinger(Math.max(0, Math.min(1, (e.clientY - flutePad.getBoundingClientRect().top) / flutePad.offsetHeight)));
     });
     flutePad.addEventListener("pointermove", (e) => {

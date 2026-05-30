@@ -55,6 +55,19 @@ export function applyEnvelope(gain, ctx, { attack = 0.02, decay = 0.1, sustain =
   };
 }
 
+/**
+ * Mic → analyser (iOS needs a path to destination or levels stay at zero).
+ */
+export function connectMicAnalyser(ctx, stream, analyser) {
+  const src = ctx.createMediaStreamSource(stream);
+  src.connect(analyser);
+  const silent = ctx.createGain();
+  silent.gain.value = 0;
+  analyser.connect(silent);
+  silent.connect(ctx.destination);
+  return src;
+}
+
 export function createMasterBus(ctx, volume = 0.7) {
   const master = ctx.createGain();
   master.gain.value = volume;
