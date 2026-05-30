@@ -14,10 +14,11 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Granular synthesis</h2>
-    <p>Turn <strong>Audio on</strong>, then tap the zone to start grains. <strong>Upload</strong> or <strong>hold Record</strong> for a custom sample (mic).</p>
-    <p><strong>Hold pad</strong> to freeze grain position. <strong>Tilt</strong> for grain rate and pitch.</p>
+    <p>Tap <strong>Start grains</strong> or <strong>Audio on</strong>, then allow motion if asked. <strong>Upload</strong> or <strong>hold Record</strong> for a custom sample.</p>
+    <p><strong>Hold</strong> the scope to freeze grains. <strong>Tilt</strong> for rate and pitch.</p>
   </div>
   <div class="app-toolbar granular-toolbar">
+    <button type="button" class="btn btn-sm" id="playBtn">Start grains</button>
     <label class="btn-secondary btn btn-sm granular-upload">
       <input type="file" id="sampleIn" accept="audio/*" hidden />
       Upload
@@ -25,7 +26,7 @@
     <button type="button" class="btn-secondary btn btn-sm btn-rec" id="recBtn">Hold record</button>
     <span class="granular-buf-tag" id="bufTag">default</span>
   </div>
-  <p class="status-bar" id="status">Tap zone for audio</p>
+  <p class="status-bar" id="status">Tap Start grains or Audio on</p>
   <div class="readout-row">
     <p class="value-chip">Rate <strong id="rateOut">—</strong>/s</p>
     <p class="value-chip">Pitch <strong id="pitchOut">—</strong>×</p>
@@ -36,22 +37,38 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, startAudio, initHeaderControls, registerAudioBoot } from "../../shared/app.js";
-    import { createMasterBus, getMicStream, primeMicStream } from "../../shared/audio.js";
+    import {
+      bindLearn,
+      setStatus,
+      startAudio,
+      isAudioActive,
+      initHeaderControls,
+      registerAudioBoot,
+    } from "../../shared/app.js";
+    import {
+      createMasterBus,
+      getAudioContext,
+      getMicStream,
+      primeMicStream,
+      unlockAudio,
+    } from "../../shared/audio.js";
     import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     initHeaderControls();
-    registerAudioBoot(boot);
+
     const tapZone = document.getElementById("tapZone");
     const canvas = document.getElementById("scope");
     const recBtn = document.getElementById("recBtn");
+    const playBtn = document.getElementById("playBtn");
     const g = canvas.getContext("2d");
     const SENSOR_OPTS = { needMotion: false, needOrientation: true };
     const MAX_RECORD_MS = 6000;
     const MIN_RECORD_SAMPLES = 2048;
 
-    let ctx, master, buffer, running = false;
+    let ctx, master, buffer;
+    let built = false;
+    let grainsOn = false;
     let scheduleTimer = null;
     let beta = 45;
     let gamma = 0;
@@ -66,6 +83,7 @@
     let recordSource, recordProcessor, recordSilent;
     let spChunks, spLength;
     let useMediaRecorder = typeof MediaRecorder !== "undefined";
+    let sensorsReady = false;
 
     function setBufTag(text) {
       document.getElementById("bufTag").textContent = text;
@@ -78,7 +96,7 @@
     }
 
     function defaultBuffer(c) {
-      const len = c.sampleRate * 0.5;
+      const len = Math.floor(c.sampleRate * 0.5);
       const b = c.createBuffer(1, len, c.sampleRate);
       const d = b.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
@@ -86,7 +104,7 @@
     }
 
     function draw() {
-      if (!running) return;
+      if (!grainsOn) return;
       resizeCanvas();
       const w = canvas.width;
       const h = canvas.height;
@@ -105,34 +123,108 @@
     }
 
     function spawnGrain() {
-      if (!running || !ctx || !master || !buffer || recording) return;
+      if (!grainsOn || !built || !ctx || !master || !buffer || recording) return;
+      if (ctx.state !== "running") return;
+      const dur = 0.025 + Math.random() * 0.035;
+      const maxOff = buffer.duration - dur - 0.002;
+      if (maxOff <= 0) return;
+      const offset = frozen ? Math.min(freezePos, maxOff) : Math.random() * maxOff;
+      const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
       const src = ctx.createBufferSource();
       src.buffer = buffer;
-      const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
-      const dur = 0.02 + Math.random() * 0.03;
-      const maxOff = Math.max(0, buffer.duration - dur - 0.002);
-      const offset = frozen ? Math.min(freezePos, maxOff) : Math.random() * maxOff;
       src.playbackRate.value = rate;
       const gn = ctx.createGain();
-      gn.connect(master);
       const t = ctx.currentTime;
       src.connect(gn);
-      src.start(t, offset, dur);
+      gn.connect(master);
       gn.gain.setValueAtTime(0, t);
-      gn.gain.linearRampToValueAtTime(0.2, t + 0.005);
+      gn.gain.linearRampToValueAtTime(0.42, t + 0.004);
       gn.gain.linearRampToValueAtTime(0, t + dur);
+      src.start(t, offset, dur);
     }
 
     function schedule() {
-      if (!running) return;
+      if (!grainsOn) return;
       spawnGrain();
-      scheduleTimer = setTimeout(schedule, 1000 / (5 + (beta / 90) * 25));
+      const interval = 1000 / (5 + (beta / 90) * 25);
+      scheduleTimer = setTimeout(schedule, interval);
     }
 
     function stopSchedule() {
       if (scheduleTimer != null) clearTimeout(scheduleTimer);
       scheduleTimer = null;
     }
+
+    function startGrains() {
+      if (!built || grainsOn) return;
+      grainsOn = true;
+      playBtn.classList.add("btn-play");
+      playBtn.textContent = "Grains on";
+      setStatus("status", "Grains on · tilt for rate/pitch", "ok");
+      stopSchedule();
+      schedule();
+      draw();
+    }
+
+    function stopGrains() {
+      grainsOn = false;
+      stopSchedule();
+      playBtn.classList.remove("btn-play");
+      playBtn.textContent = "Start grains";
+      frozen = false;
+    }
+
+    async function initSensors() {
+      if (sensorsReady) return;
+      const ok = await enableSensors(SENSOR_OPTS);
+      if (ok) {
+        onOrientation((o) => {
+          beta = o.beta ?? 45;
+          gamma = o.gamma ?? 0;
+          document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
+          document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
+        });
+      } else {
+        document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
+        document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
+      }
+      sensorsReady = true;
+    }
+
+    async function boot(c) {
+      ctx = c;
+      if (!built) {
+        ({ master } = createMasterBus(ctx, 0.65));
+        buffer = defaultBuffer(ctx);
+        setBufTag("default");
+        built = true;
+        await initSensors();
+      }
+      if (ctx.state === "suspended") await unlockAudio(ctx);
+      if (isAudioActive()) startGrains();
+    }
+
+    registerAudioBoot(boot);
+
+    async function ensurePlaying() {
+      primeSensors(SENSOR_OPTS);
+      await startAudio(boot);
+    }
+
+    document.getElementById("audioToggle")?.addEventListener("click", () => {
+      setTimeout(() => {
+        if (!isAudioActive()) stopGrains();
+      }, 0);
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (grainsOn) {
+        stopGrains();
+        setStatus("status", "Grains stopped", "");
+        return;
+      }
+      void ensurePlaying();
+    });
 
     async function ensureMic() {
       if (micStream) return true;
@@ -149,43 +241,11 @@
       }
     }
 
-    async function ensureBoot({ needMic = false } = {}) {
-      primeSensors(SENSOR_OPTS);
-      if (!running) await startAudio(boot);
-      if (needMic) return ensureMic();
-      return true;
-    }
-
-    async function boot(c) {
-      if (running) return;
-      ctx = c;
-      ({ master } = createMasterBus(ctx, 0.5));
-      buffer = defaultBuffer(ctx);
-      setBufTag("default");
-      running = true;
-      setStatus("status", "Grains on · upload or record sample", "ok");
-      draw();
-      stopSchedule();
-      schedule();
-
-      const ok = await enableSensors(SENSOR_OPTS);
-      if (ok) {
-        onOrientation((o) => {
-          beta = o.beta ?? 45;
-          gamma = o.gamma ?? 0;
-          document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
-          document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
-        });
-      } else {
-        document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
-        document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
-      }
-    }
-
     async function setBufferFromAudioData(buf, label) {
       buffer = buf;
       setBufTag(label);
-      freezePos = Math.min(freezePos, Math.max(0, buffer.duration - 0.05));
+      const maxOff = Math.max(0, buffer.duration - 0.05);
+      freezePos = Math.min(freezePos, maxOff);
     }
 
     async function setBufferFromBlob(blob, label) {
@@ -304,14 +364,15 @@
       }
     }
 
-    recBtn.addEventListener("pointerdown", async (e) => {
+    recBtn.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       primeMicStream();
-      primeSensors(SENSOR_OPTS);
-      if (!(await ensureBoot({ needMic: true }))) return;
-      recPointer = e.pointerId;
-      recBtn.setPointerCapture(e.pointerId);
-      startRecording();
+      void ensurePlaying().then(async () => {
+        if (!(await ensureMic())) return;
+        recPointer = e.pointerId;
+        recBtn.setPointerCapture(e.pointerId);
+        startRecording();
+      });
     });
 
     const endRec = (e) => {
@@ -323,21 +384,15 @@
     recBtn.addEventListener("pointercancel", endRec);
     recBtn.addEventListener("lostpointercapture", endRec);
 
-    async function onTapZone(e) {
+    tapZone.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      primeSensors(SENSOR_OPTS);
-      await ensureBoot();
-      if (!running) return;
-      tapZone.setPointerCapture(e.pointerId);
-      frozen = true;
-      if (buffer) {
+      void ensurePlaying().then(() => {
+        if (!built) return;
+        tapZone.setPointerCapture(e.pointerId);
+        frozen = true;
         const maxOff = Math.max(0, buffer.duration - 0.05);
         freezePos = Math.random() * maxOff;
-      }
-    }
-
-    tapZone.addEventListener("pointerdown", (e) => {
-      void onTapZone(e);
+      });
     });
     tapZone.addEventListener("pointerup", () => {
       frozen = false;
@@ -349,7 +404,7 @@
     document.getElementById("sampleIn").onchange = async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      await ensureBoot();
+      await ensurePlaying();
       const ab = await file.arrayBuffer();
       try {
         await setBufferFromAudioData(await ctx.decodeAudioData(ab.slice(0)), file.name.slice(0, 10));
