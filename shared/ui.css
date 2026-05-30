@@ -521,59 +521,25 @@ body.hub {
   color: #475569;
 }
 
-/* Drums — matrix: one row per instrument, 8 layer columns */
-.drums-matrix {
+/* Drums — kit pad grid */
+.drums-grid {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0.35rem 0.5rem;
-  overflow-y: auto;
-}
-
-.drums-row {
-  flex: 1;
-  min-height: 28px;
   display: grid;
-  grid-template-columns: 46px repeat(8, 1fr);
-  gap: 4px;
-}
-
-.drum-row-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  font-size: 0.55rem;
-  color: var(--muted);
-  line-height: 1.1;
-  pointer-events: none;
-}
-
-.drum-row-label .pad-icon { font-size: 0.95rem; }
-
-.drums-row .drum-pad {
-  min-height: 0;
-  padding: 2px;
-}
-
-.drum-pad .pad-layer {
-  font-size: 0.58rem;
-  font-weight: 600;
-  color: rgba(241, 245, 249, 0.55);
-  pointer-events: none;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 8px;
+  padding: 0.35rem 0.5rem;
 }
 
 .drum-pad {
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid #334155;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  gap: 2px;
   min-height: 0;
   touch-action: manipulation;
   background: var(--surface);
@@ -596,6 +562,62 @@ body.hub {
 .drum-pad[data-pad="5"] { background: linear-gradient(135deg, #6b21a8, #3b0764); }
 .drum-pad[data-pad="6"] { background: linear-gradient(135deg, #0f766e, #042f2e); }
 .drum-pad[data-pad="7"] { background: linear-gradient(135deg, #475569, #1e293b); }
+
+/* Drum sequencer — 4 rows × 8 steps */
+.drum-seq {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0.35rem 0.5rem;
+  overflow-y: auto;
+}
+
+.drum-seq-row {
+  flex: 1;
+  min-height: 36px;
+  display: grid;
+  grid-template-columns: 46px repeat(8, 1fr);
+  gap: 4px;
+}
+
+.drum-row-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-size: 0.55rem;
+  color: var(--muted);
+  line-height: 1.1;
+  pointer-events: none;
+}
+
+.drum-row-label .pad-icon { font-size: 0.95rem; }
+
+.drum-seq-cell {
+  min-height: 0;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #334155;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+.drum-seq-cell.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+.drum-seq-cell.playing {
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.drum-seq-row:nth-child(1) .drum-seq-cell.on { background: linear-gradient(135deg, #991b1b, #7f1d1d); }
+.drum-seq-row:nth-child(2) .drum-seq-cell.on { background: linear-gradient(135deg, #c2410c, #9a3412); }
+.drum-seq-row:nth-child(3) .drum-seq-cell.on { background: linear-gradient(135deg, #a16207, #854d0e); }
+.drum-seq-row:nth-child(4) .drum-seq-cell.on { background: linear-gradient(135deg, #15803d, #166534); }
 
 .pluck-ripple {
   position: absolute;

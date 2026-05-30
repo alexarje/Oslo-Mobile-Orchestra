@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Drum Sequencer — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Drum Sequencer</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>4-track × 8-step</h2>
+    <p>Tap cells to toggle steps. Kick, snare, hi-hat, open hat — one row each.</p>
+  </div>
+  <div class="control-row">
+    <label for="bpm">BPM</label>
+    <input type="range" id="bpm" min="60" max="160" value="100" />
+    <span id="bpmVal">100</span>
+    <button type="button" class="btn btn-play" id="playBtn">▶</button>
+  </div>
+  <p class="status-bar" id="status">Tap steps · then ▶</p>
+  <div class="main-stage">
+    <div class="drum-seq" id="seq"></div>
+  </div>
+  <script type="module">
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { DRUM_SEQ_ROWS } from "../../shared/drum-sounds.js";
+
+    bindLearn();
+
+    const STEPS = 8;
+    const seqEl = document.getElementById("seq");
+    const pattern = DRUM_SEQ_ROWS.map(() => Array(STEPS).fill(false));
+    const cells = [];
+    let ctx, master, playing = false, stepIndex = 0, nextTime = 0;
+
+    DRUM_SEQ_ROWS.forEach((row, ri) => {
+      const rowEl = document.createElement("div");
+      rowEl.className = "drum-seq-row";
+
+      const label = document.createElement("div");
+      label.className = "drum-row-label";
+      label.innerHTML = `<span class="pad-icon">${row.icon}</span><span class="pad-name">${row.name}</span>`;
+      rowEl.appendChild(label);
+
+      cells[ri] = [];
+      for (let ci = 0; ci < STEPS; ci++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "drum-seq-cell";
+        btn.dataset.row = ri;
+        btn.dataset.col = ci;
+        btn.setAttribute("aria-label", `${row.name} step ${ci + 1}`);
+        btn.addEventListener("click", () => {
+          pattern[ri][ci] = !pattern[ri][ci];
+          btn.classList.toggle("on", pattern[ri][ci]);
+        });
+        rowEl.appendChild(btn);
+        cells[ri][ci] = btn;
+      }
+      seqEl.appendChild(rowEl);
+    });
+
+    document.getElementById("bpm").oninput = (e) => {
+      document.getElementById("bpmVal").textContent = e.target.value;
+    };
+
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
+      ({ master } = createMasterBus(ctx, 0.65));
+    });
+
+    function scheduler() {
+      if (!playing) return;
+      const bpm = +document.getElementById("bpm").value;
+      const stepSec = 60 / bpm / 2;
+      while (nextTime < ctx.currentTime + 0.12) {
+        cells.forEach((row) => row.forEach((c) => c.classList.remove("playing")));
+        for (let ri = 0; ri < DRUM_SEQ_ROWS.length; ri++) {
+          if (pattern[ri][stepIndex]) DRUM_SEQ_ROWS[ri].play(ctx, master);
+          cells[ri][stepIndex]?.classList.add("playing");
+        }
+        stepIndex = (stepIndex + 1) % STEPS;
+        nextTime += stepSec;
+      }
+      requestAnimationFrame(scheduler);
+    }
+
+    document.getElementById("playBtn").onclick = async () => {
+      await ensureReady();
+      if (playing) {
+        playing = false;
+        document.getElementById("playBtn").classList.remove("active");
+        document.getElementById("playBtn").textContent = "▶";
+        cells.forEach((row) => row.forEach((c) => c.classList.remove("playing")));
+        setStatus("status", "Paused", "");
+        return;
+      }
+      playing = true;
+      stepIndex = 0;
+      nextTime = ctx.currentTime + 0.05;
+      document.getElementById("playBtn").classList.add("active");
+      document.getElementById("playBtn").textContent = "■";
+      setStatus("status", "Playing", "ok");
+      scheduler();
+    };
+  </script>
+</body>
+</html>
