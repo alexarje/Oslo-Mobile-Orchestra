@@ -89,7 +89,13 @@ Pick one from [IDEAS.md](docs/IDEAS.md) and open a PR — or ask in an issue.
 
 ## Deploy
 
-Push to `main` → GitHub Action updates `gh-pages`. One-time: **Settings → Pages → Deploy from branch → `gh-pages` / root**.
+Push to `main` → the [Pages workflow](.github/workflows/pages.yml) deploys the site (one GitHub Actions run per push).
+
+**One-time setup:** [Settings → Pages](https://github.com/alexarje/Oslo-Mobile-Orchestra/settings/pages) → **Build and deployment → Source:** **GitHub Actions** (not “Deploy from a branch”).
+
+If you previously used the `gh-pages` branch, switch the source to GitHub Actions; you can delete the `gh-pages` branch afterward.
+
+Live site: **https://alexarje.github.io/Oslo-Mobile-Orchestra/**
 
 ## License
 
