@@ -7,14 +7,15 @@
   <title>Tilt Harp — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell tilt-harp-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Tilt Harp</h1>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Plucked gliss</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>Tap</strong> strings. <strong>Tilt</strong> picks scale (pentatonic / major / minor).</p>
+    <p>Turn <strong>Audio on</strong>, tap the strings and <strong>slide</strong> for a glissando. Allow motion/orientation on iPhone when asked.</p>
+    <p><strong>Tilt</strong> the phone to change key (shown next to Scale).</p>
   </div>
   <div class="control-row">
     <label for="scale">Scale</label>
@@ -26,12 +27,12 @@
     <span id="keyOut">C</span>
   </div>
   <div class="main-stage">
-    <div id="strings" class="harp-strings"></div>
+    <div id="strings" class="harp-strings stage-fill" role="application" aria-label="Harp strings — tap or slide"></div>
   </div>
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
-    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     const SCALES = {
@@ -39,23 +40,39 @@
       maj: [0, 2, 4, 5, 7, 9, 11],
       min: [0, 2, 3, 5, 7, 8, 10],
     };
-    const ROOTS = ["C", "D", "E", "F", "G", "A", "B"];
+    const ROOTS = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+    const SENSOR_OPTS = { needMotion: false, needOrientation: true };
+    const STRING_COUNT = 8;
+
+    const strings = document.getElementById("strings");
+    const stringEls = [];
     let ctx, master, built = false;
+    let sensorsReady = false;
     let rootMidi = 60;
+    let activePointer = null;
+    let lastPlucked = -1;
 
     function buildAudio(c) {
       ctx = c;
       ({ master } = createMasterBus(c, 0.5));
       built = true;
-      void enableSensors().then((ok) => {
-        if (ok) {
-          onOrientation((o) => {
-            const t = ((o.gamma ?? 0) + 90) / 180;
-            rootMidi = 48 + Math.floor(t * 14);
-            document.getElementById("keyOut").textContent = ROOTS[rootMidi % 12];
-          });
-        }
+    }
+
+    async function initSensors() {
+      if (sensorsReady) return;
+      const ok = await enableSensors(SENSOR_OPTS);
+      if (!ok) return;
+      onOrientation((o) => {
+        const tilt = Math.min(1, Math.sqrt((o.beta || 0) ** 2 + (o.gamma || 0) ** 2) / 90);
+        rootMidi = 48 + Math.floor(tilt * 14);
+        document.getElementById("keyOut").textContent = ROOTS[rootMidi % 12];
       });
+      sensorsReady = true;
+    }
+
+    function midiForString(i) {
+      const scale = SCALES[document.getElementById("scale").value];
+      return rootMidi + scale[i % scale.length] + Math.floor(i / scale.length) * 12;
     }
 
     function pluck(midi) {
@@ -72,36 +89,71 @@
       o.stop(t + 0.65);
     }
 
-    const strings = document.getElementById("strings");
-    for (let i = 0; i < 8; i++) {
-      const s = document.createElement("button");
-      s.type = "button";
+    function stringIndexFromX(clientX) {
+      const r = strings.getBoundingClientRect();
+      if (r.width <= 0) return 0;
+      const nx = (clientX - r.left) / r.width;
+      return Math.max(0, Math.min(STRING_COUNT - 1, Math.round(nx * (STRING_COUNT - 1))));
+    }
+
+    function highlightString(i) {
+      stringEls.forEach((el, idx) => el.classList.toggle("active", idx === i));
+    }
+
+    function pluckAt(i, force = false) {
+      if (!built || !ctx) return;
+      if (!force && i === lastPlucked) return;
+      lastPlucked = i;
+      pluck(midiForString(i));
+      highlightString(i);
+    }
+
+    function clearStrings() {
+      lastPlucked = -1;
+      stringEls.forEach((el) => el.classList.remove("active"));
+    }
+
+    async function ensureReady() {
+      primeSensors(SENSOR_OPTS);
+      await startAudio(!built ? buildAudio : undefined);
+      await initSensors();
+    }
+
+    for (let i = 0; i < STRING_COUNT; i++) {
+      const s = document.createElement("div");
       s.className = "harp-string";
-      s.style.left = `${(i / 7) * 100}%`;
-      s.addEventListener("pointerdown", async (e) => {
-        e.preventDefault();
-        await startAudio(!built ? buildAudio : undefined);
-        const scale = SCALES[document.getElementById("scale").value];
-        pluck(rootMidi + scale[i % scale.length] + Math.floor(i / scale.length) * 12);
-        s.classList.add("active");
-      });
-      s.addEventListener("pointerup", () => s.classList.remove("active"));
+      s.style.left = `${(i / (STRING_COUNT - 1)) * 100}%`;
+      s.setAttribute("aria-hidden", "true");
       strings.appendChild(s);
+      stringEls.push(s);
     }
+
+    strings.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      void ensureReady().then(() => {
+        if (!built) return;
+        activePointer = e.pointerId;
+        strings.setPointerCapture(e.pointerId);
+        clearStrings();
+        pluckAt(stringIndexFromX(e.clientX), true);
+      });
+    });
+
+    strings.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== activePointer || !built) return;
+      pluckAt(stringIndexFromX(e.clientX));
+    });
+
+    const end = (e) => {
+      if (e.pointerId !== activePointer) return;
+      if (strings.hasPointerCapture(e.pointerId)) strings.releasePointerCapture(e.pointerId);
+      activePointer = null;
+      clearStrings();
+    };
+
+    strings.addEventListener("pointerup", end);
+    strings.addEventListener("pointercancel", end);
+    strings.addEventListener("lostpointercapture", end);
   </script>
-  <style>
-    .harp-strings { position: relative; width: 100%; height: 100%; background: #0f172a; }
-    .harp-string {
-      position: absolute;
-      top: 8%;
-      bottom: 8%;
-      width: 28px;
-      margin-left: -14px;
-      background: linear-gradient(180deg, transparent, rgba(110,231,183,0.35), transparent);
-      border: none;
-      border-radius: 4px;
-    }
-    .harp-string.active { background: rgba(110,231,183,0.55); }
-  </style>
 </body>
 </html>
