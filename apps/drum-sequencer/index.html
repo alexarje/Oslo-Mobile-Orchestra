@@ -15,12 +15,15 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>4-track × 8-step</h2>
-    <p>Turn <strong>Audio on</strong> (top right), toggle steps, then press ▶. Kick, snare, hi-hat, open hat — one row each.</p>
+    <p>Turn <strong>Audio on</strong>, toggle steps, press ▶. <strong>Swing</strong> delays every other step for a shuffle feel.</p>
   </div>
   <div class="control-row">
     <label for="bpm">BPM</label>
     <input type="range" id="bpm" min="60" max="160" value="100" />
     <span id="bpmVal">100</span>
+    <label for="swing">Swing</label>
+    <input type="range" id="swing" min="0" max="75" value="0" />
+    <span id="swingVal">0%</span>
     <button type="button" class="btn btn-play" id="playBtn">▶</button>
   </div>
   <div class="main-stage">
@@ -85,10 +88,22 @@
       document.getElementById("bpmVal").textContent = e.target.value;
     };
 
+    document.getElementById("swing").oninput = (e) => {
+      document.getElementById("swingVal").textContent = `${e.target.value}%`;
+    };
+
+    /** 8th-note step length; odd steps delayed, even shortened (bar length unchanged). */
+    function stepDuration(step) {
+      const bpm = +document.getElementById("bpm").value;
+      const base = 60 / bpm / 2;
+      const swing = +document.getElementById("swing").value / 100;
+      if (swing === 0) return base;
+      const skew = swing * 0.5;
+      return step % 2 === 1 ? base * (1 + skew) : base * (1 - skew);
+    }
+
     function scheduler() {
       if (!playing || !ctx) return;
-      const bpm = +document.getElementById("bpm").value;
-      const stepSec = 60 / bpm / 2;
       const now = ctx.currentTime;
       while (nextTime <= now + 0.05) {
         const col = stepIndex;
@@ -97,8 +112,8 @@
           if (pattern[ri][col]) DRUM_SEQ_ROWS[ri].play(ctx, master);
           cells[ri][col]?.classList.add("playing");
         }
+        nextTime += stepDuration(col);
         stepIndex = (col + 1) % STEPS;
-        nextTime += stepSec;
       }
       requestAnimationFrame(scheduler);
     }
