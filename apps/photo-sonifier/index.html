@@ -81,7 +81,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Camera → grains</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>Start camera</strong>. Each frame becomes a brightness map — brighter pixels spawn more grains.</p>
+    <p>Turn <strong>Audio on</strong>, then <strong>Start camera</strong>. Even scenes sound smooth; busy, high-contrast scenes get grainier.</p>
     <p>Camera is used <strong>only while open</strong>. Nothing is recorded, uploaded, or saved. <strong>Workshop mode</strong> uses the rear camera at low resolution.</p>
   </div>
 
@@ -99,6 +99,7 @@
   <p class="status-bar" id="status"></p>
   <div class="readout-row">
     <p class="value-chip">Brightness <strong id="brightOut">—</strong></p>
+    <p class="value-chip">Detail <strong id="detailOut">—</strong></p>
     <p class="value-chip">Grains <strong id="rateOut">—</strong>/s</p>
   </div>
   <div class="control-row">
@@ -121,8 +122,10 @@
     const GRID_W = 16;
     const GRID_H = 12;
     const ANALYZE_MS = 80;
-    const MIN_GRAINS = 2;
-    const MAX_GRAINS = 42;
+    const MIN_GRAINS = 1;
+    const MAX_GRAINS = 46;
+    const TEXTURE_SMOOTH = 0.82;
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     const consentGate = document.getElementById("consentGate");
     const consentBtn = document.getElementById("consentBtn");
@@ -141,6 +144,7 @@
     let analyzeTimer = null;
     let grainTimer = null;
     let meanBrightness = 0;
+    let smoothTexture = 0;
     let grainsPerSec = MIN_GRAINS;
     const cellBrightness = new Float32Array(GRID_W * GRID_H);
     const cellWeight = new Float32Array(GRID_W * GRID_H);
@@ -164,15 +168,49 @@
       }
     }
 
+    function measureTexture(cells) {
+      const n = cells.length;
+      let sum = 0;
+      for (let i = 0; i < n; i++) sum += cells[i];
+      const mean = sum / n;
+      let variance = 0;
+      for (let i = 0; i < n; i++) {
+        const d = cells[i] - mean;
+        variance += d * d;
+      }
+      variance /= n;
+
+      let edgeSum = 0;
+      let edgeCount = 0;
+      for (let row = 0; row < GRID_H; row++) {
+        for (let col = 0; col < GRID_W; col++) {
+          const i = row * GRID_W + col;
+          const v = cells[i];
+          if (col + 1 < GRID_W) {
+            edgeSum += Math.abs(v - cells[i + 1]);
+            edgeCount++;
+          }
+          if (row + 1 < GRID_H) {
+            edgeSum += Math.abs(v - cells[i + GRID_W]);
+            edgeCount++;
+          }
+        }
+      }
+      const edgeMean = edgeCount > 0 ? edgeSum / edgeCount : 0;
+      return clamp(Math.sqrt(variance) * 3.4 + edgeMean * 2.2, 0, 1);
+    }
+
     function spawnGrain(col, row, level) {
       if (!ctx || !buffer) return;
+      const tex = smoothTexture;
+      const even = 1 - tex;
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       const nx = GRID_W > 1 ? col / (GRID_W - 1) : 0.5;
       const ny = GRID_H > 1 ? row / (GRID_H - 1) : 0.5;
-      const rate = 0.35 + ny * 1.4;
-      const dur = 0.015 + Math.random() * 0.04;
-      src.playbackRate.value = rate;
+      const rateSpread = 0.25 + tex * 1.35;
+      src.playbackRate.value = 0.45 + ny * rateSpread;
+      const dur = 0.014 + even * 0.1 + Math.random() * (0.012 + tex * 0.038);
       const gn = ctx.createGain();
       const pan = ctx.createStereoPanner();
       pan.pan.value = nx * 2 - 1;
@@ -181,10 +219,11 @@
       gn.connect(pan);
       src.connect(gn);
       const t = ctx.currentTime;
-      const amp = 0.06 + level * 0.22;
+      const amp = 0.05 + even * 0.05 + level * (0.1 + tex * 0.18);
+      const attack = 0.003 + even * 0.006;
       src.start(t, Math.random() * Math.max(0.01, buffer.duration - dur), dur);
       gn.gain.setValueAtTime(0, t);
-      gn.gain.linearRampToValueAtTime(amp, t + 0.004);
+      gn.gain.linearRampToValueAtTime(amp, t + attack);
       gn.gain.linearRampToValueAtTime(0, t + dur);
     }
 
@@ -210,7 +249,10 @@
       const row = (idx / GRID_W) | 0;
       spawnGrain(col, row, cellBrightness[idx]);
       const interval = 1000 / Math.max(MIN_GRAINS, grainsPerSec);
-      grainTimer = setTimeout(scheduleGrain, interval * (0.7 + Math.random() * 0.6));
+      const even = 1 - smoothTexture;
+      const jitterLo = 0.9 + even * 0.08;
+      const jitterHi = 1.05 + smoothTexture * 0.55;
+      grainTimer = setTimeout(scheduleGrain, interval * (jitterLo + Math.random() * (jitterHi - jitterLo)));
     }
 
     function analyzeFrame() {
@@ -222,12 +264,19 @@
         const o = i * 4;
         const b = (img.data[o] + img.data[o + 1] + img.data[o + 2]) / (3 * 255);
         cellBrightness[i] = b;
-        cellWeight[i] = 0.08 + b * b;
         sum += b;
       }
       meanBrightness = sum / cellBrightness.length;
-      grainsPerSec = MIN_GRAINS + meanBrightness * (MAX_GRAINS - MIN_GRAINS);
+      const texture = measureTexture(cellBrightness);
+      smoothTexture = smoothTexture * TEXTURE_SMOOTH + texture * (1 - TEXTURE_SMOOTH);
+      const even = 1 - smoothTexture;
+      for (let i = 0; i < cellBrightness.length; i++) {
+        const b = cellBrightness[i];
+        cellWeight[i] = 0.05 + even * 0.2 + (1 - even) * (0.06 + b * b);
+      }
+      grainsPerSec = MIN_GRAINS + smoothTexture * (MAX_GRAINS - MIN_GRAINS);
       document.getElementById("brightOut").textContent = `${(meanBrightness * 100).toFixed(0)}%`;
+      document.getElementById("detailOut").textContent = `${(smoothTexture * 100).toFixed(0)}%`;
       document.getElementById("rateOut").textContent = grainsPerSec.toFixed(0);
       drawPreview(img);
     }
