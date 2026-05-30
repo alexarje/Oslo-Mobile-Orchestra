@@ -32,7 +32,7 @@
   }
 
   function markReady() {
-    if (statusEl) statusEl.textContent = 'Tap pads';
+    if (statusEl) statusEl.textContent = 'Tap a layer cell';
   }
 
   document.body.addEventListener('pointerdown', () => {
@@ -54,6 +54,8 @@
     { name: 'Clap',     icon: '👏', key: '7', play: playClap },
     { name: 'Cowbell',  icon: '🐄', key: '8', play: playCowbell },
   ];
+
+  const LAYERS = 8;
 
   // ── Sound synthesis helpers ─────────────────────────────────────────────────
 
@@ -194,47 +196,61 @@
     });
   }
 
-  // ── Build pad UI ────────────────────────────────────────────────────────────
+  // ── Build matrix UI (8 instruments × 8 layer columns) ─────────────────────
   const grid = document.getElementById('pads-grid');
+  grid.className = 'drums-matrix';
   const keyToPad = {};
 
-  PADS.forEach((pad, i) => {
-    const el = document.createElement('div');
-    el.className = 'drum-pad';
-    el.dataset.pad = i;
-    el.innerHTML = `
-      <span class="pad-icon">${pad.icon}</span>
-      <span class="pad-name">${pad.name}</span>
-      <span class="pad-key">${pad.key}</span>
-    `;
+  PADS.forEach((pad, row) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'drums-row';
 
-    el.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      triggerPad(i, el);
-    });
-    el.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      ensureCtx();
-      triggerPad(i, el);
-    });
+    const label = document.createElement('div');
+    label.className = 'drum-row-label';
+    label.innerHTML = `<span class="pad-icon">${pad.icon}</span><span class="pad-name">${pad.name}</span>`;
+    rowEl.appendChild(label);
 
-    grid.appendChild(el);
-    keyToPad[pad.key] = { index: i, el, play: pad.play };
+    let firstCell = null;
+    for (let col = 0; col < LAYERS; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'drum-pad';
+      cell.dataset.pad = row;
+      cell.dataset.col = col;
+      cell.innerHTML = `<span class="pad-layer">${col + 1}</span>`;
+
+      cell.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        ensureCtx();
+        triggerPad(row, col, cell);
+      });
+
+      rowEl.appendChild(cell);
+      if (col === 0) firstCell = cell;
+    }
+
+    grid.appendChild(rowEl);
+    keyToPad[pad.key] = { index: row, el: firstCell };
   });
 
-  // ── Trigger helper ──────────────────────────────────────────────────────────
-  function triggerPad(i, el) {
+  function layerGain(col) {
+    return 0.62 + (col / (LAYERS - 1)) * 0.38;
+  }
+
+  function triggerPad(row, col, el) {
     ensureCtx();
-    PADS[i].play();
+    const prev = masterGain.gain.value;
+    masterGain.gain.setValueAtTime(parseFloat(volumeSlider.value) * layerGain(col), ctx.currentTime);
+    PADS[row].play();
+    masterGain.gain.setValueAtTime(prev, ctx.currentTime + 0.08);
     el.classList.add('active');
     setTimeout(() => el.classList.remove('active'), 120);
   }
 
-  // ── Keyboard events ─────────────────────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     if (e.repeat) return;
     const entry = keyToPad[e.key];
     if (!entry) return;
-    triggerPad(entry.index, entry.el);
+    ensureCtx();
+    triggerPad(entry.index, 0, entry.el);
   });
 }());
