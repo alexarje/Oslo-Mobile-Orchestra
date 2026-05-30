@@ -19,7 +19,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [FM Touch Synth](apps/fm-touch/) | Timbre exploration | Touch XY → carrier + modulator (FM) |
 | [FM Touch + Tilt](apps/fm-touch-tilt/) | Expressive FM | Touch pitch/amp; tilt → mod frequency |
 | [Karplus–Strong String](apps/ks-string/) | Plucked strings | KS delay line; tilt → damping |
-| [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM |
+| [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM, aftertouch (force / touch size) |
 | [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
 | [Train & Shake](apps/train-shake/) | Gesture performance | k-NN on still / sway / shake; export/import training sets |

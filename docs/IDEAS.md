@@ -27,7 +27,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 - **Pulse Grid** — pattern copy/paste row; share pattern via URL hash
 - ~~**Train & Shake** sway + export/import~~ — shipped in [Train & Shake](../apps/train-shake/)
 - **Conductor** — QR code for musician link; visual metronome flash at downbeat
-- **Synth Pad** — aftertouch-style pressure (if `force` / `radius` available)
+- ~~**Synth Pad** aftertouch~~ — [Synth Pad](../apps/synth-pad/) (`pressure` / contact size)
 - **Granular Tilt** — hold pad to freeze grain buffer; upload short sample (File API)
 
 ---

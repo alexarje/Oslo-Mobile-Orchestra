@@ -6,6 +6,12 @@
   <meta name="theme-color" content="#0d0f14" />
   <title>Synth Pad — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+    #cursor {
+      transform-origin: center center;
+      transition: transform 0.04s ease-out;
+    }
+  </style>
 </head>
 <body class="app-shell">
   <header class="app-header">
@@ -15,7 +21,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Sound synthesis</h2>
-    <p><strong>X</strong> = pitch. <strong>Y</strong> = filter. <strong>FM</strong> = frequency modulation.</p>
+    <p><strong>X</strong> = pitch. <strong>Y</strong> = filter cutoff. <strong>Press harder</strong> = louder + brighter (aftertouch) when your device reports force or touch size.</p>
+    <p><strong>FM</strong> = frequency modulation; pressure also deepens the mod amount.</p>
   </div>
   <div class="control-row">
     <label for="wave">Wave</label>
@@ -25,6 +32,10 @@
       <option value="sawtooth" selected>Saw</option>
       <option value="fm">FM</option>
     </select>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Press <strong id="pressOut">—</strong></p>
+    <p class="value-chip" id="pressSrcChip" hidden><span id="pressSrc">—</span></p>
   </div>
   <div class="main-stage">
     <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="cursor"></div></div>
@@ -40,6 +51,38 @@
     let ctx, master, voice = null;
     let built = false;
     let activePointer = null;
+
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+    /** @returns {{ value: number, source: 'force' | 'size' | 'tap' }} */
+    function readPressure(e) {
+      const p = e.pressure;
+      if (typeof p === "number" && p > 0 && (p < 0.48 || p > 0.52 || p >= 0.99)) {
+        return { value: clamp(p, 0.05, 1), source: "force" };
+      }
+      const w = e.width ?? 0;
+      const h = e.height ?? 0;
+      if (w > 1.2 || h > 1.2) {
+        const size = Math.hypot(w, h);
+        return { value: clamp(0.2 + (size - 14) / 42, 0.2, 1), source: "size" };
+      }
+      return { value: 0.55, source: "tap" };
+    }
+
+    function updatePressureUI(pressure, source) {
+      document.getElementById("pressOut").textContent = `${(pressure * 100).toFixed(0)}%`;
+      const chip = document.getElementById("pressSrcChip");
+      const srcEl = document.getElementById("pressSrc");
+      if (source === "force") {
+        chip.hidden = false;
+        srcEl.textContent = "3D force";
+      } else if (source === "size") {
+        chip.hidden = false;
+        srcEl.textContent = "touch size";
+      } else {
+        chip.hidden = true;
+      }
+    }
 
     function buildAudio(c) {
       ctx = c;
@@ -63,27 +106,48 @@
       voice = null;
     }
 
-    function startVoice(freq, cutoff) {
+    function applyPressure(pressure, when) {
+      if (!voice?.amp) return;
+      const level = 0.06 + pressure * 0.58;
+      voice.amp.gain.setTargetAtTime(level, when, 0.03);
+      voice.filter.Q.setTargetAtTime(2 + pressure * 18, when, 0.04);
+      if (voice.modGain) {
+        voice.modGain.gain.setTargetAtTime(voice.baseMod * (0.45 + pressure * 0.85), when, 0.04);
+      }
+    }
+
+    function startVoice(freq, cutoff, pressure) {
       if (!built) return;
       stopVoice();
       const t = ctx.currentTime;
-      const gain = ctx.createGain();
-      gain.connect(master);
+      const amp = ctx.createGain();
+      amp.connect(master);
       const filt = ctx.createBiquadFilter();
       filt.type = "lowpass";
       filt.frequency.value = cutoff;
-      filt.Q.value = 8;
-      filt.connect(gain);
-      const env = applyEnvelope(gain, ctx, { peak: 0.5, sustain: 0.4, release: 0.25 });
-      const nodes = [gain, filt];
+      filt.Q.value = 2 + pressure * 18;
+      filt.connect(amp);
+      const peak = 0.12 + pressure * 0.55;
+      const sustain = 0.35 + pressure * 0.25;
+      const env = applyEnvelope(amp, ctx, {
+        peak,
+        sustain,
+        attack: 0.015,
+        decay: 0.08,
+        release: 0.25,
+      });
+      const nodes = [amp, filt];
       let osc;
       let modOsc = null;
+      let modGain = null;
+      let baseMod = 0;
       if (waveSel.value === "fm") {
         const carrier = ctx.createOscillator();
         const mod = ctx.createOscillator();
-        const modGain = ctx.createGain();
+        modGain = ctx.createGain();
+        baseMod = freq * 0.8;
         mod.frequency.value = freq * 1.5;
-        modGain.gain.value = freq * 0.8;
+        modGain.gain.value = baseMod * (0.45 + pressure * 0.85);
         mod.connect(modGain);
         modGain.connect(carrier.frequency);
         carrier.frequency.value = freq;
@@ -102,7 +166,8 @@
         osc.start(t);
         nodes.push(osc);
       }
-      voice = { env, nodes, filter: filt, osc, modOsc };
+      voice = { env, nodes, filter: filt, osc, modOsc, modGain, amp, baseMod };
+      applyPressure(pressure, t);
     }
 
     function pointer(e) {
@@ -110,18 +175,23 @@
       const rect = pad.getBoundingClientRect();
       const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      const { value: pressure, source } = readPressure(e);
       cursor.style.left = `${nx * 100}%`;
       cursor.style.top = `${ny * 100}%`;
+      cursor.style.transform = `scale(${0.65 + pressure * 0.95})`;
+      updatePressureUI(pressure, source);
       const freq = midiToFreq(48 + nx * 24);
       const cutoff = 200 + (1 - ny) * 8000;
-      if (!voice) startVoice(freq, cutoff);
+      const t = ctx.currentTime;
+      if (!voice) startVoice(freq, cutoff, pressure);
       else {
-        const t = ctx.currentTime;
         voice.osc.frequency.setTargetAtTime(freq, t, 0.02);
         if (voice.modOsc) {
           voice.modOsc.frequency.setTargetAtTime(freq * 1.5, t, 0.02);
+          voice.baseMod = freq * 0.8;
         }
         voice.filter.frequency.setTargetAtTime(cutoff, t, 0.02);
+        applyPressure(pressure, t);
       }
     }
 
@@ -143,6 +213,9 @@
     const stop = (e) => {
       if (e.pointerId !== activePointer) return;
       pad.classList.remove("active");
+      cursor.style.transform = "scale(1)";
+      document.getElementById("pressOut").textContent = "—";
+      document.getElementById("pressSrcChip").hidden = true;
       stopVoice();
       activePointer = null;
     };
