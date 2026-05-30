@@ -7,6 +7,18 @@
   let ctx = null;
   let masterGain = null;
 
+  const volumeSlider = document.getElementById('volume');
+  const statusEl = document.getElementById('status');
+
+  function pingIOS(c) {
+    const buf = c.createBuffer(1, 1, c.sampleRate);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(c.destination);
+    src.start();
+    src.stop();
+  }
+
   function ensureCtx() {
     if (!ctx) {
       ctx = new AudioContext();
@@ -16,9 +28,17 @@
     } else if (ctx.state === 'suspended') {
       ctx.resume();
     }
+    pingIOS(ctx);
   }
 
-  const volumeSlider = document.getElementById('volume');
+  function markReady() {
+    if (statusEl) statusEl.textContent = 'Tap pads';
+  }
+
+  document.body.addEventListener('pointerdown', () => {
+    ensureCtx();
+    markReady();
+  }, { once: true, capture: true });
   volumeSlider.addEventListener('input', () => {
     if (masterGain) masterGain.gain.value = parseFloat(volumeSlider.value);
   });

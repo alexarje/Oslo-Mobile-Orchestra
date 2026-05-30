@@ -17,7 +17,7 @@
     <h2>FM + motion</h2>
     <p><strong>X</strong> = pitch. <strong>Y</strong> = volume. <strong>Tilt</strong> = modulator frequency.</p>
   </div>
-  <p class="status-bar" id="status">Tap pad to play</p>
+  <p class="status-bar" id="status">Tap screen to start</p>
   <div class="main-stage">
     <div id="playArea" class="stage-fill play-grid">
       <div class="touch-dot" id="dot"></div>
@@ -29,7 +29,7 @@
     <p class="value-chip">Mod <strong id="modHz">110</strong> Hz</p>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot, pingIOSUnlock } from "../../shared/app.js";
+    import { bindLearn, setStatus, createAudioBoot, bindScreenAudioBoot, pingIOSUnlock } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
@@ -72,6 +72,7 @@
       }
       setStatus("status", tiltReady ? "Drag · tilt modulates" : "Drag to play", "ok");
     });
+    bindScreenAudioBoot(ensureReady);
 
     function setFromEvent(ev) {
       const rect = playArea.getBoundingClientRect();

@@ -17,6 +17,17 @@ export function setStatus(id, text, kind = "") {
   if (kind) el.classList.add(kind);
 }
 
+/** Unlock audio on first tap anywhere (header, controls, stage, etc.). */
+export function bindScreenAudioBoot(ensureReady, onReady) {
+  document.body.addEventListener(
+    "pointerdown",
+    () => {
+      void ensureReady().then(() => onReady?.());
+    },
+    { once: true, capture: true }
+  );
+}
+
 /** One-shot audio + app init on first user gesture (iOS-safe). */
 export function createAudioBoot(initFn) {
   let done = false;

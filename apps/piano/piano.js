@@ -21,9 +21,19 @@
   const waveformSelect = document.getElementById('waveform');
   const keyboard = document.getElementById('keyboard');
   const octaveDisplay = document.getElementById('octave-display');
+  const statusEl = document.getElementById('status');
 
   const WHITE_W = 33; // key 32px + 1px gap
   const BLACK_NUDGE = 24;
+
+  function pingIOS(c) {
+    const buf = c.createBuffer(1, 1, c.sampleRate);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.connect(c.destination);
+    src.start();
+    src.stop();
+  }
 
   function ensureCtx() {
     if (!ctx) {
@@ -32,7 +42,17 @@
     } else if (ctx.state === 'suspended') {
       ctx.resume();
     }
+    pingIOS(ctx);
   }
+
+  function markReady() {
+    if (statusEl) statusEl.textContent = 'C4–B5 · tap keys';
+  }
+
+  document.body.addEventListener('pointerdown', () => {
+    ensureCtx();
+    markReady();
+  }, { once: true, capture: true });
 
   function buildReverb() {
     masterGain = ctx.createGain();
