@@ -628,6 +628,11 @@ body.hub {
 .drum-pad[data-pad="6"] { background: linear-gradient(135deg, #0f766e, #042f2e); }
 .drum-pad[data-pad="7"] { background: linear-gradient(135deg, #475569, #1e293b); }
 
+/* Filter ladder — tappable pad while tilting */
+.filter-ladder-app .stage-fill.play-grid {
+  touch-action: manipulation;
+}
+
 /* Mic theremin — tappable pad + visible header controls */
 .mic-theremin-app .mic-theremin-pad {
   touch-action: manipulation;

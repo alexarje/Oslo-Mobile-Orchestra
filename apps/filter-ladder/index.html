@@ -7,7 +7,7 @@
   <title>Filter Ladder — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell filter-ladder-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Filter Ladder</h1>
@@ -15,7 +15,7 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Subtractive filter</h2>
     <p>Turn <strong>Audio on</strong>, then Four lowpass stages ≈ <strong>24 dB/oct</strong>. Hold pad for a saw tone through the ladder.</p>
-    <p><strong>Tilt</strong> phone forward/back: cutoff + envelope (like opening a filter with motion).</p>
+    <p><strong>Tilt</strong> while holding the pad (allow motion if asked on iPhone). The <strong>Tilt</strong> readout should move; cutoff follows tilt.</p>
   </div>
   <div class="control-row">
     <label for="res">Resonance</label>
@@ -40,6 +40,7 @@
     let ctx, master, built = false;
     let osc, ampGain, ladder, activePointer = null;
     let holding = false;
+    let tiltReady = false;
     let baseCutoff = 1200;
     let tiltAmount = 0.35;
 
@@ -58,6 +59,24 @@
       return { filters, input: filters[0], output: filters[stages - 1] };
     }
 
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+    async function enableTilt() {
+      if (tiltReady) return;
+      if (await enableSensors()) {
+        tiltReady = true;
+        onOrientation((o) => {
+          if (!built) return;
+          const t = clamp(Math.sqrt((o.beta || 0) ** 2 + (o.gamma || 0) ** 2) / 90, 0, 1);
+          tiltAmount = t;
+          document.getElementById("tiltOut").textContent = `${(t * 100).toFixed(0)}%`;
+          if (holding) applyFilter(ctx.currentTime);
+        });
+      } else {
+        document.getElementById("tiltOut").textContent = "blocked";
+      }
+    }
+
     function buildAudio(c) {
       ctx = c;
       ({ master } = createMasterBus(c, 0.5));
@@ -72,17 +91,7 @@
       ampGain.connect(master);
       osc.start();
       built = true;
-      void enableTilt();
-      onOrientation((o) => {
-        if (!holding) return;
-        const t = clamp(Math.sqrt((o.beta || 0) ** 2 + (o.gamma || 0) ** 2) / 90, 0, 1);
-        tiltAmount = t;
-        document.getElementById("tiltOut").textContent = `${(t * 100).toFixed(0)}%`;
-        applyFilter(ctx.currentTime);
-      });
     }
-
-    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
     function applyFilter(when) {
       const res = +document.getElementById("res").value;
@@ -102,6 +111,7 @@
 
     pad.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
+      void enableTilt();
       await startAudio(!built ? buildAudio : undefined);
       activePointer = e.pointerId;
       pad.setPointerCapture(e.pointerId);
