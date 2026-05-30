@@ -633,6 +633,36 @@ body.hub {
   touch-action: manipulation;
 }
 
+/* Granular tilt — upload + record toolbar */
+.granular-tilt-app .granular-toolbar {
+  flex-wrap: wrap;
+}
+
+.granular-tilt-app .granular-upload {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin: 0;
+}
+
+.granular-tilt-app .granular-buf-tag {
+  font-size: 0.7rem;
+  color: var(--muted);
+  flex: 1 1 auto;
+  text-align: right;
+  min-width: 3rem;
+}
+
+.granular-tilt-app .btn-rec.recording {
+  border-color: #f87171;
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.35);
+}
+
+.granular-tilt-app .stage-fill.play-grid {
+  touch-action: manipulation;
+}
+
 /* Bow phone — motion-driven bow */
 .bow-phone-app .stage-fill.play-grid {
   touch-action: manipulation;

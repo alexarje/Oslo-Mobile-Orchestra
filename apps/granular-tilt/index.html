@@ -7,22 +7,25 @@
   <title>Granular Tilt — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell granular-tilt-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Granular Tilt</h1>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Granular synthesis</h2>
-    <p>Turn <strong>Audio on</strong>, then Tap to start. <strong>Upload</strong> a short WAV/MP3. <strong>Hold pad</strong> to freeze the grain buffer position.</p>
+    <p>Turn <strong>Audio on</strong>, then tap the zone to start grains. <strong>Upload</strong> or <strong>hold Record</strong> for a custom sample (mic).</p>
+    <p><strong>Hold pad</strong> to freeze grain position. <strong>Tilt</strong> for grain rate and pitch.</p>
   </div>
-  <div class="control-row">
-    <label class="btn-secondary btn btn-sm" style="display:inline-flex;align-items:center;cursor:pointer">
+  <div class="app-toolbar granular-toolbar">
+    <label class="btn-secondary btn btn-sm granular-upload">
       <input type="file" id="sampleIn" accept="audio/*" hidden />
-      Upload sample
+      Upload
     </label>
-    <span id="bufTag" style="font-size:0.7rem;color:var(--muted)">default</span>
+    <button type="button" class="btn-secondary btn btn-sm btn-rec" id="recBtn">Hold record</button>
+    <span class="granular-buf-tag" id="bufTag">default</span>
   </div>
+  <p class="status-bar" id="status">Tap zone for audio</p>
   <div class="readout-row">
     <p class="value-chip">Rate <strong id="rateOut">—</strong>/s</p>
     <p class="value-chip">Pitch <strong id="pitchOut">—</strong>×</p>
@@ -33,18 +36,37 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, startAudio } from "../../shared/app.js";
-    import { createMasterBus } from "../../shared/audio.js";
-    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
+    import { createMasterBus, getMicStream, primeMicStream } from "../../shared/audio.js";
+    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     const tapZone = document.getElementById("tapZone");
     const canvas = document.getElementById("scope");
+    const recBtn = document.getElementById("recBtn");
     const g = canvas.getContext("2d");
+    const SENSOR_OPTS = { needMotion: false, needOrientation: true };
+    const MAX_RECORD_MS = 6000;
+    const MIN_RECORD_SAMPLES = 2048;
+
     let ctx, master, buffer, running = false;
-    let beta = 45, gamma = 0;
+    let beta = 45;
+    let gamma = 0;
     let frozen = false;
     let freezePos = 0;
+    let micStream = null;
+    let recording = false;
+    let recPointer = null;
+    let recordTimer = null;
+    let mediaRecorder = null;
+    let recordChunks = [];
+    let recordSource, recordProcessor, recordSilent;
+    let spChunks, spLength;
+    let useMediaRecorder = typeof MediaRecorder !== "undefined";
+
+    function setBufTag(text) {
+      document.getElementById("bufTag").textContent = text;
+    }
 
     function resizeCanvas() {
       const box = canvas.parentElement.getBoundingClientRect();
@@ -63,21 +85,24 @@
     function draw() {
       if (!running) return;
       resizeCanvas();
-      const w = canvas.width, h = canvas.height;
+      const w = canvas.width;
+      const h = canvas.height;
       g.fillStyle = "#0f172a";
       g.fillRect(0, 0, w, h);
-      g.strokeStyle = frozen ? "#fbbf24" : "#6ee7b7";
+      g.strokeStyle = frozen ? "#fbbf24" : recording ? "#f87171" : "#6ee7b7";
       g.beginPath();
       for (let i = 0; i < 40; i++) {
         const x = (i / 40) * w;
         const y = h / 2 + Math.sin(i * 0.5 + performance.now() / 200) * (beta / 90) * h * 0.3;
-        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
       }
       g.stroke();
       requestAnimationFrame(draw);
     }
 
     function spawnGrain() {
+      if (!buffer || recording) return;
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
@@ -102,42 +127,215 @@
       setTimeout(schedule, 1000 / (5 + (beta / 90) * 25));
     }
 
+    async function ensureMic() {
+      if (micStream) return true;
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("status", "Mic not supported", "warn");
+        return false;
+      }
+      try {
+        micStream = await getMicStream();
+        return true;
+      } catch {
+        setStatus("status", "Mic denied — allow in Settings", "warn");
+        return false;
+      }
+    }
+
+    async function ensureBoot() {
+      primeSensors(SENSOR_OPTS);
+      if (!running) await startAudio(boot);
+      else if (!micStream) await ensureMic();
+    }
+
     async function boot(c) {
       ctx = c;
       ({ master } = createMasterBus(ctx, 0.5));
       buffer = defaultBuffer(ctx);
-      await enableSensors();
-      onOrientation((o) => {
-        beta = o.beta ?? 45;
-        gamma = o.gamma ?? 0;
-        document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
-        document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
-      });
+      setBufTag("default");
+      const ok = await enableSensors(SENSOR_OPTS);
+      if (ok) {
+        onOrientation((o) => {
+          beta = o.beta ?? 45;
+          gamma = o.gamma ?? 0;
+          document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
+          document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
+        });
+      }
       running = true;
+      setStatus("status", "Grains on · upload or record sample", "ok");
       draw();
       schedule();
     }
 
+    async function setBufferFromAudioData(buf, label) {
+      buffer = buf;
+      setBufTag(label);
+      freezePos = Math.min(freezePos, Math.max(0, buffer.duration - 0.05));
+    }
+
+    async function setBufferFromBlob(blob, label) {
+      try {
+        const ab = await blob.arrayBuffer();
+        await setBufferFromAudioData(await ctx.decodeAudioData(ab.slice(0)), label);
+        setStatus("status", "Sample loaded", "ok");
+      } catch {
+        setStatus("status", "Could not use recording", "warn");
+      }
+    }
+
+    function teardownScriptCapture() {
+      if (recordProcessor) recordProcessor.onaudioprocess = null;
+      try {
+        recordProcessor?.disconnect();
+        recordSource?.disconnect();
+        recordSilent?.disconnect();
+      } catch {
+        /* noop */
+      }
+      recordProcessor = null;
+      recordSource = null;
+      recordSilent = null;
+    }
+
+    function bufferFromScriptCapture() {
+      if (spLength < MIN_RECORD_SAMPLES) return null;
+      const buf = ctx.createBuffer(1, spLength, ctx.sampleRate);
+      const out = buf.getChannelData(0);
+      let off = 0;
+      for (const chunk of spChunks) {
+        out.set(chunk, off);
+        off += chunk.length;
+      }
+      return buf;
+    }
+
+    function recorderMime() {
+      if (typeof MediaRecorder === "undefined") return "";
+      if (MediaRecorder.isTypeSupported("audio/mp4")) return "audio/mp4";
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
+      if (MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
+      return "";
+    }
+
+    function stopRecording() {
+      if (!recording) return;
+      recording = false;
+      recBtn.classList.remove("recording");
+      clearTimeout(recordTimer);
+      recordTimer = null;
+
+      if (useMediaRecorder && mediaRecorder?.state === "recording") {
+        mediaRecorder.stop();
+        return;
+      }
+      teardownScriptCapture();
+      const buf = bufferFromScriptCapture();
+      if (buf) {
+        void setBufferFromAudioData(buf, "recorded");
+        setStatus("status", "Sample recorded", "ok");
+      } else {
+        setStatus("status", "Too short — hold longer", "warn");
+      }
+    }
+
+    function startRecording() {
+      if (recording || !micStream) return;
+      recording = true;
+      recBtn.classList.add("recording");
+      setStatus("status", "Recording…", "ok");
+
+      recordTimer = setTimeout(() => {
+        if (recPointer != null) stopRecording();
+      }, MAX_RECORD_MS);
+
+      if (useMediaRecorder) {
+        recordChunks = [];
+        const mime = recorderMime();
+        try {
+          mediaRecorder = mime
+            ? new MediaRecorder(micStream, { mimeType: mime })
+            : new MediaRecorder(micStream);
+        } catch {
+          useMediaRecorder = false;
+          startRecording();
+          return;
+        }
+        mediaRecorder.ondataavailable = (ev) => {
+          if (ev.data.size > 0) recordChunks.push(ev.data);
+        };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          void setBufferFromBlob(blob, "recorded");
+        };
+        mediaRecorder.start(250);
+      } else {
+        spChunks = [];
+        spLength = 0;
+        recordSource = ctx.createMediaStreamSource(micStream);
+        recordProcessor = ctx.createScriptProcessor(4096, 1, 1);
+        recordSilent = ctx.createGain();
+        recordSilent.gain.value = 0;
+        recordProcessor.onaudioprocess = (e) => {
+          if (!recording) return;
+          const ch = e.inputBuffer.getChannelData(0);
+          const copy = Float32Array.from(ch);
+          spChunks.push(copy);
+          spLength += copy.length;
+          if (spLength >= ctx.sampleRate * (MAX_RECORD_MS / 1000)) stopRecording();
+        };
+        recordSource.connect(recordProcessor);
+        recordProcessor.connect(recordSilent);
+        recordSilent.connect(ctx.destination);
+      }
+    }
+
+    recBtn.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      primeMicStream();
+      primeSensors(SENSOR_OPTS);
+      await ensureBoot();
+      if (!(await ensureMic())) return;
+      recPointer = e.pointerId;
+      recBtn.setPointerCapture(e.pointerId);
+      startRecording();
+    });
+
+    const endRec = (e) => {
+      if (e.pointerId !== recPointer) return;
+      recPointer = null;
+      stopRecording();
+    };
+    recBtn.addEventListener("pointerup", endRec);
+    recBtn.addEventListener("pointercancel", endRec);
+    recBtn.addEventListener("lostpointercapture", endRec);
+
     tapZone.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
+      primeSensors(SENSOR_OPTS);
       if (!running) await startAudio(boot);
       tapZone.setPointerCapture(e.pointerId);
       frozen = true;
-      freezePos = Math.random() * Math.max(0.01, buffer.duration - 0.05);
+      if (buffer) freezePos = Math.random() * Math.max(0.01, buffer.duration - 0.05);
     });
-    tapZone.addEventListener("pointerup", () => { frozen = false; });
-    tapZone.addEventListener("pointercancel", () => { frozen = false; });
+    tapZone.addEventListener("pointerup", () => {
+      frozen = false;
+    });
+    tapZone.addEventListener("pointercancel", () => {
+      frozen = false;
+    });
 
     document.getElementById("sampleIn").onchange = async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      if (!ctx) await startAudio(boot);
+      await ensureBoot();
       const ab = await file.arrayBuffer();
       try {
-        buffer = await ctx.decodeAudioData(ab.slice(0));
-        document.getElementById("bufTag").textContent = file.name.slice(0, 12);
+        await setBufferFromAudioData(await ctx.decodeAudioData(ab.slice(0)), file.name.slice(0, 10));
+        setStatus("status", "Sample loaded", "ok");
       } catch {
-        document.getElementById("bufTag").textContent = "decode failed";
+        setBufTag("decode fail");
+        setStatus("status", "Could not decode file", "warn");
       }
     };
 
