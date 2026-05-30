@@ -633,17 +633,110 @@ body.hub {
   touch-action: manipulation;
 }
 
-/* Mic theremin — tappable pad + visible header controls */
-.mic-theremin-app .mic-theremin-pad {
-  touch-action: manipulation;
-}
-
+/* Mic theremin — pitch keyboard + hold-to-play circle */
 .mic-theremin-app .app-header h1 {
   font-size: 0.82rem;
 }
 
 .mic-theremin-app .header-controls {
   max-width: 52%;
+}
+
+.mic-theremin-app .theremin-keyboard-scroll {
+  flex: 1 1 auto;
+  min-height: 4.5rem;
+  padding-bottom: 0.25rem;
+}
+
+.mic-theremin-app .piano-key.theremin-key {
+  pointer-events: none;
+}
+
+.mic-theremin-app .piano-key.white.theremin-key {
+  width: 22px;
+  height: 76px;
+}
+
+.mic-theremin-app .piano-key.black.theremin-key {
+  width: 14px;
+  height: 46px;
+}
+
+.mic-theremin-app .piano-key.theremin-key.pitch-detected {
+  box-shadow: 0 0 14px rgba(110, 231, 183, 0.55);
+}
+
+.mic-theremin-app .piano-key.white.theremin-key.pitch-detected {
+  background: #6ee7b7;
+}
+
+.mic-theremin-app .piano-key.black.theremin-key.pitch-detected {
+  background: #047857;
+}
+
+.mic-theremin-app .theremin-play-area {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0.35rem 0.5rem calc(0.5rem + var(--safe-b));
+}
+
+.mic-theremin-app .theremin-play-btn {
+  position: relative;
+  width: 5.75rem;
+  height: 5.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--accent-dim);
+  background: radial-gradient(circle at 32% 28%, #334155, #0f172a 72%);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mic-theremin-app .theremin-play-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 22px rgba(110, 231, 183, 0.35);
+}
+
+.mic-theremin-app .theremin-play-inner {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 3px solid rgba(110, 231, 183, 0.2);
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.12s, transform 0.12s;
+}
+
+.mic-theremin-app .theremin-play-inner.on {
+  opacity: 1;
+  transform: scale(1);
+  border-color: var(--accent);
+  animation: theremin-pulse 0.9s ease-in-out infinite;
+}
+
+.mic-theremin-app .theremin-play-label {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes theremin-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(110, 231, 183, 0.15);
+  }
+  50% {
+    box-shadow: inset 0 0 18px 4px rgba(110, 231, 183, 0.35);
+  }
 }
 
 /* Additive bells — compact strike pad, all partial sliders on screen */
@@ -838,7 +931,7 @@ body.hub {
   background: linear-gradient(90deg, #334155, #475569 35%, #64748b 50%, #475569 65%, #334155);
   box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(0, 0, 0, 0.35);
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: center;
   justify-content: space-evenly;
   padding: 0.4rem 0;

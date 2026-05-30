@@ -15,7 +15,7 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Breath + finger holes</h2>
     <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>blow</strong> past the yellow line.</p>
-    <p><strong>Tap a hole</strong> to cover or uncover it. Lift fingers from the <strong>bottom</strong> hole upward for higher notes (C → D → E → G → A → C). Top = near mouthpiece.</p>
+    <p><strong>Tap a hole</strong> to cover or uncover it. Uncover from the <strong>bottom</strong> hole upward for higher notes (C → D → E → G → A → C). Bottom hole is nearest the screen edge.</p>
   </div>
   <p class="status-bar" id="status"></p>
   <div class="breath-row">
@@ -39,8 +39,8 @@
     const ROOT_MIDI = 60;
     const NOTE_NAMES = ["C", "D", "E", "G", "A"];
     const HOLE_COUNT = 5;
-    /** Open holes count (0–5) → pentatonic step index (0–9). */
-    const OPEN_TO_INDEX = [0, 2, 4, 6, 8, 9];
+    /** Consecutive open holes from bottom (0–5) → pentatonic step 0–5 (C4…C5). */
+    const OPEN_TO_INDEX = [0, 1, 2, 3, 4, 5];
 
     const fluteTube = document.getElementById("fluteTube");
     let ctx, master, analyser, micStream;
@@ -56,38 +56,44 @@
     const holeBtns = [];
 
     function indexToMidi(i) {
-      const idx = Math.max(0, Math.min(9, Math.round(i)));
+      const idx = Math.max(0, Math.min(5, Math.round(i)));
       return ROOT_MIDI + Math.floor(idx / 5) * 12 + PENTA[idx % 5];
     }
 
     function labelFromIndex(i) {
-      const idx = Math.max(0, Math.min(9, Math.round(i)));
+      const idx = Math.max(0, Math.min(5, Math.round(i)));
       return `${NOTE_NAMES[idx % 5]}${4 + Math.floor(idx / 5)}`;
     }
 
-    /** Open holes from the bottom of the tube upward (hole 5 → 1). */
+    /** Open holes from the bottom of the tube upward (hole 0 = bottom). */
     function openStepsFromBottom() {
       let n = 0;
-      for (let i = HOLE_COUNT - 1; i >= 0; i--) {
+      for (let i = 0; i < HOLE_COUNT; i++) {
         if (!holesCovered[i]) n++;
         else break;
       }
       return n;
     }
 
+    function setPitch(when) {
+      if (!toneOsc || !ctx) return;
+      const freq = midiToFreq(currentMidi);
+      toneOsc.frequency.cancelScheduledValues(when);
+      toneOsc.frequency.setValueAtTime(freq, when);
+    }
+
     function applyFingering() {
-      noteIndex = OPEN_TO_INDEX[openStepsFromBottom()];
+      const steps = openStepsFromBottom();
+      noteIndex = OPEN_TO_INDEX[Math.min(steps, OPEN_TO_INDEX.length - 1)];
       currentMidi = indexToMidi(noteIndex);
       document.getElementById("readout").textContent = labelFromIndex(noteIndex);
       holeBtns.forEach((btn, i) => {
         btn.classList.toggle("open", !holesCovered[i]);
         btn.classList.toggle("covered", holesCovered[i]);
         btn.setAttribute("aria-pressed", holesCovered[i] ? "true" : "false");
-        btn.setAttribute("aria-label", `Hole ${i + 1} ${holesCovered[i] ? "covered" : "open"}`);
+        btn.setAttribute("aria-label", `Hole ${i + 1} (bottom=1) ${holesCovered[i] ? "covered" : "open"}`);
       });
-      if (toneOsc && ctx) {
-        toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), ctx.currentTime, 0.03);
-      }
+      if (ctx) setPitch(ctx.currentTime);
     }
 
     function onHoleTap(i, e) {
@@ -107,6 +113,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "flute-hole covered";
+      btn.dataset.hole = String(i + 1);
       btn.addEventListener("pointerdown", (e) => onHoleTap(i, e));
       fluteTube.appendChild(btn);
       holeBtns.push(btn);
@@ -142,9 +149,9 @@
       const vib = ctx.createOscillator();
       const vibG = ctx.createGain();
       vib.frequency.value = 5.5;
-      vibG.gain.value = 3;
+      vibG.gain.value = 5;
       vib.connect(vibG);
-      vibG.connect(toneOsc.frequency);
+      vibG.connect(toneOsc.detune);
       vib.start();
       const f = ctx.createBiquadFilter();
       f.type = "lowpass";
@@ -181,7 +188,7 @@
         const s = Math.min(1, (rms - blowThreshold) / (0.12 - blowThreshold));
         toneGain.gain.setTargetAtTime(0.08 + s * 0.42, t, 0.02);
         noiseGain.gain.setTargetAtTime(s * 0.06, t, 0.02);
-        toneOsc.frequency.setTargetAtTime(midiToFreq(currentMidi), t, 0.03);
+        setPitch(t);
       } else {
         toneGain.gain.setTargetAtTime(0, t, 0.06);
         noiseGain.gain.setTargetAtTime(0, t, 0.04);
