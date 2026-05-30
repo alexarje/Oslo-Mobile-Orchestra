@@ -136,7 +136,7 @@
     const sctx = sample.getContext("2d", { willReadFrequently: true });
 
     let stream = null;
-    let ctx, master, buffer;
+    let ctx, master, buffer, dryGain, reverb, reverbWet;
     let running = false;
     let analyzeTimer = null;
     let grainTimer = null;
@@ -144,6 +144,16 @@
     let grainsPerSec = MIN_GRAINS;
     const cellBrightness = new Float32Array(GRID_W * GRID_H);
     const cellWeight = new Float32Array(GRID_W * GRID_H);
+
+    function reverbImpulse(c, sec) {
+      const len = Math.floor(c.sampleRate * sec);
+      const b = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = b.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.5;
+      }
+      return b;
+    }
 
     function buildGrainBuffer(c) {
       const len = Math.floor(c.sampleRate * 0.4);
@@ -166,7 +176,8 @@
       const gn = ctx.createGain();
       const pan = ctx.createStereoPanner();
       pan.pan.value = nx * 2 - 1;
-      pan.connect(master);
+      pan.connect(dryGain);
+      pan.connect(reverb);
       gn.connect(pan);
       src.connect(gn);
       const t = ctx.currentTime;
@@ -301,6 +312,15 @@
       if (ctx) return;
       ctx = c;
       ({ master } = createMasterBus(c, 0.45));
+      dryGain = ctx.createGain();
+      dryGain.gain.value = 0.78;
+      dryGain.connect(master);
+      reverb = ctx.createConvolver();
+      reverb.buffer = reverbImpulse(c, 1.6);
+      reverbWet = ctx.createGain();
+      reverbWet.gain.value = 0.32;
+      reverb.connect(reverbWet);
+      reverbWet.connect(master);
       buildGrainBuffer(c);
     }
 
