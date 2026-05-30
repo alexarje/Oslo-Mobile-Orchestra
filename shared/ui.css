@@ -634,6 +634,15 @@ body.hub {
 }
 
 /* Granular tilt — upload + record toolbar */
+.granular-tilt-app .app-header h1 {
+  font-size: 0.82rem;
+}
+
+.granular-tilt-app .header-controls {
+  flex-shrink: 0;
+  z-index: 11;
+}
+
 .granular-tilt-app .granular-toolbar {
   flex-wrap: wrap;
 }

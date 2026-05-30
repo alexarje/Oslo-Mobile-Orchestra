@@ -36,11 +36,13 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
+    import { bindLearn, setStatus, startAudio, initHeaderControls, registerAudioBoot } from "../../shared/app.js";
     import { createMasterBus, getMicStream, primeMicStream } from "../../shared/audio.js";
     import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
+    initHeaderControls();
+    registerAudioBoot(boot);
     const tapZone = document.getElementById("tapZone");
     const canvas = document.getElementById("scope");
     const recBtn = document.getElementById("recBtn");
@@ -50,6 +52,7 @@
     const MIN_RECORD_SAMPLES = 2048;
 
     let ctx, master, buffer, running = false;
+    let scheduleTimer = null;
     let beta = 45;
     let gamma = 0;
     let frozen = false;
@@ -102,14 +105,13 @@
     }
 
     function spawnGrain() {
-      if (!buffer || recording) return;
+      if (!running || !ctx || !master || !buffer || recording) return;
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
       const dur = 0.02 + Math.random() * 0.03;
-      const offset = frozen
-        ? freezePos
-        : Math.random() * Math.max(0.01, buffer.duration - 0.05);
+      const maxOff = Math.max(0, buffer.duration - dur - 0.002);
+      const offset = frozen ? Math.min(freezePos, maxOff) : Math.random() * maxOff;
       src.playbackRate.value = rate;
       const gn = ctx.createGain();
       gn.connect(master);
@@ -124,7 +126,12 @@
     function schedule() {
       if (!running) return;
       spawnGrain();
-      setTimeout(schedule, 1000 / (5 + (beta / 90) * 25));
+      scheduleTimer = setTimeout(schedule, 1000 / (5 + (beta / 90) * 25));
+    }
+
+    function stopSchedule() {
+      if (scheduleTimer != null) clearTimeout(scheduleTimer);
+      scheduleTimer = null;
     }
 
     async function ensureMic() {
@@ -142,17 +149,25 @@
       }
     }
 
-    async function ensureBoot() {
+    async function ensureBoot({ needMic = false } = {}) {
       primeSensors(SENSOR_OPTS);
       if (!running) await startAudio(boot);
-      else if (!micStream) await ensureMic();
+      if (needMic) return ensureMic();
+      return true;
     }
 
     async function boot(c) {
+      if (running) return;
       ctx = c;
       ({ master } = createMasterBus(ctx, 0.5));
       buffer = defaultBuffer(ctx);
       setBufTag("default");
+      running = true;
+      setStatus("status", "Grains on · upload or record sample", "ok");
+      draw();
+      stopSchedule();
+      schedule();
+
       const ok = await enableSensors(SENSOR_OPTS);
       if (ok) {
         onOrientation((o) => {
@@ -161,11 +176,10 @@
           document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
           document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
         });
+      } else {
+        document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
+        document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
       }
-      running = true;
-      setStatus("status", "Grains on · upload or record sample", "ok");
-      draw();
-      schedule();
     }
 
     async function setBufferFromAudioData(buf, label) {
@@ -294,8 +308,7 @@
       e.preventDefault();
       primeMicStream();
       primeSensors(SENSOR_OPTS);
-      await ensureBoot();
-      if (!(await ensureMic())) return;
+      if (!(await ensureBoot({ needMic: true }))) return;
       recPointer = e.pointerId;
       recBtn.setPointerCapture(e.pointerId);
       startRecording();
@@ -310,13 +323,21 @@
     recBtn.addEventListener("pointercancel", endRec);
     recBtn.addEventListener("lostpointercapture", endRec);
 
-    tapZone.addEventListener("pointerdown", async (e) => {
+    async function onTapZone(e) {
       e.preventDefault();
       primeSensors(SENSOR_OPTS);
-      if (!running) await startAudio(boot);
+      await ensureBoot();
+      if (!running) return;
       tapZone.setPointerCapture(e.pointerId);
       frozen = true;
-      if (buffer) freezePos = Math.random() * Math.max(0.01, buffer.duration - 0.05);
+      if (buffer) {
+        const maxOff = Math.max(0, buffer.duration - 0.05);
+        freezePos = Math.random() * maxOff;
+      }
+    }
+
+    tapZone.addEventListener("pointerdown", (e) => {
+      void onTapZone(e);
     });
     tapZone.addEventListener("pointerup", () => {
       frozen = false;
