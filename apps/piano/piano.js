@@ -1,8 +1,6 @@
 /* piano.js – Web Audio piano (three octaves, mobile touch) */
 
-import { startAudio, ensureAudioBadge } from '../../shared/app.js';
-
-ensureAudioBadge();
+import { startAudio } from '../../shared/app.js';
 
 (function () {
   'use strict';

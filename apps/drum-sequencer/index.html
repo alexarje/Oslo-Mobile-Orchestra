@@ -15,10 +15,9 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>4-track × 8-step</h2>
-    <p>Tap <strong>Audio on</strong>, then toggle steps. Press ▶ to play. Kick, snare, hi-hat, open hat — one row each.</p>
+    <p>Turn <strong>Audio on</strong> (top right), toggle steps, then press ▶. Kick, snare, hi-hat, open hat — one row each.</p>
   </div>
   <div class="control-row">
-    <button type="button" class="btn btn-sm" id="enableAudioBtn">Audio on</button>
     <label for="bpm">BPM</label>
     <input type="range" id="bpm" min="60" max="160" value="100" />
     <span id="bpmVal">100</span>
@@ -28,7 +27,7 @@
     <div class="drum-seq" id="seq"></div>
   </div>
   <script type="module">
-    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { bindLearn, startAudio, registerAudioBoot } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { DRUM_SEQ_ROWS } from "../../shared/drum-sounds.js";
 
@@ -36,7 +35,6 @@
 
     const STEPS = 8;
     const seqEl = document.getElementById("seq");
-    const enableBtn = document.getElementById("enableAudioBtn");
     const pattern = DRUM_SEQ_ROWS.map(() => Array(STEPS).fill(false));
     const cells = [];
     let ctx, master, playing = false, stepIndex = 0, nextTime = 0;
@@ -46,17 +44,14 @@
       ctx = c;
       ({ master } = createMasterBus(ctx, 0.65));
       audioReady = true;
-      enableBtn.hidden = true;
     }
+
+    registerAudioBoot(boot);
 
     function ensureAudio() {
       if (audioReady) return Promise.resolve(ctx);
       return startAudio(boot);
     }
-
-    enableBtn.addEventListener("click", () => {
-      void ensureAudio();
-    });
 
     DRUM_SEQ_ROWS.forEach((row, ri) => {
       const rowEl = document.createElement("div");

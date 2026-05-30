@@ -30,7 +30,8 @@
     <button type="button" class="btn-danger btn btn-sm" id="clearBtn">Clear</button>
   </div>
   <script type="module">
-    import { bindLearn, createAudioBoot, setStatus } from "../../shared/app.js";
+    import { bindLearn, createAudioBoot, setStatus, registerAudioBoot } from "../../shared/app.js";
+    import { connectMicAnalyser } from "../../shared/audio.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { KNNClassifier, FeatureNormalizer } from "../../shared/ml.js";
 
@@ -53,7 +54,8 @@
       return [sum / buf.length / 128, hi / (buf.length * 0.6) / 128, Math.random() * 0.01];
     }
 
-    const ensureReady = createAudioBoot(async (c) => {
+    async function bootMic(c) {
+      if (ctx) return;
       ctx = c;
       ({ master } = createMasterBus(c, 0.4));
       toneGain = ctx.createGain();
@@ -76,8 +78,11 @@
       analyser.fftSize = 512;
       buf = new Uint8Array(analyser.frequencyBinCount);
       mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      ctx.createMediaStreamSource(mic).connect(analyser);
-    });
+      connectMicAnalyser(ctx, mic, analyser);
+    }
+
+    registerAudioBoot(bootMic);
+    const ensureReady = createAudioBoot(bootMic);
 
     function counts() {
       return LABELS.map((l) => clf.samples.filter((s) => s.label === l).length);

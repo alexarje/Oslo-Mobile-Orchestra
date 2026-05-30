@@ -1,8 +1,6 @@
 /* drums.js – Web Audio drum machine */
 
-import { startAudio, ensureAudioBadge } from '../../shared/app.js';
-
-ensureAudioBadge();
+import { startAudio } from '../../shared/app.js';
 
 (function () {
   'use strict';

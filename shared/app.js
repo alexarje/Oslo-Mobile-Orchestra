@@ -3,32 +3,79 @@
  */
 import { getAudioContext, unlockAudio } from "./audio.js";
 
-const AUDIO_BADGE_ID = "audioStatus";
+const AUDIO_TOGGLE_ID = "audioToggle";
+let audioOn = false;
+let optionalBootFn = null;
 
 export function bindLearn(learnBtnId = "learnBtn", panelId = "learnPanel") {
   document.getElementById(learnBtnId)?.addEventListener("click", () => {
     document.getElementById(panelId)?.classList.toggle("open");
   });
-  ensureAudioBadge(learnBtnId);
+  initAudioToggle();
 }
 
-/** Badge in the header (after Learn, or at end of header). */
-export function ensureAudioBadge(learnBtnId = "learnBtn") {
-  if (document.getElementById(AUDIO_BADGE_ID)) return;
-  const span = document.createElement("span");
-  span.id = AUDIO_BADGE_ID;
-  span.className = "audio-status";
-  span.hidden = true;
-  const btn = document.getElementById(learnBtnId);
-  if (btn) btn.insertAdjacentElement("afterend", span);
-  else document.querySelector(".app-header")?.appendChild(span);
+/** Optional full setup (mic, graph) when user turns audio on from the header toggle. */
+export function registerAudioBoot(fn) {
+  optionalBootFn = fn;
+}
+
+/** Header control — upper right on every app page. */
+export function initAudioToggle() {
+  const header = document.querySelector(".app-header, .hub-header");
+  if (!header || document.getElementById(AUDIO_TOGGLE_ID)) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "audio-toggle-wrap";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = AUDIO_TOGGLE_ID;
+  btn.className = "audio-toggle is-off";
+  btn.setAttribute("aria-pressed", "false");
+  btn.setAttribute("aria-label", "Audio off");
+  btn.innerHTML = '<span class="audio-toggle-label">Audio off</span>';
+  btn.addEventListener("click", () => {
+    void (audioOn ? setAudioOff() : setAudioOn());
+  });
+
+  wrap.appendChild(btn);
+  header.appendChild(wrap);
+  setAudioActive(false);
+}
+
+/** @deprecated Use initAudioToggle — kept for piano/drumkit imports */
+export function ensureAudioBadge() {
+  initAudioToggle();
+}
+
+export function isAudioActive() {
+  return audioOn;
 }
 
 export function setAudioActive(on = true) {
-  const el = document.getElementById(AUDIO_BADGE_ID);
-  if (!el) return;
-  el.hidden = !on;
-  el.textContent = on ? "Audio on" : "";
+  audioOn = !!on;
+  const btn = document.getElementById(AUDIO_TOGGLE_ID);
+  if (!btn) return;
+  btn.classList.toggle("is-on", audioOn);
+  btn.classList.toggle("is-off", !audioOn);
+  btn.setAttribute("aria-pressed", String(audioOn));
+  btn.setAttribute("aria-label", audioOn ? "Audio on" : "Audio off");
+  const label = btn.querySelector(".audio-toggle-label");
+  if (label) label.textContent = audioOn ? "Audio on" : "Audio off";
+}
+
+export async function setAudioOn() {
+  return startAudio(optionalBootFn || undefined);
+}
+
+export async function setAudioOff() {
+  const ctx = getAudioContext();
+  try {
+    if (ctx.state === "running") await ctx.suspend();
+  } catch {
+    /* ignore */
+  }
+  setAudioActive(false);
 }
 
 export function setStatus(id, text, kind = "") {
@@ -101,4 +148,16 @@ export function createAudioBoot(initFn, { screenTap = true } = {}) {
   if (screenTap) bindScreenAudioBoot(ensureReady);
 
   return ensureReady;
+}
+
+function autoInitAudioToggle() {
+  if (document.querySelector(".app-header, .hub-header")) initAudioToggle();
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", autoInitAudioToggle);
+  } else {
+    autoInitAudioToggle();
+  }
 }

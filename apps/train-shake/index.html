@@ -175,7 +175,7 @@
   </div>
 
   <script type="module">
-    import { bindLearn, createAudioBoot, setStatus } from "../../shared/app.js";
+    import { bindLearn, createAudioBoot, setStatus, registerAudioBoot } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onMotion, stopSensors } from "../../shared/sensors.js";
     import {
@@ -203,7 +203,8 @@
 
     bindLearn();
 
-    const ensureReady = createAudioBoot(async (c) => {
+    async function bootAudio(c) {
+      if (ctx) return;
       ctx = c;
       ({ master } = createMasterBus(ctx, 0.45));
       padGain = ctx.createGain();
@@ -236,7 +237,10 @@
       noise.connect(noiseGain);
       noiseGain.connect(master);
       noise.start();
-    });
+    }
+
+    registerAudioBoot(bootAudio);
+    const ensureReady = createAudioBoot(bootAudio);
 
     async function ensureAudio() {
       await ensureReady();

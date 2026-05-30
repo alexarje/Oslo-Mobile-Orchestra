@@ -15,12 +15,9 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Breath + pentatonic</h2>
-    <p>Tap <strong>Audio &amp; mic on</strong>, allow the mic, then blow past the yellow line. Slide the pad for pitch (C major pentatonic).</p>
+    <p>Turn <strong>Audio on</strong> (top right), allow the mic, then blow past the yellow line. Slide the pad for pitch (C major pentatonic).</p>
   </div>
   <p class="status-bar" id="status"></p>
-  <div class="control-row">
-    <button type="button" class="btn" id="enableAudioBtn">Audio &amp; mic on</button>
-  </div>
   <div class="breath-row">
     <label>Breath</label>
     <div class="breath-meter breath-threshold" id="breathWrap" style="--thresh: 35%">
@@ -35,7 +32,7 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
+    import { bindLearn, setStatus, startAudio, registerAudioBoot } from "../../shared/app.js";
     import { createMasterBus, midiToFreq, connectMicAnalyser } from "../../shared/audio.js";
 
     bindLearn();
@@ -45,7 +42,6 @@
     const STEPS = 10;
     const flutePad = document.getElementById("flutePad");
     const finger = document.getElementById("finger");
-    const enableBtn = document.getElementById("enableAudioBtn");
     let ctx, master, analyser, micStream;
     let toneGain, toneOsc, noiseGain, noiseSrc;
     let blowThreshold = 0.02;
@@ -151,6 +147,7 @@
     }
 
     async function boot(c) {
+      if (ready) return;
       if (!navigator.mediaDevices?.getUserMedia) {
         setStatus("status", "Mic not supported", "warn");
         throw new Error("no mic");
@@ -174,7 +171,6 @@
       setStatus("status", "Calibrating… stay quiet", "");
       await calibrate();
       ready = true;
-      enableBtn.hidden = true;
       setStatus("status", "Blow past yellow line", "ok");
       tick();
     }
@@ -182,20 +178,14 @@
     async function enableAudio() {
       if (ready || booting) return;
       booting = true;
-      enableBtn.disabled = true;
       try {
         await startAudio(boot);
-      } catch {
-        enableBtn.disabled = false;
       } finally {
         booting = false;
       }
     }
 
-    enableBtn.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      void enableAudio();
-    });
+    registerAudioBoot(boot);
 
     flutePad.addEventListener("pointerdown", (e) => {
       e.preventDefault();

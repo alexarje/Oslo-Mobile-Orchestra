@@ -127,17 +127,52 @@ a {
   min-height: 28px;
 }
 
-.audio-status {
+.audio-toggle-wrap {
+  margin-left: auto;
   flex-shrink: 0;
-  font-size: 0.62rem;
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  z-index: 2;
 }
 
-.audio-status[hidden] {
-  display: none;
+.hub-header .audio-toggle-wrap {
+  position: absolute;
+  top: calc(0.35rem + env(safe-area-inset-top, 0px));
+  right: 0.5rem;
+  margin-left: 0;
+}
+
+.hub-header {
+  position: relative;
+}
+
+.audio-toggle {
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  min-height: 28px;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.audio-toggle.is-on {
+  border-color: var(--accent);
+  background: rgba(110, 231, 183, 0.12);
+  color: var(--accent);
+}
+
+.audio-toggle.is-off {
+  border-color: #64748b;
+  color: #94a3b8;
+}
+
+.audio-toggle-label {
+  pointer-events: none;
 }
 
 /* Overlay — does not push main UI down */

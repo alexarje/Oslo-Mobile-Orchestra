@@ -115,7 +115,7 @@
   </div>
 
   <script type="module">
-    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
+    import { bindLearn, setStatus, startAudio, registerAudioBoot } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
 
     bindLearn();
@@ -299,13 +299,18 @@
       setStatus("status", "", "");
     }
 
+    async function bootAudio(c) {
+      if (ctx) return;
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.45));
+      buildGrainBuffer(c);
+    }
+
+    registerAudioBoot(bootAudio);
+
     async function onConsent() {
       consentBtn.disabled = true;
-      await startAudio((c) => {
-        ctx = c;
-        ({ master } = createMasterBus(c, 0.45));
-        buildGrainBuffer(c);
-      });
+      await startAudio(bootAudio);
       if (!(await startCamera())) {
         consentBtn.disabled = false;
         return;
