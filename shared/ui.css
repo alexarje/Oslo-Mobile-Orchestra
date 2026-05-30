@@ -990,6 +990,10 @@ body.hub {
   color: #6ee7b7;
 }
 
+.pred-display.clap {
+  color: #fb923c;
+}
+
 .pred-display.silence {
   color: #64748b;
 }
