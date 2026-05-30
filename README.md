@@ -10,91 +10,70 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 
 | App | Music making | Tech highlight |
 |-----|----------------|----------------|
-| [Conductor](apps/conductor/) | Shared downbeat | URL-encoded start time + BPM |
-| [Pentatonic Flute](apps/flute-blow/) | Melody by breath | Mic level → sound; slide → pentatonic pitch |
-| [Piano](apps/piano/) | Melody / harmony | Web Audio keyboard + reverb |
-| [Drumkit](apps/drumkit/) | Rhythm hits | 8 synthesized drum pads |
-| [Drum Sequencer](apps/drum-sequencer/) | Patterns | 4 sounds × 8 steps |
-| [Sampler](apps/sampler/) | Loop textures | Hold to record mic · release loops · tilt FX |
-| [FM Touch Synth](apps/fm-touch/) | Timbre exploration | Touch XY → carrier + modulator (FM) |
-| [FM Touch + Tilt](apps/fm-touch-tilt/) | Expressive FM | Touch pitch/amp; tilt → mod frequency |
-| [Karplus–Strong String](apps/ks-string/) | Plucked strings | KS delay line; tilt → damping |
-| [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM, aftertouch (force / touch size) |
-| [Additive Bells](apps/additive-bells/) | Bell tones | 8 partials, sliders per harmonic |
-| [KS Pluck](apps/ks-pluck/) | Plucked string | Tap-to-excite Karplus–Strong delay line |
-| [FM Matrix](apps/fm-matrix/) | FM timbres | 2×2 routing presets for workshop |
-| [Wavetable Scan](apps/wavetable-scan/) | Timbral sweep | Swipe through single-cycle waves |
-| [Filter Ladder](apps/filter-ladder/) | Subtractive sweep | 24 dB lowpass + tilt envelope |
-| [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
-| [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
-| [Train & Shake](apps/train-shake/) | Gesture performance | k-NN vs tiny net; feature plot, confusion matrix, ethics panel |
-| [Granular Tilt](apps/granular-tilt/) | Textures / clouds | Granular synthesis + orientation |
-| [Photo Sonifier](apps/photo-sonifier/) | Texture from environment | Camera brightness map → grain density (consent / workshop mode) |
-| [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step sequencer, drum synthesis |
+| [Conductor](apps/conductor/) | Shared downbeat | URL start + BPM, QR, metronome flash |
+| [Your Part](apps/part/) | Seating | `?part=1`…`20` → suggested instrument |
+| [Audience Swell](apps/audience/) | Crowd layer | One-button hold swell |
+| [Pentatonic Flute](apps/flute-blow/) | Melody by breath | Mic gate + pentatonic slide |
+| [Mic Theremin](apps/mic-theremin/) | Sung melody | Pitch detect → sine |
+| [Hum vs Clap](apps/hum-clap/) | Call-and-response | k-NN on mic features |
+| [Piano](apps/piano/) | Melody / harmony | Keyboard + reverb |
+| [Drumkit](apps/drumkit/) | Rhythm hits | 8 drum pads |
+| [Drum Sequencer](apps/drum-sequencer/) | Patterns | 4×8 steps |
+| [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step seq, hash share, haptics |
+| [Delay Throw](apps/delay-throw/) | Echo layers | Tap sample + tilt delay |
+| [Sampler](apps/sampler/) | Loop textures | Mic loop + tilt FX |
+| [FM Touch / + Tilt](apps/fm-touch/) | FM timbre | Touch + optional tilt mod |
+| [FM Matrix](apps/fm-matrix/) | FM routing | 2×2 presets |
+| [KS String / Pluck](apps/ks-string/) | Plucked strings | Karplus–Strong |
+| [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, aftertouch |
+| [Additive Bells](apps/additive-bells/) | Bell tones | 8 partials |
+| [Wavetable Scan](apps/wavetable-scan/) | Timbral sweep | Swipe waves |
+| [Filter Ladder](apps/filter-ladder/) | Subtractive | 24 dB LP + tilt |
+| [Motion Wah](apps/motion-wah/) | Filter sweeps | Hold or continuous + tilt |
+| [Compass Wah](apps/compass-wah/) | Orientation filter | Alpha → lowpass |
+| [Drone Choir](apps/drone-choir/) | Harmonic mass | Hold sustain, ±5 st pad, cents |
+| [Gyro Compass](apps/gyro-compass/) | Spatial pan | Heading → stereo |
+| [Tilt Harp](apps/tilt-harp/) | Gliss plucks | Tap strings, tilt = key |
+| [Bow Phone](apps/bow-phone/) | Bowed tone | Drag X/Y pressure + pitch |
+| [Train & Shake](apps/train-shake/) | Gesture ML | k-NN vs tiny net, teaching UI |
+| [Granular Tilt](apps/granular-tilt/) | Grain clouds | Upload, hold freeze |
+| [Photo Sonifier](apps/photo-sonifier/) | Environment texture | Camera → grain density |
 
-Each app has a **Learn** panel with short explanations (where applicable). Piano, drumkit, FM, and KS string apps are adapted from [web_instruments/mobile](https://github.com/alexarje/web_instruments/tree/main/mobile).
+Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache covers core assets.
 
 ## Workshop scenarios (20 players)
 
 ### 1. “Spectrum” (10 min)
-- 8× **Drone Choir** (pick different chord tones)
-- 6× **Motion Wah** (filter sweeps)
+- 8× **Drone Choir** (different chord tones)
+- 6× **Motion Wah** or **Compass Wah**
 - 4× **Pulse Grid** (kick / hat / snare / tone)
-- 1× **Conductor** — one downbeat, no rush
+- 1× **Conductor** — QR + countdown
 
 ### 2. “Human ML” (15 min)
-- Everyone on **Train & Shake**: collect still / sway / shake (3+ each), or **import** a teacher’s demo set; perform in three sections.
-- Discuss: training data, labels, misclassification, bias (what if someone holds the phone differently?).
+- **Train & Shake** or **Hum vs Clap** — collect labels, perform in sections.
 
 ### 3. “Synthesis tour” (20 min)
-- Stations rotate: **Synth Pad** → **Wavetable Scan** → **Filter Ladder** → **Additive Bells**
-- Same melody idea, three timbral worlds.
+- **Synth Pad** → **Wavetable Scan** → **Filter Ladder** → **Additive Bells**
 
 ### 4. “Grid orchestra”
-- Assign sound colors: 5 kick, 5 snare, 5 hat, 5 tone — each writes a 1-bar pattern.
-- Conductor link → **Pulse Grid** with shared `start` + `bpm` query params.
+- Assign colors on **Pulse Grid**; share patterns via URL hash; Conductor `start` + `bpm`.
+
+### 5. “Spatial circle”
+- 20× **Gyro Compass** — each phone pans by compass heading in the room.
 
 ## Browser & sensor notes
 
 | Topic | Android (Chrome) | iPhone (Safari) |
 |-------|------------------|-----------------|
-| Web Audio | Good | Unlocks on first tap in each app |
-| Motion | Usually automatic | Tap to allow when prompted |
-| Orientation | Often available | iOS 13+ permission dialog |
-| Silent switch | N/A | Physical mute affects speaker |
-| Battery saver | May throttle timers | Keep screen on, low power mode off |
+| Web Audio | Good | Unlocks on first tap |
+| Motion | Usually automatic | Tap to allow |
+| Orientation | Often available | iOS 13+ permission |
+| PWA / offline | Service worker | Add to Home Screen |
+| Haptics | Pulse Grid vibrate | Limited |
 
-All apps use **Web Audio API** and standard **DeviceMotion** / **DeviceOrientation** — no native wrappers.
+## Ideas still open
 
-## Ideas to add next
-
-Full backlog with tables and priorities: **[docs/IDEAS.md](docs/IDEAS.md)**
-
-### New apps
-- ~~**Mic flute**~~ → [Pentatonic Flute](apps/flute-blow/) (breath gate + pentatonic slide)
-- **Mic theremin** — microphone pitch → continuous tone (chromatic)
-- **Hum vs clap** — TensorFlow.js speech / audio classifier
-- **Gyro compass** — orientation → stereo pan (spatial ensemble)
-- **QR part assignment** — scan on stage → `?part=12` + suggested instrument
-
-### Ensemble
-- **WebRTC or WebSocket room** — tighter sync than URL countdown alone
-- **Conductor QR** — share musician link without typing
-- **Pattern in URL** — Pulse Grid pattern encoded in hash for copy/paste
-
-### Existing app upgrades
-- Pulse Grid pattern share · Train & Shake third gesture class · PWA “Add to Home Screen” · offline service worker
-- Haptics on steps (Android) · accessibility mode (larger UI, high contrast)
-
-### Education & AI showcase
-- ~~Live feature plot + confusion matrix~~ — in [Train & Shake](apps/train-shake/)
-- “Data stays on device” ethics note for classroom discussion
-
-### Synthesis demos
-- Karplus–Strong pluck · additive bells · FM matrix · wavetable swipe
-
-Pick one from [IDEAS.md](docs/IDEAS.md) and open a PR — or ask in an issue.
-
+See **[docs/IDEAS.md](docs/IDEAS.md)** for WebRTC room, i18n, ambient light sensor, score PDF, and more.
 
 ## License
 

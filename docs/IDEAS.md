@@ -8,94 +8,97 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 
 | Idea | Music role | Tech |
 |------|------------|------|
-| ~~**Pentatonic Flute**~~ | Melody by breath | Done → [flute-blow](../apps/flute-blow/) — mic RMS gate + slide pitch |
-| **Mic Theremin** | Solo melody, “voice in the ensemble” | `getUserMedia` + pitch detection (autocorrelation or YIN) → oscillator frequency |
-| **Hum vs Clap** | Call-and-response sections | TensorFlow.js [speech commands](https://github.com/tensorflow/tfjs-models/tree/master/speech-commands) or custom audio classifier |
-| **Tilt Harp** | Plucked glissandi | Touch = pluck; tilt = scale / key |
-| **Gyro Compass** | Panning in the room | Device orientation → stereo pan (each player is one speaker in the circle) |
-| **Delay Throw** | Rhythmic layers | Tap screen → sample captured → tilt controls delay feedback time |
-| **Bow Phone** | Sustained strings | Hold + horizontal drag = bow pressure; vertical = pitch on a string |
-| **NFC / QR Part** | Instant seating | Scan QR on stage → opens app with `?part=7` and suggested instrument |
-| ~~**Photo Sonifier**~~ | Texture from environment | → [Photo Sonifier](../apps/photo-sonifier/) |
+| ~~**Pentatonic Flute**~~ | Melody by breath | [flute-blow](../apps/flute-blow/) |
+| ~~**Mic Theremin**~~ | Solo melody | [mic-theremin](../apps/mic-theremin/) — autocorrelation pitch |
+| ~~**Hum vs Clap**~~ | Call-and-response | [hum-clap](../apps/hum-clap/) — k-NN on mic features |
+| ~~**Tilt Harp**~~ | Plucked glissandi | [tilt-harp](../apps/tilt-harp/) |
+| ~~**Gyro Compass**~~ | Panning in the room | [gyro-compass](../apps/gyro-compass/) |
+| ~~**Delay Throw**~~ | Rhythmic layers | [delay-throw](../apps/delay-throw/) |
+| ~~**Bow Phone**~~ | Sustained strings | [bow-phone](../apps/bow-phone/) |
+| ~~**NFC / QR Part**~~ | Instant seating | [part](../apps/part/) + hub `?part=` |
+| ~~**Photo Sonifier**~~ | Texture from environment | [photo-sonifier](../apps/photo-sonifier/) |
+| ~~**Audience swell**~~ | Crowd layer | [audience](../apps/audience/) |
+| ~~**Compass wah**~~ | Orientation filter | [compass-wah](../apps/compass-wah/) |
 
 ---
 
 ## Enhance existing apps
 
-- **Drone Choir** — hold-to-sustain gate; show cents + semitone ruler on pad
-- **Motion Wah** — optional continuous mode vs hold (toggle in Learn)
-- **Pulse Grid** — pattern copy/paste row; share pattern via URL hash
-- ~~**Train & Shake** sway + export/import~~ — shipped in [Train & Shake](../apps/train-shake/)
-- **Conductor** — QR code for musician link; visual metronome flash at downbeat
-- ~~**Synth Pad** aftertouch~~ — [Synth Pad](../apps/synth-pad/) (`pressure` / contact size)
-- **Granular Tilt** — hold pad to freeze grain buffer; upload short sample (File API)
+- ~~**Drone Choir**~~ — hold-to-sustain; cents ruler on pad
+- ~~**Motion Wah**~~ — continuous mode toggle
+- ~~**Pulse Grid**~~ — copy row, URL hash pattern, haptics
+- ~~**Train & Shake** sway + export/import~~ — [train-shake](../apps/train-shake/)
+- ~~**Conductor**~~ — QR + visual metronome flash at downbeat
+- ~~**Synth Pad** aftertouch~~ — [synth-pad](../apps/synth-pad/)
+- ~~**Granular Tilt**~~ — hold freeze buffer; upload sample
 
 ---
 
 ## Ensemble & sync
 
-| Idea | Why |
-|------|-----|
-| **WebRTC room** | Tighter beat than URL `start` time; conductor sets BPM in room |
-| **WebSocket hub** | Tiny server (Cloudflare Worker / Fly.io) broadcasts `step` index for global grid |
-| **Listen & lock** | Mic hears conductor click → local phase correction (hard on 20 phones, demo only) |
-| **Section colors** | Conductor URL assigns `section=brass` → opens suggested apps list |
-| **Room reverb send** | Optional: one laptop runs reverb bus via Web Audio (not on phones) |
+| Idea | Why | Status |
+|------|-----|--------|
+| **WebRTC room** | Tighter beat than URL `start` time | Not started (needs server) |
+| **WebSocket hub** | Global grid step broadcast | Not started |
+| **Listen & lock** | Mic phase correction | Demo-only / deferred |
+| ~~**Section colors**~~ | `?section=` on hub filters apps | Shipped |
+| **Room reverb send** | Laptop reverb bus | Not started |
 
 ---
 
 ## AI & education (showcase)
 
-- ~~Teachable panel, confusion matrix, k slider, ethics, k-NN vs tiny net~~ — [Train & Shake](../apps/train-shake/) (2-layer net in pure JS, no TF.js bundle)
+- ~~Teachable panel, confusion matrix, k slider, ethics, k-NN vs tiny net~~ — [Train & Shake](../apps/train-shake/)
+- ~~Hum vs clap classifier~~ — [hum-clap](../apps/hum-clap/)
 
 ---
 
 ## Sound synthesis demos
 
-- ~~Additive bells, KS pluck, FM matrix, wavetable scan, filter ladder~~ — shipped (see hub **Synthesis** tags)
+- ~~Additive bells, KS pluck, FM matrix, wavetable scan, filter ladder~~ — on hub
 
 ---
 
 ## Sensors
 
-| Sensor | Idea |
-|--------|------|
-| Accelerometer | Shake intensity → distortion drive (already partial in Train & Shake) |
-| Gyroscope | Continuous vibrato rate |
-| Orientation | Map alpha to filter cutoff (compass wah) |
-| Light (ambient) | `AmbientLightSensor` where supported → brightness → volume cap |
-| Proximity | Cover top of phone → mute (Android mainly) |
-| Haptics | `navigator.vibrate` on Pulse Grid steps (Android) |
-| Touch pressure | iOS `touch.force` → dynamics |
+| Sensor | Idea | Status |
+|--------|------|--------|
+| Accelerometer | Shake → distortion | Partial in Train & Shake |
+| Gyroscope | Vibrato / pan | Gyro Compass, Motion Wah |
+| Orientation | Compass wah / tilt | Compass Wah, Granular Tilt |
+| Light (ambient) | Volume cap | Open |
+| Proximity | Cover → mute | Open |
+| ~~Haptics~~ | Pulse Grid steps | Android `vibrate` |
+| Touch pressure | iOS force | Synth Pad |
 
 ---
 
 ## Workshop & concert
 
-- **20-part score card** — PDF/one-pager: who plays which app + color
-- **5-minute “open app” ritual** — Conductor countdown built into all apps via shared `?start=`
-- **Silent movement piece** — all Train & Shake, no speakers, only visual pred on screen (then discuss)
-- **Audience phones** — QR to simplified “one button” audience app (crowd swell)
-- **Accessibility mode** — larger targets; high-contrast; haptic-only rhythm cue
+- **20-part score card** — PDF one-pager (open)
+- ~~**5-minute open app ritual**~~ — Conductor `?start=` + countdown
+- **Silent movement piece** — Train & Shake visual-only (facilitator)
+- ~~**Audience phones**~~ — [audience](../apps/audience/)
+- ~~**Accessibility mode**~~ — hub “Larger UI” + `omo-a11y` CSS
 
 ---
 
 ## Infrastructure
 
-- **PWA manifest** — Add to Home Screen, full-screen, icon per app
-- **Offline cache** — service worker for gym/hall with bad Wi‑Fi
-- **i18n** — Norwegian + English UI strings
-- **Telemetry opt-in** — anonymous “which app used” for workshop planning (no audio upload)
-- **Version pin** — `?v=2` for workshops so 20 phones stay on same build
+- ~~**PWA manifest**~~ — `manifest.webmanifest`
+- ~~**Offline cache**~~ — `sw.js` (core assets)
+- **i18n** — Norwegian + English
+- **Telemetry opt-in** — anonymous app usage
+- **Version pin** — `?v=2` for workshops
 
 ---
 
 ## Priority (suggested)
 
-1. Mic Theremin — high musical payoff, one new app  
-2. Conductor QR + Pulse Grid URL patterns — better 20-player sync  
-3. PWA / offline — reliability in venues  
-4. WebRTC room — when URL sync isn’t enough  
-5. TF.js speech commands — second AI app beside Train & Shake  
+1. ~~Mic Theremin~~ — done  
+2. ~~Conductor QR + Pulse Grid URL patterns~~ — done  
+3. ~~PWA / offline~~ — basic SW  
+4. **WebRTC room** — when URL sync isn’t enough  
+5. ~~Hum/clap classifier~~ — done (k-NN, no TF.js bundle)  
 
-Contributions welcome: pick an idea, open a PR, link it here.
+Contributions welcome: pick an open item, open a PR, link it here.

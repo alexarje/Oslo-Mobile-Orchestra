@@ -15,7 +15,14 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Granular synthesis</h2>
-    <p>Tap to start grain cloud. Tilt = rate; roll = pitch.</p>
+    <p>Tap to start. <strong>Upload</strong> a short WAV/MP3. <strong>Hold pad</strong> to freeze the grain buffer position.</p>
+  </div>
+  <div class="control-row">
+    <label class="btn-secondary btn btn-sm" style="display:inline-flex;align-items:center;cursor:pointer">
+      <input type="file" id="sampleIn" accept="audio/*" hidden />
+      Upload sample
+    </label>
+    <span id="bufTag" style="font-size:0.7rem;color:var(--muted)">default</span>
   </div>
   <div class="readout-row">
     <p class="value-chip">Rate <strong id="rateOut">—</strong>/s</p>
@@ -27,7 +34,7 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, createAudioBoot } from "../../shared/app.js";
+    import { bindLearn, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
@@ -37,11 +44,21 @@
     const g = canvas.getContext("2d");
     let ctx, master, buffer, running = false;
     let beta = 45, gamma = 0;
+    let frozen = false;
+    let freezePos = 0;
 
     function resizeCanvas() {
       const box = canvas.parentElement.getBoundingClientRect();
       canvas.width = Math.max(1, Math.floor(box.width * devicePixelRatio));
       canvas.height = Math.max(1, Math.floor(box.height * devicePixelRatio));
+    }
+
+    function defaultBuffer(c) {
+      const len = c.sampleRate * 0.5;
+      const b = c.createBuffer(1, len, c.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
+      return b;
     }
 
     function draw() {
@@ -50,7 +67,7 @@
       const w = canvas.width, h = canvas.height;
       g.fillStyle = "#0f172a";
       g.fillRect(0, 0, w, h);
-      g.strokeStyle = "#6ee7b7";
+      g.strokeStyle = frozen ? "#fbbf24" : "#6ee7b7";
       g.beginPath();
       for (let i = 0; i < 40; i++) {
         const x = (i / 40) * w;
@@ -66,12 +83,15 @@
       src.buffer = buffer;
       const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
       const dur = 0.02 + Math.random() * 0.03;
+      const offset = frozen
+        ? freezePos
+        : Math.random() * Math.max(0.01, buffer.duration - 0.05);
       src.playbackRate.value = rate;
       const gn = ctx.createGain();
       gn.connect(master);
       const t = ctx.currentTime;
       src.connect(gn);
-      src.start(t, Math.random() * (buffer.duration - 0.04), dur);
+      src.start(t, offset, dur);
       gn.gain.setValueAtTime(0, t);
       gn.gain.linearRampToValueAtTime(0.2, t + 0.005);
       gn.gain.linearRampToValueAtTime(0, t + dur);
@@ -83,13 +103,10 @@
       setTimeout(schedule, 1000 / (5 + (beta / 90) * 25));
     }
 
-    const ensureReady = createAudioBoot(async (c) => {
+    async function boot(c) {
       ctx = c;
       ({ master } = createMasterBus(ctx, 0.5));
-      const len = ctx.sampleRate * 0.5;
-      buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-      const d = buffer.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
+      buffer = defaultBuffer(ctx);
       await enableSensors();
       onOrientation((o) => {
         beta = o.beta ?? 45;
@@ -100,7 +117,30 @@
       running = true;
       draw();
       schedule();
+    }
+
+    tapZone.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      if (!running) await startAudio(boot);
+      tapZone.setPointerCapture(e.pointerId);
+      frozen = true;
+      freezePos = Math.random() * Math.max(0.01, buffer.duration - 0.05);
     });
+    tapZone.addEventListener("pointerup", () => { frozen = false; });
+    tapZone.addEventListener("pointercancel", () => { frozen = false; });
+
+    document.getElementById("sampleIn").onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!ctx) await startAudio(boot);
+      const ab = await file.arrayBuffer();
+      try {
+        buffer = await ctx.decodeAudioData(ab.slice(0));
+        document.getElementById("bufTag").textContent = file.name.slice(0, 12);
+      } catch {
+        document.getElementById("bufTag").textContent = "decode failed";
+      }
+    };
 
     new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
   </script>

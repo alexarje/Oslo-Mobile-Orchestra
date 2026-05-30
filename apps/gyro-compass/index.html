@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Gyro Compass — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Gyro Compass</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Spatial pan</h2>
+    <p>Point your phone around the circle — <strong>compass heading</strong> pans a drone in stereo. Each player is one speaker in the room.</p>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
+    <p class="value-chip">Pan <strong id="panOut">—</strong></p>
+  </div>
+  <div class="main-stage">
+    <canvas id="compass" class="canvas-fill"></canvas>
+  </div>
+  <script type="module">
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+
+    bindLearn();
+    const canvas = document.getElementById("compass");
+    const g = canvas.getContext("2d");
+    let ctx, panner, osc, built = false;
+    let alpha = 0;
+
+    function buildAudio(c) {
+      ctx = c;
+      const master = c.createGain();
+      master.gain.value = 0.4;
+      master.connect(c.destination);
+      panner = c.createStereoPanner();
+      osc = c.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = 165;
+      osc.connect(panner);
+      panner.connect(master);
+      osc.start();
+      built = true;
+      void enableSensors().then((ok) => {
+        if (!ok) return;
+        onOrientation((o) => {
+          alpha = o.alpha ?? 0;
+          const pan = Math.sin((alpha * Math.PI) / 180);
+          panner.pan.setTargetAtTime(pan, ctx.currentTime, 0.05);
+          document.getElementById("headOut").textContent = alpha.toFixed(0);
+          document.getElementById("panOut").textContent = pan.toFixed(2);
+          draw();
+        });
+      });
+    }
+
+    function draw() {
+      const box = canvas.parentElement.getBoundingClientRect();
+      const dpr = devicePixelRatio || 1;
+      canvas.width = box.width * dpr;
+      canvas.height = box.height * dpr;
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const r = Math.min(w, h) * 0.35;
+      g.fillStyle = "#0f172a";
+      g.fillRect(0, 0, w, h);
+      g.strokeStyle = "#334155";
+      g.beginPath();
+      g.arc(cx, cy, r, 0, Math.PI * 2);
+      g.stroke();
+      const a = ((alpha - 90) * Math.PI) / 180;
+      g.strokeStyle = "#6ee7b7";
+      g.lineWidth = 3 * dpr;
+      g.beginPath();
+      g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      g.stroke();
+    }
+
+    canvas.addEventListener("pointerdown", async () => {
+      await startAudio(!built ? buildAudio : undefined);
+    });
+    new ResizeObserver(draw).observe(canvas.parentElement);
+  </script>
+</body>
+</html>

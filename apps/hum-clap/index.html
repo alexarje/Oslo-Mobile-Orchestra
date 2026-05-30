@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Hum vs Clap — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Hum vs Clap</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Audio classifier</h2>
+    <p>Record <strong>hum</strong>, <strong>clap</strong>, and <strong>silence</strong> — k-NN on mic features (loudness + brightness). Then <strong>Listen</strong>.</p>
+  </div>
+  <div class="pred-display still" id="pred">—</div>
+  <p class="status-bar" id="status"></p>
+  <p class="status-bar" id="counts">Hum: 0 · Clap: 0 · Silence: 0</p>
+  <div class="btn-grid-3">
+    <button type="button" class="btn-secondary btn btn-sm" id="recHum">Hum</button>
+    <button type="button" class="btn-secondary btn btn-sm" id="recClap">Clap</button>
+    <button type="button" class="btn-secondary btn btn-sm" id="recSil">Silent</button>
+  </div>
+  <div class="btn-grid-2">
+    <button type="button" class="btn btn-sm" id="playBtn" disabled>Listen</button>
+    <button type="button" class="btn-danger btn btn-sm" id="clearBtn">Clear</button>
+  </div>
+  <script type="module">
+    import { bindLearn, createAudioBoot, setStatus } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { KNNClassifier, FeatureNormalizer } from "../../shared/ml.js";
+
+    bindLearn();
+    const LABELS = ["hum", "clap", "silence"];
+    const MIN = 3;
+    const clf = new KNNClassifier(5);
+    const norm = new FeatureNormalizer(3);
+    let ctx, master, mic, analyser, buf, listen = false;
+    let toneGain, noiseGain;
+
+    function extractAudio() {
+      analyser.getByteFrequencyData(buf);
+      let sum = 0;
+      let hi = 0;
+      for (let i = 0; i < buf.length; i++) {
+        sum += buf[i];
+        if (i > buf.length * 0.4) hi += buf[i];
+      }
+      return [sum / buf.length / 128, hi / (buf.length * 0.6) / 128, Math.random() * 0.01];
+    }
+
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.4));
+      toneGain = ctx.createGain();
+      noiseGain = ctx.createGain();
+      const o = ctx.createOscillator();
+      o.frequency.value = 220;
+      o.connect(toneGain);
+      toneGain.connect(master);
+      o.start();
+      const n = ctx.createBufferSource();
+      const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      n.buffer = b;
+      n.loop = true;
+      n.connect(noiseGain);
+      noiseGain.connect(master);
+      n.start();
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      buf = new Uint8Array(analyser.frequencyBinCount);
+      mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      ctx.createMediaStreamSource(mic).connect(analyser);
+    });
+
+    function counts() {
+      return LABELS.map((l) => clf.samples.filter((s) => s.label === l).length);
+    }
+
+    function update() {
+      const c = counts();
+      document.getElementById("counts").textContent =
+        `Hum: ${c[0]} · Clap: ${c[1]} · Silence: ${c[2]}`;
+      document.getElementById("playBtn").disabled = !LABELS.every((l, i) => c[i] >= MIN);
+    }
+
+    async function record(label, ms = 1200) {
+      await ensureReady();
+      const samples = [];
+      const t0 = performance.now();
+      const id = setInterval(() => {
+        const f = extractAudio();
+        norm.push(f);
+        samples.push(f);
+        if (performance.now() - t0 > ms) {
+          clearInterval(id);
+          samples.forEach((f) => clf.addSample(norm.normalize(f), label));
+          update();
+          setStatus("status", `+${samples.length} ${label}`, "ok");
+        }
+      }, 40);
+    }
+
+    document.getElementById("recHum").onclick = () => { setStatus("status", "Hum…", ""); void record("hum"); };
+    document.getElementById("recClap").onclick = () => { setStatus("status", "Clap!", ""); void record("clap", 800); };
+    document.getElementById("recSil").onclick = () => { setStatus("status", "Quiet…", ""); void record("silence"); };
+    document.getElementById("clearBtn").onclick = () => { clf.clear(); norm.count = 0; update(); };
+    document.getElementById("playBtn").onclick = async () => {
+      await ensureReady();
+      listen = true;
+      const loop = () => {
+        if (!listen) return;
+        const { label } = clf.predict(norm.normalize(extractAudio()));
+        const el = document.getElementById("pred");
+        el.textContent = label ? label.toUpperCase() : "—";
+        el.className = `pred-display ${label || "silence"}`;
+        const t = ctx.currentTime;
+        toneGain.gain.setTargetAtTime(label === "hum" ? 0.3 : 0, t, 0.05);
+        noiseGain.gain.setTargetAtTime(label === "clap" ? 0.35 : 0, t, 0.02);
+        requestAnimationFrame(loop);
+      };
+      loop();
+    };
+    update();
+  </script>
+</body>
+</html>

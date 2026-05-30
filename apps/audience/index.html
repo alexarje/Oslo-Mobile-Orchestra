@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Audience Swell — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+    #swellBtn {
+      width: min(85vw, 280px);
+      height: min(85vw, 280px);
+      border-radius: 50%;
+      font-size: 1.1rem;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1rem;
+    }
+    .audience-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #1e293b 0%, #0d0f14 70%);
+    }
+  </style>
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Audience</h1>
+  </header>
+  <p class="status-bar" style="text-align:center">One button · join the swell</p>
+  <div class="audience-stage">
+    <button type="button" class="btn" id="swellBtn">Hold<br />to swell</button>
+  </div>
+  <script type="module">
+    import { startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+
+    let ctx, master, osc, gain, built = false;
+
+    function build(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.5));
+      osc = ctx.createOscillator();
+      gain = ctx.createGain();
+      gain.gain.value = 0;
+      osc.type = "sine";
+      osc.frequency.value = 220;
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start();
+      built = true;
+    }
+
+    const btn = document.getElementById("swellBtn");
+    btn.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      await startAudio(!built ? build : undefined);
+      btn.classList.add("active");
+      gain.gain.setTargetAtTime(0.45, ctx.currentTime, 0.15);
+      osc.frequency.setTargetAtTime(180 + Math.random() * 80, ctx.currentTime, 0.2);
+    });
+    const off = () => {
+      if (!built) return;
+      btn.classList.remove("active");
+      gain.gain.setTargetAtTime(0, ctx.currentTime, 0.2);
+    };
+    btn.addEventListener("pointerup", off);
+    btn.addEventListener("pointercancel", off);
+  </script>
+</body>
+</html>

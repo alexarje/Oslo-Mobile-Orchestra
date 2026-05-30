@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0d0f14" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <title>Oslo Mobile Orchestra</title>
   <link rel="stylesheet" href="shared/ui.css" />
 </head>
@@ -14,34 +15,111 @@
     <p>Tap an app · <strong>touch to play</strong> (mic/motion when asked).</p>
   </header>
 
-  <ul class="app-list">
-    <li><a href="apps/conductor/"><span class="tag">Timing</span><span class="title">Conductor</span></a></li>
-    <li><a href="apps/flute-blow/"><span class="tag">Mic</span><span class="title">Pentatonic Flute</span></a></li>
-    <li><a href="apps/piano/"><span class="tag">Keys</span><span class="title">Piano</span></a></li>
-    <li><a href="apps/drumkit/"><span class="tag">Rhythm</span><span class="title">Drumkit</span></a></li>
-    <li><a href="apps/drum-sequencer/"><span class="tag">Seq</span><span class="title">Drum Sequencer</span></a></li>
-    <li><a href="apps/fm-touch/"><span class="tag">FM · Touch</span><span class="title">FM Touch Synth</span></a></li>
-    <li><a href="apps/fm-touch-tilt/"><span class="tag">FM · Tilt</span><span class="title">FM Touch + Tilt</span></a></li>
-    <li><a href="apps/ks-string/"><span class="tag">KS · Pluck</span><span class="title">Karplus–Strong String</span></a></li>
-    <li><a href="apps/sampler/"><span class="tag">Sample</span><span class="title">Sampler</span></a></li>
-    <li><a href="apps/synth-pad/"><span class="tag">Synthesis</span><span class="title">Synth Pad</span></a></li>
-    <li><a href="apps/additive-bells/"><span class="tag">Additive</span><span class="title">Additive Bells</span></a></li>
-    <li><a href="apps/ks-pluck/"><span class="tag">KS</span><span class="title">KS Pluck</span></a></li>
-    <li><a href="apps/fm-matrix/"><span class="tag">FM</span><span class="title">FM Matrix</span></a></li>
-    <li><a href="apps/wavetable-scan/"><span class="tag">Table</span><span class="title">Wavetable Scan</span></a></li>
-    <li><a href="apps/filter-ladder/"><span class="tag">Filter</span><span class="title">Filter Ladder</span></a></li>
-    <li><a href="apps/motion-wah/"><span class="tag">Accel</span><span class="title">Motion Wah</span></a></li>
-    <li><a href="apps/drone-choir/"><span class="tag">Harmony</span><span class="title">Drone Choir</span></a></li>
-    <li><a href="apps/train-shake/"><span class="tag">AI</span><span class="title">Train &amp; Shake</span></a></li>
-    <li><a href="apps/granular-tilt/"><span class="tag">Granular</span><span class="title">Granular Tilt</span></a></li>
-    <li><a href="apps/photo-sonifier/"><span class="tag">Camera</span><span class="title">Photo Sonifier</span></a></li>
-    <li><a href="apps/pulse-grid/"><span class="tag">Rhythm</span><span class="title">Pulse Grid</span></a></li>
-  </ul>
+  <div id="partBanner" class="hub-banner hidden"></div>
+
+  <div class="control-row" style="margin:0 0.35rem">
+    <label class="slide-toggle"><input type="checkbox" id="a11yToggle" /> Larger UI</label>
+    <label for="sectionFilter">Section</label>
+    <select id="sectionFilter">
+      <option value="">All</option>
+      <option value="drones">Drones</option>
+      <option value="rhythm">Rhythm</option>
+      <option value="melody">Melody</option>
+      <option value="texture">Texture</option>
+      <option value="synthesis">Synthesis</option>
+      <option value="ai">AI</option>
+    </select>
+  </div>
+
+  <ul class="app-list" id="appList"></ul>
 
   <details class="hub-tips panel">
     <summary>Setup tips</summary>
     <p><strong>iPhone:</strong> Allow mic, camera &amp; motion when asked; silent switch off.</p>
     <p><strong>Volume:</strong> ~70% for 20 phones in a room.</p>
+    <p><strong>Parts:</strong> <a href="apps/part/?part=1">Part 1</a> … <a href="apps/part/?part=20">Part 20</a> · <a href="apps/conductor/">Conductor</a> QR</p>
+    <p><strong>Install:</strong> Add to Home Screen for full-screen (PWA).</p>
   </details>
+
+  <script type="module">
+    import { SECTIONS, getPartFromUrl, getSectionFromUrl, applyA11y, loadA11yPreference } from "./shared/workshop.js";
+
+    loadA11yPreference();
+
+    const APPS = [
+      { href: "apps/conductor/", tag: "Timing", title: "Conductor", section: "rhythm" },
+      { href: "apps/part/", tag: "Seat", title: "Your Part (QR)", section: "rhythm" },
+      { href: "apps/audience/", tag: "Crowd", title: "Audience Swell", section: "drones" },
+      { href: "apps/flute-blow/", tag: "Mic", title: "Pentatonic Flute", section: "melody" },
+      { href: "apps/mic-theremin/", tag: "Mic", title: "Mic Theremin", section: "melody" },
+      { href: "apps/hum-clap/", tag: "AI", title: "Hum vs Clap", section: "ai" },
+      { href: "apps/piano/", tag: "Keys", title: "Piano", section: "melody" },
+      { href: "apps/drumkit/", tag: "Rhythm", title: "Drumkit", section: "rhythm" },
+      { href: "apps/drum-sequencer/", tag: "Seq", title: "Drum Sequencer", section: "rhythm" },
+      { href: "apps/pulse-grid/", tag: "Grid", title: "Pulse Grid", section: "rhythm" },
+      { href: "apps/delay-throw/", tag: "Delay", title: "Delay Throw", section: "rhythm" },
+      { href: "apps/fm-touch/", tag: "FM", title: "FM Touch Synth", section: "synthesis" },
+      { href: "apps/fm-touch-tilt/", tag: "FM", title: "FM Touch + Tilt", section: "synthesis" },
+      { href: "apps/fm-matrix/", tag: "FM", title: "FM Matrix", section: "synthesis" },
+      { href: "apps/ks-string/", tag: "KS", title: "KS String", section: "synthesis" },
+      { href: "apps/ks-pluck/", tag: "KS", title: "KS Pluck", section: "synthesis" },
+      { href: "apps/sampler/", tag: "Sample", title: "Sampler", section: "texture" },
+      { href: "apps/synth-pad/", tag: "Pad", title: "Synth Pad", section: "melody" },
+      { href: "apps/additive-bells/", tag: "Add", title: "Additive Bells", section: "synthesis" },
+      { href: "apps/wavetable-scan/", tag: "Table", title: "Wavetable Scan", section: "texture" },
+      { href: "apps/filter-ladder/", tag: "Filter", title: "Filter Ladder", section: "synthesis" },
+      { href: "apps/motion-wah/", tag: "Wah", title: "Motion Wah", section: "drones" },
+      { href: "apps/compass-wah/", tag: "Compass", title: "Compass Wah", section: "drones" },
+      { href: "apps/drone-choir/", tag: "Harmony", title: "Drone Choir", section: "drones" },
+      { href: "apps/gyro-compass/", tag: "Pan", title: "Gyro Compass", section: "drones" },
+      { href: "apps/tilt-harp/", tag: "Harp", title: "Tilt Harp", section: "melody" },
+      { href: "apps/bow-phone/", tag: "Bow", title: "Bow Phone", section: "melody" },
+      { href: "apps/train-shake/", tag: "ML", title: "Train & Shake", section: "ai" },
+      { href: "apps/granular-tilt/", tag: "Grain", title: "Granular Tilt", section: "texture" },
+      { href: "apps/photo-sonifier/", tag: "Cam", title: "Photo Sonifier", section: "texture" },
+    ];
+
+    const list = document.getElementById("appList");
+    const filter = document.getElementById("sectionFilter");
+
+    function render() {
+      const sec = filter.value || getSectionFromUrl() || "";
+      list.innerHTML = "";
+      APPS.filter((a) => !sec || a.section === sec).forEach((a) => {
+        const li = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = a.href;
+        link.dataset.section = a.section;
+        link.innerHTML = `<span class="tag">${a.tag}</span><span class="title">${a.title}</span>`;
+        li.appendChild(link);
+        list.appendChild(li);
+      });
+    }
+
+    filter.onchange = () => {
+      const u = new URL(location.href);
+      if (filter.value) u.searchParams.set("section", filter.value);
+      else u.searchParams.delete("section");
+      history.replaceState({}, "", u);
+      render();
+    };
+
+    const part = getPartFromUrl();
+    if (part) {
+      const b = document.getElementById("partBanner");
+      b.classList.remove("hidden");
+      b.innerHTML = `${part.label} → <a href="apps/${part.app}/">open ${part.app}</a>`;
+    }
+
+    const urlSec = getSectionFromUrl();
+    if (urlSec) filter.value = urlSec;
+    render();
+
+    document.getElementById("a11yToggle").onchange = (e) => applyA11y(e.target.checked);
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+  </script>
 </body>
 </html>

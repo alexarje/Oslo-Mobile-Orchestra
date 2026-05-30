@@ -15,7 +15,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Step sequencer</h2>
-    <p>16 steps = one bar. Assign different sounds across the ensemble.</p>
+    <p>16 steps = one bar. <strong>Copy row</strong> duplicates pattern. <strong>Share</strong> encodes pattern in URL hash. Android: haptic tick on steps.</p>
   </div>
   <div class="control-row">
     <label for="color">Sound</label>
@@ -30,18 +30,27 @@
     <span id="bpmVal">100</span>
     <button type="button" class="btn btn-play" id="playBtn">▶</button>
   </div>
+  <div class="btn-grid-2" style="padding:0 0.5rem 0.35rem">
+    <button type="button" class="btn-secondary btn btn-sm" id="copyRow">Copy row</button>
+    <button type="button" class="btn-secondary btn btn-sm" id="sharePat">Share pattern</button>
+  </div>
   <div class="main-stage">
     <div class="seq-grid" id="grid"></div>
   </div>
   <script type="module">
     import { bindLearn, createAudioBoot } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { encodePulsePattern, decodePulsePattern } from "../../shared/workshop.js";
 
     bindLearn();
 
     const steps = Array(16).fill(false);
     const grid = document.getElementById("grid");
     let ctx, master, playing = false, stepIndex = 0, nextTime = 0;
+
+    function syncUi() {
+      [...grid.children].forEach((btn, i) => btn.classList.toggle("on", steps[i]));
+    }
 
     for (let i = 0; i < 16; i++) {
       const btn = document.createElement("button");
@@ -55,8 +64,6 @@
       grid.appendChild(btn);
     }
 
-    bindLearn();
-
     document.getElementById("bpm").oninput = (e) => {
       document.getElementById("bpmVal").textContent = e.target.value;
     };
@@ -66,6 +73,34 @@
     if (urlBpm) {
       document.getElementById("bpm").value = urlBpm;
       document.getElementById("bpmVal").textContent = urlBpm;
+    }
+
+    const hashPat = decodePulsePattern(location.hash);
+    if (hashPat) {
+      const color = document.getElementById("color").value;
+      if (hashPat[color]) {
+        hashPat[color].forEach((on, i) => {
+          if (i < 16) steps[i] = on;
+        });
+        syncUi();
+      }
+    }
+
+    document.getElementById("copyRow").onclick = () => {
+      const first = steps.slice(0, 8);
+      for (let i = 8; i < 16; i++) steps[i] = first[i - 8];
+      syncUi();
+    };
+
+    document.getElementById("sharePat").onclick = () => {
+      const color = document.getElementById("color").value;
+      const payload = encodePulsePattern({ [color]: steps });
+      location.hash = payload;
+      navigator.clipboard?.writeText(location.href);
+    };
+
+    function hapticTick() {
+      if (navigator.vibrate) navigator.vibrate(8);
     }
 
     function playSound(type) {
@@ -124,6 +159,7 @@
         if (steps[stepIndex]) {
           playSound(document.getElementById("color").value);
           cells[stepIndex]?.classList.add("playing");
+          hapticTick();
         }
         stepIndex = (stepIndex + 1) % 16;
         nextTime += stepSec;

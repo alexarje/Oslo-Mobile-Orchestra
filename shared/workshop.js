@@ -1,0 +1,103 @@
+/**
+ * Workshop URL helpers — parts, sections, pulse patterns, accessibility.
+ */
+
+export const SECTIONS = {
+  drones: {
+    name: "Drones",
+    color: "#38bdf8",
+    apps: ["drone-choir", "motion-wah", "compass-wah"],
+  },
+  rhythm: {
+    name: "Rhythm",
+    color: "#fb923c",
+    apps: ["pulse-grid", "drumkit", "drum-sequencer", "delay-throw"],
+  },
+  melody: {
+    name: "Melody",
+    color: "#a78bfa",
+    apps: ["piano", "flute-blow", "mic-theremin", "synth-pad", "tilt-harp", "bow-phone"],
+  },
+  texture: {
+    name: "Texture",
+    color: "#6ee7b7",
+    apps: ["granular-tilt", "sampler", "photo-sonifier", "wavetable-scan"],
+  },
+  synthesis: {
+    name: "Synthesis",
+    color: "#f472b6",
+    apps: [
+      "fm-touch",
+      "fm-touch-tilt",
+      "fm-matrix",
+      "ks-string",
+      "ks-pluck",
+      "additive-bells",
+      "filter-ladder",
+    ],
+  },
+  ai: {
+    name: "AI",
+    color: "#fbbf24",
+    apps: ["train-shake", "hum-clap"],
+  },
+};
+
+/** Part cards for ?part=N (1–20). */
+export const PARTS = Array.from({ length: 20 }, (_, i) => {
+  const n = i + 1;
+  const keys = Object.keys(SECTIONS);
+  const section = keys[i % keys.length];
+  const apps = SECTIONS[section].apps;
+  const app = apps[i % apps.length];
+  return { part: n, section, app, label: `Part ${n} · ${SECTIONS[section].name}` };
+});
+
+export function getPartFromUrl(search = location.search) {
+  const p = new URLSearchParams(search).get("part");
+  if (!p) return null;
+  const n = parseInt(p, 10);
+  return PARTS.find((x) => x.part === n) || null;
+}
+
+export function getSectionFromUrl(search = location.search) {
+  return new URLSearchParams(search).get("section") || null;
+}
+
+/** Pulse grid: #p=kick:10101010,snare:... (16 chars 0/1 per sound) */
+export function encodePulsePattern(stepsBySound) {
+  const parts = Object.entries(stepsBySound).map(
+    ([k, arr]) => `${k}:${arr.map((b) => (b ? "1" : "0")).join("")}`
+  );
+  return `p=${parts.join(",")}`;
+}
+
+export function decodePulsePattern(hash) {
+  const h = hash.replace(/^#/, "");
+  const m = h.match(/p=([^&]+)/) || h.match(/^([^&]+)/);
+  if (!m) return null;
+  const out = {};
+  for (const chunk of m[1].split(",")) {
+    const [name, bits] = chunk.split(":");
+    if (!name || !bits) continue;
+    out[name] = [...bits].map((c) => c === "1");
+  }
+  return out;
+}
+
+export function applyA11y(enabled) {
+  document.documentElement.classList.toggle("omo-a11y", enabled);
+  try {
+    localStorage.setItem("omo-a11y", enabled ? "1" : "0");
+  } catch {
+    /* noop */
+  }
+}
+
+export function loadA11yPreference() {
+  try {
+    if (localStorage.getItem("omo-a11y") === "1") applyA11y(true);
+  } catch {
+    /* noop */
+  }
+}

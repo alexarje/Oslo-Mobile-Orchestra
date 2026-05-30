@@ -15,7 +15,10 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Resonant filter</h2>
-    <p>Hold to play; tilt sweeps a band-pass filter.</p>
+    <p>Hold to play; tilt sweeps a band-pass filter. Toggle <strong>Continuous</strong> to keep sound on without holding.</p>
+  </div>
+  <div class="control-row">
+    <label class="slide-toggle"><input type="checkbox" id="continuous" /> Continuous</label>
   </div>
   <div class="main-stage">
     <div class="touch-zone" id="touchZone">
@@ -36,6 +39,7 @@
     let built = false;
     let sensorsOn = false;
     let holding = false;
+    let continuous = false;
     let activePointer = null;
 
     function buildVoice(c) {
@@ -62,7 +66,7 @@
       if (await enableSensors()) {
         sensorsOn = true;
         onMotion(({ x, y, z }) => {
-          if (!holding || !built) return;
+          if ((!holding && !continuous) || !built) return;
           const tilt = (normalizeAccel(x, y, z).y + 1) / 2;
           filter.frequency.setTargetAtTime(150 + tilt * 3500, ctx.currentTime, 0.03);
           meter.style.width = `${tilt * 100}%`;
@@ -75,6 +79,7 @@
       if (e && e.pointerId !== activePointer) return;
       holding = false;
       activePointer = null;
+      if (continuous) return;
       touchZone.classList.remove("active");
       if (gate && ctx) gate.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
       meter.style.width = "0%";
@@ -94,6 +99,17 @@
     touchZone.addEventListener("pointerup", release);
     touchZone.addEventListener("pointercancel", release);
     touchZone.addEventListener("lostpointercapture", release);
+
+    document.getElementById("continuous").onchange = async (e) => {
+      continuous = e.target.checked;
+      if (continuous) {
+        await startAudio(!built ? (c) => { buildVoice(c); void enableTilt(); } : undefined);
+        gate.gain.setTargetAtTime(0.5, ctx.currentTime, 0.05);
+        touchZone.classList.add("active");
+      } else if (!holding) {
+        release();
+      }
+    };
   </script>
 </body>
 </html>

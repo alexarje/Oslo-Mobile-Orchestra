@@ -840,6 +840,75 @@ body.hub {
   color: #a78bfa;
 }
 
+.pred-display.hum {
+  color: #6ee7b7;
+}
+
+.pred-display.silence {
+  color: #64748b;
+}
+
+html.omo-a11y .btn,
+html.omo-a11y .cell,
+html.omo-a11y .drum-pad,
+html.omo-a11y .learn-toggle {
+  min-height: 52px;
+  font-size: 0.85rem;
+}
+
+html.omo-a11y .app-list a {
+  min-height: 52px;
+  padding: 0.6rem 0.5rem;
+}
+
+html.omo-a11y {
+  --touch-min: 52px;
+}
+
+.hub-banner {
+  margin: 0.35rem 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  border: 1px solid var(--accent-dim);
+  background: rgba(110, 231, 183, 0.08);
+}
+
+.countdown-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(110, 231, 183, 0.25);
+  opacity: 0;
+  z-index: 100;
+  transition: opacity 0.05s;
+}
+
+.countdown-flash.on {
+  opacity: 1;
+}
+
+.slide-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.semitone-ruler {
+  position: absolute;
+  left: 0.25rem;
+  top: 8%;
+  bottom: 8%;
+  width: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.55rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 .btn-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Delay Throw — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Delay Throw</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Tap + delay</h2>
+    <p><strong>Tap</strong> captures a short sample into a feedback delay. <strong>Tilt</strong> = delay time &amp; feedback.</p>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Delay <strong id="dlyOut">0.3</strong>s</p>
+    <p class="value-chip">FB <strong id="fbOut">40</strong>%</p>
+  </div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"></div>
+  </div>
+  <script type="module">
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+
+    bindLearn();
+    const pad = document.getElementById("pad");
+    let ctx, master, delay, fb, wet, built = false;
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.55));
+      delay = ctx.createDelay(1.5);
+      delay.delayTime.value = 0.28;
+      fb = ctx.createGain();
+      fb.gain.value = 0.4;
+      wet = ctx.createGain();
+      wet.gain.value = 0.5;
+      delay.connect(fb);
+      fb.connect(delay);
+      delay.connect(wet);
+      wet.connect(master);
+      built = true;
+      void enableSensors().then((ok) => {
+        if (!ok) return;
+        onOrientation((o) => {
+          const t = Math.sqrt((o.beta || 0) ** 2 + (o.gamma || 0) ** 2) / 90;
+          const d = 0.08 + t * 0.55;
+          const f = 0.15 + t * 0.7;
+          delay.delayTime.setTargetAtTime(d, ctx.currentTime, 0.05);
+          fb.gain.setTargetAtTime(f, ctx.currentTime, 0.05);
+          document.getElementById("dlyOut").textContent = d.toFixed(2);
+          document.getElementById("fbOut").textContent = (f * 100).toFixed(0);
+        });
+      });
+    }
+
+    function throwSample() {
+      const len = Math.floor(ctx.sampleRate * 0.15);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.2));
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.value = 0.7;
+      src.connect(g);
+      g.connect(delay);
+      g.connect(master);
+      const t = ctx.currentTime;
+      src.start(t);
+      src.stop(t + 0.2);
+    }
+
+    pad.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      await startAudio(!built ? buildAudio : undefined);
+      throwSample();
+      pad.classList.add("active");
+      setTimeout(() => pad.classList.remove("active"), 120);
+    });
+  </script>
+</body>
+</html>

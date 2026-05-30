@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Compass Wah — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Compass Wah</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Compass filter</h2>
+    <p>Rotate phone flat like a compass — <strong>alpha</strong> heading sweeps a resonant lowpass (wah by orientation).</p>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Cutoff <strong id="cutOut">—</strong> Hz</p>
+  </div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"></div>
+  </div>
+  <script type="module">
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+
+    bindLearn();
+    let ctx, master, osc, filt, gate, built = false;
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.5));
+      gate = ctx.createGain();
+      gate.gain.value = 0.4;
+      filt = ctx.createBiquadFilter();
+      filt.type = "lowpass";
+      filt.Q.value = 10;
+      osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = 110;
+      osc.connect(filt);
+      filt.connect(gate);
+      gate.connect(master);
+      osc.start();
+      built = true;
+      void enableSensors().then((ok) => {
+        if (!ok) return;
+        onOrientation((o) => {
+          const a = o.alpha ?? 0;
+          const cut = 200 + ((a % 360) / 360) * 6000;
+          filt.frequency.setTargetAtTime(cut, ctx.currentTime, 0.04);
+          document.getElementById("cutOut").textContent = cut.toFixed(0);
+        });
+      });
+    }
+
+    document.getElementById("pad").addEventListener("pointerdown", async () => {
+      await startAudio(!built ? buildAudio : undefined);
+    });
+  </script>
+</body>
+</html>

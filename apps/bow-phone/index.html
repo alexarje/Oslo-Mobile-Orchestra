@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Bow Phone — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Bow Phone</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Bowed string</h2>
+    <p><strong>Hold</strong> and drag: <strong>Y</strong> = pitch, <strong>X</strong> = bow pressure (noise + tone).</p>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Pitch <strong id="pOut">220</strong> Hz</p>
+    <p class="value-chip">Bow <strong id="bOut">0</strong></p>
+  </div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+
+    bindLearn();
+    const pad = document.getElementById("pad");
+    let ctx, master, osc, noise, noiseGain, toneGain, built = false;
+    let active = null;
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.45));
+      osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      toneGain = ctx.createGain();
+      toneGain.gain.value = 0;
+      osc.connect(toneGain);
+      toneGain.connect(master);
+      osc.start();
+      const len = ctx.sampleRate * 2;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      noise.loop = true;
+      noiseGain = ctx.createGain();
+      noiseGain.gain.value = 0;
+      noise.connect(noiseGain);
+      noiseGain.connect(master);
+      noise.start();
+      built = true;
+    }
+
+    function update(ev) {
+      const r = pad.getBoundingClientRect();
+      const nx = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+      const ny = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
+      const pitch = 110 * Math.pow(2, (1 - ny) * 2);
+      const bow = nx;
+      const t = ctx.currentTime;
+      osc.frequency.setTargetAtTime(pitch, t, 0.03);
+      toneGain.gain.setTargetAtTime(bow * 0.2, t, 0.02);
+      noiseGain.gain.setTargetAtTime(bow * 0.25, t, 0.02);
+      document.getElementById("pOut").textContent = pitch.toFixed(0);
+      document.getElementById("bOut").textContent = bow.toFixed(2);
+      document.getElementById("dot").style.left = `${nx * 100}%`;
+      document.getElementById("dot").style.top = `${ny * 100}%`;
+    }
+
+    pad.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      await startAudio(!built ? buildAudio : undefined);
+      active = e.pointerId;
+      pad.setPointerCapture(e.pointerId);
+      pad.classList.add("active");
+      update(e);
+    });
+    pad.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== active) return;
+      update(e);
+    });
+    const stop = (e) => {
+      if (e.pointerId !== active) return;
+      active = null;
+      pad.classList.remove("active");
+      toneGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
+      noiseGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
+    };
+    pad.addEventListener("pointerup", stop);
+    pad.addEventListener("pointercancel", stop);
+  </script>
+</body>
+</html>
