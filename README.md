@@ -20,6 +20,11 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [FM Touch + Tilt](apps/fm-touch-tilt/) | Expressive FM | Touch pitch/amp; tilt → mod frequency |
 | [Karplus–Strong String](apps/ks-string/) | Plucked strings | KS delay line; tilt → damping |
 | [Synth Pad](apps/synth-pad/) | Melodic lead | Waveforms, filter, FM, aftertouch (force / touch size) |
+| [Additive Bells](apps/additive-bells/) | Bell tones | 8 partials, sliders per harmonic |
+| [KS Pluck](apps/ks-pluck/) | Plucked string | Tap-to-excite Karplus–Strong delay line |
+| [FM Matrix](apps/fm-matrix/) | FM timbres | 2×2 routing presets for workshop |
+| [Wavetable Scan](apps/wavetable-scan/) | Timbral sweep | Swipe through single-cycle waves |
+| [Filter Ladder](apps/filter-ladder/) | Subtractive sweep | 24 dB lowpass + tilt envelope |
 | [Motion Wah](apps/motion-wah/) | Expressive filter sweeps | Hold + tilt → band-pass wah |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
 | [Train & Shake](apps/train-shake/) | Gesture performance | k-NN vs tiny net; feature plot, confusion matrix, ethics panel |
@@ -42,7 +47,7 @@ Each app has a **Learn** panel with short explanations (where applicable). Piano
 - Discuss: training data, labels, misclassification, bias (what if someone holds the phone differently?).
 
 ### 3. “Synthesis tour” (20 min)
-- Stations rotate: **Synth Pad** → **Granular Tilt** → **Motion Wah**
+- Stations rotate: **Synth Pad** → **Wavetable Scan** → **Filter Ladder** → **Additive Bells**
 - Same melody idea, three timbral worlds.
 
 ### 4. “Grid orchestra”

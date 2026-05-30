@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>KS Pluck — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>KS Pluck</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Karplus–Strong</h2>
+    <p><strong>Tap</strong> to excite a delay-line string. <strong>X</strong> = pitch. A short noise burst feeds the loop; the filter shapes decay.</p>
+    <p>For hold-to-pluck + tilt damping, try <a href="../ks-string/">Karplus–Strong String</a>.</p>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Pitch <strong id="freqOut">220</strong> Hz</p>
+  </div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"></div>
+  </div>
+  <script type="module">
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+
+    bindLearn();
+    const pad = document.getElementById("pad");
+    let ctx, master, built = false;
+    const voices = [];
+    const MAX = 4;
+
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const mapX = (nx) => 55 * Math.pow(880 / 55, nx);
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.55));
+      built = true;
+    }
+
+    function pluck(freq) {
+      const sr = ctx.sampleRate;
+      const now = ctx.currentTime;
+      const n = Math.ceil(sr / freq);
+      const buf = ctx.createBuffer(1, n, sr);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * 0.85;
+
+      const exc = ctx.createBufferSource();
+      exc.buffer = buf;
+      const delay = ctx.createDelay(0.5);
+      delay.delayTime.value = 1 / freq;
+      const lpf = ctx.createBiquadFilter();
+      lpf.type = "lowpass";
+      lpf.frequency.value = Math.min(8000, freq * 6);
+      lpf.Q.value = 0.5;
+      const fb = ctx.createGain();
+      fb.gain.value = 0.965;
+      const out = ctx.createGain();
+      out.gain.value = 0.9;
+
+      while (voices.length >= MAX) {
+        const old = voices.shift();
+        try {
+          old.fb.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+          setTimeout(() => {
+            try {
+              old.out.disconnect();
+              old.fb.disconnect();
+            } catch { /* noop */ }
+          }, 280);
+        } catch { /* noop */ }
+      }
+      voices.push({ out, fb });
+
+      exc.connect(delay);
+      delay.connect(lpf);
+      lpf.connect(fb);
+      fb.connect(delay);
+      lpf.connect(out);
+      out.connect(master);
+      exc.start(now);
+      exc.stop(now + 1 / freq + 0.002);
+
+      setTimeout(() => {
+        const i = voices.findIndex((v) => v.out === out);
+        if (i !== -1) voices.splice(i, 1);
+        try {
+          lpf.disconnect();
+          fb.disconnect();
+          out.disconnect();
+        } catch { /* noop */ }
+      }, 3500);
+
+      document.getElementById("freqOut").textContent = freq.toFixed(0);
+    }
+
+    pad.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      await startAudio(!built ? buildAudio : undefined);
+      const r = pad.getBoundingClientRect();
+      const nx = clamp((e.clientX - r.left) / r.width, 0, 1);
+      pluck(mapX(nx));
+      const ripple = document.createElement("div");
+      ripple.className = "pluck-ripple";
+      ripple.style.left = `${e.clientX - r.left}px`;
+      ripple.style.top = `${e.clientY - r.top}px`;
+      pad.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+    });
+  </script>
+</body>
+</html>

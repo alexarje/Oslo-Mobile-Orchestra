@@ -52,11 +52,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 
 ## Sound synthesis demos
 
-- **Additive bells** — 5–8 partials, sliders per harmonic
-- **Karplus–strong pluck** — delay line string; tap = excite
-- **FM matrix** — 2×2 mod routing preset for workshop
-- **Wavetable scan** — swipe through single-cycle waves
-- **Filter ladder** — 24 dB lowpass with resonance + envelope from tilt
+- ~~Additive bells, KS pluck, FM matrix, wavetable scan, filter ladder~~ — shipped (see hub **Synthesis** tags)
 
 ---
 

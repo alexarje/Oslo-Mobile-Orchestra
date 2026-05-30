@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Additive Bells — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Additive Bells</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Additive synthesis</h2>
+    <p>A bell is many sine <strong>partials</strong> (harmonics) at once. Set each slider, then <strong>tap</strong> the pad to strike.</p>
+    <p><strong>Root</strong> sets the base pitch; partials use inharmonic ratios like a real bell.</p>
+  </div>
+  <div class="control-row">
+    <label for="root">Root</label>
+    <input type="range" id="root" min="48" max="72" value="60" />
+    <span id="rootLbl">C4</span>
+  </div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"></div>
+  </div>
+  <div id="partials" class="scroll-panel partial-sliders"></div>
+  <script type="module">
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus, midiToFreq } from "../../shared/audio.js";
+
+    bindLearn();
+    const RATIOS = [1, 2.56, 5.12, 8.21, 10.45, 13.8, 17.2, 21.5];
+    const NAMES = ["1×", "2.6×", "5.1×", "8.2×", "10×", "14×", "17×", "22×"];
+    const pad = document.getElementById("pad");
+    const partialsEl = document.getElementById("partials");
+    let ctx, master, built = false;
+    const levels = [0.9, 0.55, 0.4, 0.35, 0.28, 0.22, 0.18, 0.14];
+
+    NAMES.forEach((name, i) => {
+      const row = document.createElement("label");
+      row.className = "control-row";
+      row.innerHTML = `${name} <input type="range" min="0" max="100" value="${(levels[i] * 100) | 0}" data-i="${i}" />`;
+      partialsEl.appendChild(row);
+    });
+
+    function getLevels() {
+      return [...partialsEl.querySelectorAll("input")].map((el) => +el.value / 100);
+    }
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.5));
+      built = true;
+    }
+
+    function strike(nx) {
+      if (!built) return;
+      const f0 = midiToFreq(+document.getElementById("root").value);
+      const t = ctx.currentTime;
+      const amps = getLevels();
+      const bright = 0.7 + (1 - nx) * 0.3;
+      RATIOS.forEach((ratio, i) => {
+        const amp = amps[i];
+        if (amp < 0.02) return;
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = f0 * ratio;
+        const g = ctx.createGain();
+        g.connect(master);
+        osc.connect(g);
+        const peak = amp * bright * 0.35;
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(peak, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.2 + i * 0.15);
+        osc.start(t);
+        osc.stop(t + 2.5);
+      });
+    }
+
+    document.getElementById("root").oninput = (e) => {
+      const m = +e.target.value;
+      const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+      document.getElementById("rootLbl").textContent = `${names[m % 12]}${Math.floor(m / 12) - 1}`;
+    };
+
+    pad.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      await startAudio(!built ? buildAudio : undefined);
+      const r = pad.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width;
+      pad.classList.add("active");
+      strike(Math.max(0, Math.min(1, nx)));
+    });
+    pad.addEventListener("pointerup", () => pad.classList.remove("active"));
+    pad.addEventListener("pointercancel", () => pad.classList.remove("active"));
+  </script>
+</body>
+</html>
