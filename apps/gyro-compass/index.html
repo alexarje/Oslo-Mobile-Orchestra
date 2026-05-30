@@ -7,15 +7,17 @@
   <title>Gyro Compass — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell gyro-compass-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Gyro Compass</h1>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Pan + pitch</h2>
-    <p>Turn <strong>Audio on</strong>, then point the phone flat like a compass for stereo pan. <strong>Tilt</strong> forward/back for pitch, or drag up/down on the circle.</p>
+    <p>Tap the compass and allow <strong>motion/orientation</strong> on iPhone. Hold the phone flat and rotate for stereo pan.</p>
+    <p><strong>Tilt</strong> forward/back for pitch, or drag up/down on the circle.</p>
   </div>
+  <p class="status-bar" id="status">Tap compass · Audio on</p>
   <div class="readout-row">
     <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
     <p class="value-chip">Pan <strong id="panOut">—</strong></p>
@@ -25,9 +27,9 @@
     <canvas id="compass" class="canvas-fill"></canvas>
   </div>
   <script type="module">
-    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
-    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     const canvas = document.getElementById("compass");
@@ -35,8 +37,10 @@
     const NOTE_NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
     const MIDI_MIN = 48;
     const MIDI_MAX = 76;
+    const SENSOR_OPTS = { needMotion: false, needOrientation: true };
 
     let ctx, panner, osc, built = false;
+    let sensorsReady = false;
     let alpha = 0;
     let beta = 90;
     let touchMidi = null;
@@ -87,15 +91,25 @@
       osc.start();
       built = true;
       applyMotion();
-      void enableSensors().then((ok) => {
-        if (!ok) return;
-        onOrientation((o) => {
-          alpha = o.alpha ?? alpha;
-          if (o.beta != null) beta = o.beta;
-          else if (o.gamma != null) beta = 90 - o.gamma;
-          if (activePointer == null) applyMotion();
-        });
+    }
+
+    async function initSensors() {
+      if (sensorsReady) return true;
+      const ok = await enableSensors(SENSOR_OPTS);
+      if (!ok) {
+        setStatus("status", "Motion blocked — allow orientation in Settings", "warn");
+        return false;
+      }
+      onOrientation((o) => {
+        if (o.alpha != null && !Number.isNaN(o.alpha)) alpha = o.alpha;
+        if (o.beta != null && !Number.isNaN(o.beta)) beta = o.beta;
+        else if (o.gamma != null && !Number.isNaN(o.gamma)) beta = 90 - o.gamma;
+        if (activePointer == null) applyMotion();
       });
+      sensorsReady = true;
+      setStatus("status", "Rotate flat for pan · tilt for pitch", "ok");
+      applyMotion();
+      return true;
     }
 
     function draw() {
@@ -108,6 +122,7 @@
       const cx = w / 2;
       const cy = h / 2;
       const r = Math.min(w, h) * 0.35;
+      g.setTransform(1, 0, 0, 1, 0, 0);
       g.fillStyle = "#0f172a";
       g.fillRect(0, 0, w, h);
 
@@ -140,13 +155,21 @@
       g.setLineDash([]);
     }
 
-    canvas.addEventListener("pointerdown", async (e) => {
-      e.preventDefault();
+    async function boot(e) {
+      primeSensors(SENSOR_OPTS);
       await startAudio(!built ? buildAudio : undefined);
-      activePointer = e.pointerId;
-      canvas.setPointerCapture(e.pointerId);
-      touchMidi = midiFromTouchY(e.clientY);
-      applyMotion();
+      await initSensors();
+      if (e) {
+        activePointer = e.pointerId;
+        canvas.setPointerCapture(e.pointerId);
+        touchMidi = midiFromTouchY(e.clientY);
+        applyMotion();
+      }
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      void boot(e);
     });
     canvas.addEventListener("pointermove", (e) => {
       if (e.pointerId !== activePointer) return;
@@ -162,7 +185,9 @@
     canvas.addEventListener("pointerup", endTouch);
     canvas.addEventListener("pointercancel", endTouch);
 
-    new ResizeObserver(draw).observe(canvas.parentElement);
+    new ResizeObserver(() => {
+      if (built) draw();
+    }).observe(canvas.parentElement);
   </script>
 </body>
 </html>

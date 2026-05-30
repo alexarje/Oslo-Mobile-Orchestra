@@ -25,7 +25,7 @@
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
-    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     let ctx, master, osc, filt, gate, built = false;
@@ -46,19 +46,23 @@
       gate.connect(master);
       osc.start();
       built = true;
-      void enableSensors().then((ok) => {
-        if (!ok) return;
-        onOrientation((o) => {
-          const a = o.alpha ?? 0;
-          const cut = 200 + ((a % 360) / 360) * 6000;
-          filt.frequency.setTargetAtTime(cut, ctx.currentTime, 0.04);
-          document.getElementById("cutOut").textContent = cut.toFixed(0);
-        });
+    }
+
+    async function initSensors() {
+      const ok = await enableSensors({ needMotion: false, needOrientation: true });
+      if (!ok) return;
+      onOrientation((o) => {
+        const a = o.alpha ?? 0;
+        const cut = 200 + ((a % 360) / 360) * 6000;
+        filt.frequency.setTargetAtTime(cut, ctx.currentTime, 0.04);
+        document.getElementById("cutOut").textContent = cut.toFixed(0);
       });
     }
 
     document.getElementById("pad").addEventListener("pointerdown", async () => {
+      primeSensors({ needMotion: false, needOrientation: true });
       await startAudio(!built ? buildAudio : undefined);
+      await initSensors();
     });
   </script>
 </body>

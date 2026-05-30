@@ -31,10 +31,26 @@ export async function requestOrientationPermission() {
   }
 }
 
-export async function enableSensors() {
-  const m = await requestMotionPermission();
-  const o = await requestOrientationPermission();
+/**
+ * @param {{ needMotion?: boolean, needOrientation?: boolean }} [opts]
+ */
+export async function enableSensors({ needMotion = true, needOrientation = true } = {}) {
+  const m = !needMotion || (await requestMotionPermission());
+  const o = !needOrientation || (await requestOrientationPermission());
   return m && o;
+}
+
+let sensorPrime = null;
+
+/** Start permission requests on the same user gesture (before any await). */
+export function primeSensors(opts) {
+  if (!sensorPrime) {
+    sensorPrime = enableSensors(opts).catch(() => {
+      sensorPrime = null;
+      return false;
+    });
+  }
+  return sensorPrime;
 }
 
 /**
@@ -57,21 +73,35 @@ export function onMotion(callback) {
 }
 
 export function onOrientation(callback) {
+  if (orientationHandler) {
+    window.removeEventListener("deviceorientation", orientationHandler);
+    window.removeEventListener("deviceorientationabsolute", orientationHandler);
+  }
   orientationHandler = (e) => {
+    let alpha = e.alpha;
+    if ((alpha == null || Number.isNaN(alpha)) && typeof e.webkitCompassHeading === "number") {
+      alpha = e.webkitCompassHeading;
+    }
     callback({
-      alpha: e.alpha ?? 0,
+      alpha: alpha ?? 0,
       beta: e.beta ?? 0,
       gamma: e.gamma ?? 0,
+      absolute: !!e.absolute,
     });
   };
   window.addEventListener("deviceorientation", orientationHandler, { passive: true });
+  window.addEventListener("deviceorientationabsolute", orientationHandler, { passive: true });
 }
 
 export function stopSensors() {
   if (motionHandler) window.removeEventListener("devicemotion", motionHandler);
-  if (orientationHandler) window.removeEventListener("deviceorientation", orientationHandler);
+  if (orientationHandler) {
+    window.removeEventListener("deviceorientation", orientationHandler);
+    window.removeEventListener("deviceorientationabsolute", orientationHandler);
+  }
   motionHandler = null;
   orientationHandler = null;
+  sensorPrime = null;
 }
 
 /** Normalize accel to roughly -1..1 for portrait hold */
