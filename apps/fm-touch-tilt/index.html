@@ -17,7 +17,6 @@
     <h2>FM + motion</h2>
     <p><strong>X</strong> = pitch. <strong>Y</strong> = volume. <strong>Tilt</strong> = modulator frequency.</p>
   </div>
-  <p class="status-bar" id="status">Hold pad to play</p>
   <div class="main-stage">
     <div id="playArea" class="stage-fill play-grid">
       <div class="touch-dot" id="dot"></div>
@@ -29,8 +28,8 @@
     <p class="value-chip">Mod <strong id="modHz">110</strong> Hz</p>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
-    import { createMasterBus, getAudioContext, unlockAudio } from "../../shared/audio.js";
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
     bindLearn();
@@ -78,7 +77,6 @@
           document.getElementById("modHz").textContent = modHz.toFixed(0);
         });
       }
-      setStatus("status", tiltReady ? "Hold · tilt modulates" : "Hold (no tilt)", tiltReady ? "ok" : "warn");
     }
 
     function setFromEvent(ev) {
@@ -100,13 +98,7 @@
 
     playArea.addEventListener("pointerdown", async (ev) => {
       ev.preventDefault();
-      if (!built) {
-        const c = getAudioContext();
-        pingIOSUnlock(c);
-        buildVoice(c);
-        void enableTilt();
-      }
-      await unlockAudio(ctx);
+      await startAudio(!built ? (c) => { buildVoice(c); void enableTilt(); } : undefined);
       activePointerId = ev.pointerId;
       playArea.setPointerCapture(activePointerId);
       playArea.classList.add("active");

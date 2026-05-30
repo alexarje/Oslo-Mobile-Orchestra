@@ -23,12 +23,11 @@
     <span id="bpmVal">100</span>
     <button type="button" class="btn btn-play" id="playBtn">▶</button>
   </div>
-  <p class="status-bar" id="status">Tap steps · then ▶</p>
   <div class="main-stage">
     <div class="drum-seq" id="seq"></div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { bindLearn, createAudioBoot } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { DRUM_SEQ_ROWS } from "../../shared/drum-sounds.js";
 
@@ -108,7 +107,6 @@
         playBtn.classList.remove("active");
         playBtn.textContent = "▶";
         cells.forEach((row) => row.forEach((c) => c.classList.remove("playing")));
-        setStatus("status", "Paused", "");
         return;
       }
       playing = true;
@@ -116,7 +114,6 @@
       nextTime = ctx.currentTime;
       playBtn.classList.add("active");
       playBtn.textContent = "■";
-      setStatus("status", "Playing", "ok");
       scheduler();
     });
   </script>

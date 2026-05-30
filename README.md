@@ -24,6 +24,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Chord tone + pitch pad ±5 st, rotate to detune |
 | [Train & Shake](apps/train-shake/) | Gesture performance | k-NN classifier on motion features |
 | [Granular Tilt](apps/granular-tilt/) | Textures / clouds | Granular synthesis + orientation |
+| [Photo Sonifier](apps/photo-sonifier/) | Texture from environment | Camera brightness map → grain density (consent / workshop mode) |
 | [Pulse Grid](apps/pulse-grid/) | Rhythm layer | 16-step sequencer, drum synthesis |
 
 Each app has a **Learn** panel with short explanations (where applicable). Piano, drumkit, FM, and KS string apps are adapted from [web_instruments/mobile](https://github.com/alexarje/web_instruments/tree/main/mobile).

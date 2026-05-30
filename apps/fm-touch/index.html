@@ -17,7 +17,6 @@
     <h2>FM synthesis</h2>
     <p><strong>X</strong> = carrier pitch. <strong>Y</strong> = modulator pitch &amp; depth. Hold to play.</p>
   </div>
-  <p class="status-bar" id="status">Hold pad to play</p>
   <div class="main-stage">
     <div id="playArea" class="stage-fill play-grid">
       <div class="touch-dot" id="dot"></div>
@@ -28,8 +27,8 @@
     <p class="value-chip">Mod <strong id="modHz">110</strong> Hz</p>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
-    import { createMasterBus, getAudioContext, unlockAudio } from "../../shared/audio.js";
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
 
     bindLearn();
     const playArea = document.getElementById("playArea");
@@ -61,7 +60,6 @@
       carrierOsc.start();
       modOsc.start();
       built = true;
-      setStatus("status", "Hold & drag", "ok");
     }
 
     function setFromEvent(ev) {
@@ -82,19 +80,13 @@
 
     playArea.addEventListener("pointerdown", async (ev) => {
       ev.preventDefault();
-      if (!built) {
-        const c = getAudioContext();
-        pingIOSUnlock(c);
-        buildVoice(c);
-      }
-      await unlockAudio(ctx);
+      await startAudio(!built ? buildVoice : undefined);
       activePointerId = ev.pointerId;
       playArea.setPointerCapture(activePointerId);
       playArea.classList.add("active");
       setFromEvent(ev);
       ampGain.gain.cancelScheduledValues(ctx.currentTime);
       ampGain.gain.setTargetAtTime(0.24, ctx.currentTime, 0.01);
-      setStatus("status", "Playing", "ok");
     });
 
     playArea.addEventListener("pointermove", (ev) => {
@@ -108,7 +100,6 @@
       playArea.classList.remove("active");
       ampGain.gain.cancelScheduledValues(ctx.currentTime);
       ampGain.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
-      setStatus("status", "Hold & drag", "ok");
       activePointerId = null;
     };
 

@@ -1,9 +1,11 @@
 /* piano.js – Web Audio piano (three octaves, mobile touch) */
 
+import { startAudio, ensureAudioBadge } from '../../shared/app.js';
+
+ensureAudioBadge();
+
 (function () {
   'use strict';
-
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
   let ctx = null;
   let masterGain = null;
   let reverbNode = null;
@@ -22,47 +24,17 @@
   const waveformSelect = document.getElementById('waveform');
   const keyboard = document.getElementById('keyboard');
   const octaveDisplay = document.getElementById('octave-display');
-  const statusEl = document.getElementById('status');
   const slideModeEl = document.getElementById('slideMode');
 
   const WHITE_W = 28; // key 27px + 1px gap — fits 3 octaves with scroll
   const BLACK_NUDGE = 20;
 
-  function pingIOS(c) {
-    const buf = c.createBuffer(1, 1, c.sampleRate);
-    const src = c.createBufferSource();
-    src.buffer = buf;
-    src.connect(c.destination);
-    src.start();
-    src.stop();
-  }
-
-  let iosUnlocked = false;
-
   function ensureCtx() {
-    if (!ctx) {
-      ctx = new AudioContext();
-      buildReverb();
-    } else if (ctx.state === 'suspended') {
-      void ctx.resume();
-    }
-    if (!iosUnlocked) {
-      pingIOS(ctx);
-      iosUnlocked = true;
-    }
-  }
-
-  function markReady() {
-    if (statusEl) {
-      statusEl.textContent = slideModeEl.checked
-        ? 'C4–B6 · hold & slide (chromatic)'
-        : 'C4–B6 · tap or drag keys';
-    }
+    void startAudio(!ctx ? (c) => { ctx = c; buildReverb(); } : undefined);
   }
 
   document.body.addEventListener('pointerdown', () => {
     ensureCtx();
-    markReady();
   }, { once: true, capture: true });
 
   function buildReverb() {
@@ -349,7 +321,6 @@
 
   slideModeEl.addEventListener('change', () => {
     stopSlide();
-    markReady();
   });
 
   keyboard.style.touchAction = 'none';

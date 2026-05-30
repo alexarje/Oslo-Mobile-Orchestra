@@ -17,7 +17,6 @@
     <h2>Ensemble harmony</h2>
     <p>Pick chord tone · slide pad ±5 semitones · rotate to detune.</p>
   </div>
-  <p class="status-bar" id="status">Tap screen to start</p>
   <p class="pick-label">F minor — pick one</p>
   <div class="note-grid" id="notes"></div>
   <div class="main-stage">
@@ -28,7 +27,7 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { bindLearn, createAudioBoot } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
@@ -78,7 +77,6 @@
         applyPitch();
       });
       applyPitch();
-      setStatus("status", "Slide · rotate to detune", "ok");
     });
 
     function placeFinger(ny) {

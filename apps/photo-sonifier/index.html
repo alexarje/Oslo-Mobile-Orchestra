@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Photo Sonifier — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  <style>
+    .consent-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(13, 15, 20, 0.92);
+    }
+    .consent-gate.hidden { display: none; }
+    .consent-card {
+      max-width: 22rem;
+      padding: 0.85rem;
+      background: var(--surface);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+    .consent-card h2 {
+      margin: 0 0 0.5rem;
+      font-size: 0.95rem;
+    }
+    .consent-card p { margin: 0.35rem 0; color: var(--muted); }
+    .consent-card label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      margin: 0.65rem 0;
+      cursor: pointer;
+    }
+    .consent-card .btn { width: 100%; margin-top: 0.5rem; }
+    #previewWrap {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+    }
+    #preview {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    #videoFeed {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .live-badge {
+      position: absolute;
+      top: 0.35rem;
+      left: 0.35rem;
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: #f87171;
+      background: rgba(15, 23, 42, 0.75);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .live-badge[hidden] { display: none; }
+  </style>
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Photo Sonifier</h1>
+    <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Camera → grains</h2>
+    <p>Each video frame becomes a <strong>brightness map</strong>. Brighter areas spawn more granular “grains” — a texture of your surroundings.</p>
+    <p><strong>Workshop mode:</strong> rear camera, low resolution, nothing leaves the device.</p>
+  </div>
+
+  <div id="consentGate" class="consent-gate">
+    <div class="consent-card">
+      <h2>Camera consent</h2>
+      <p>This app uses your camera <strong>only while open</strong>. Frames are analyzed on your phone for sound. Nothing is recorded, uploaded, or saved.</p>
+      <label>
+        <input type="checkbox" id="workshopMode" checked />
+        <span><strong>Workshop mode</strong> — rear camera, low resolution (recommended in class)</span>
+      </label>
+      <button type="button" class="btn" id="consentBtn">Start camera &amp; sound</button>
+    </div>
+  </div>
+
+  <p class="status-bar" id="status"></p>
+  <div class="readout-row">
+    <p class="value-chip">Brightness <strong id="brightOut">—</strong></p>
+    <p class="value-chip">Grains <strong id="rateOut">—</strong>/s</p>
+  </div>
+  <div class="control-row">
+    <button type="button" class="btn-secondary btn btn-sm" id="stopBtn" hidden>Stop camera</button>
+  </div>
+  <div class="main-stage">
+    <div id="previewWrap" class="stage-fill">
+      <video id="videoFeed" playsinline muted></video>
+      <canvas id="preview" class="canvas-fill"></canvas>
+      <span class="live-badge" id="liveBadge" hidden>LIVE · on device only</span>
+    </div>
+  </div>
+
+  <script type="module">
+    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+
+    bindLearn();
+
+    const GRID_W = 16;
+    const GRID_H = 12;
+    const ANALYZE_MS = 80;
+    const MIN_GRAINS = 2;
+    const MAX_GRAINS = 42;
+
+    const consentGate = document.getElementById("consentGate");
+    const consentBtn = document.getElementById("consentBtn");
+    const workshopMode = document.getElementById("workshopMode");
+    const video = document.getElementById("videoFeed");
+    const preview = document.getElementById("preview");
+    const pctx = preview.getContext("2d");
+    const sample = document.createElement("canvas");
+    sample.width = GRID_W;
+    sample.height = GRID_H;
+    const sctx = sample.getContext("2d", { willReadFrequently: true });
+
+    let stream = null;
+    let ctx, master, buffer;
+    let running = false;
+    let analyzeTimer = null;
+    let grainTimer = null;
+    let meanBrightness = 0;
+    let grainsPerSec = MIN_GRAINS;
+    const cellBrightness = new Float32Array(GRID_W * GRID_H);
+    const cellWeight = new Float32Array(GRID_W * GRID_H);
+
+    function buildGrainBuffer(c) {
+      const len = Math.floor(c.sampleRate * 0.4);
+      buffer = c.createBuffer(1, len, c.sampleRate);
+      const d = buffer.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI) * 0.9;
+      }
+    }
+
+    function spawnGrain(col, row, level) {
+      if (!ctx || !buffer) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const nx = GRID_W > 1 ? col / (GRID_W - 1) : 0.5;
+      const ny = GRID_H > 1 ? row / (GRID_H - 1) : 0.5;
+      const rate = 0.35 + ny * 1.4;
+      const dur = 0.015 + Math.random() * 0.04;
+      src.playbackRate.value = rate;
+      const gn = ctx.createGain();
+      const pan = ctx.createStereoPanner();
+      pan.pan.value = nx * 2 - 1;
+      pan.connect(master);
+      gn.connect(pan);
+      src.connect(gn);
+      const t = ctx.currentTime;
+      const amp = 0.06 + level * 0.22;
+      src.start(t, Math.random() * Math.max(0.01, buffer.duration - dur), dur);
+      gn.gain.setValueAtTime(0, t);
+      gn.gain.linearRampToValueAtTime(amp, t + 0.004);
+      gn.gain.linearRampToValueAtTime(0, t + dur);
+    }
+
+    function pickWeightedCell() {
+      let total = 0;
+      for (let i = 0; i < cellWeight.length; i++) {
+        const w = cellWeight[i];
+        total += w;
+      }
+      if (total <= 0) return 0;
+      let r = Math.random() * total;
+      for (let i = 0; i < cellWeight.length; i++) {
+        r -= cellWeight[i];
+        if (r <= 0) return i;
+      }
+      return cellWeight.length - 1;
+    }
+
+    function scheduleGrain() {
+      if (!running) return;
+      const idx = pickWeightedCell();
+      const col = idx % GRID_W;
+      const row = (idx / GRID_W) | 0;
+      spawnGrain(col, row, cellBrightness[idx]);
+      const interval = 1000 / Math.max(MIN_GRAINS, grainsPerSec);
+      grainTimer = setTimeout(scheduleGrain, interval * (0.7 + Math.random() * 0.6));
+    }
+
+    function analyzeFrame() {
+      if (!stream || video.readyState < 2) return;
+      sctx.drawImage(video, 0, 0, GRID_W, GRID_H);
+      const img = sctx.getImageData(0, 0, GRID_W, GRID_H);
+      let sum = 0;
+      for (let i = 0; i < cellBrightness.length; i++) {
+        const o = i * 4;
+        const b = (img.data[o] + img.data[o + 1] + img.data[o + 2]) / (3 * 255);
+        cellBrightness[i] = b;
+        cellWeight[i] = 0.08 + b * b;
+        sum += b;
+      }
+      meanBrightness = sum / cellBrightness.length;
+      grainsPerSec = MIN_GRAINS + meanBrightness * (MAX_GRAINS - MIN_GRAINS);
+      document.getElementById("brightOut").textContent = `${(meanBrightness * 100).toFixed(0)}%`;
+      document.getElementById("rateOut").textContent = grainsPerSec.toFixed(0);
+      drawPreview(img);
+    }
+
+    function drawPreview(gridImg) {
+      const box = preview.parentElement.getBoundingClientRect();
+      const dpr = devicePixelRatio || 1;
+      preview.width = Math.max(1, Math.floor(box.width * dpr));
+      preview.height = Math.max(1, Math.floor(box.height * dpr));
+      const w = preview.width;
+      const h = preview.height;
+      const mirror = stream && workshopMode.checked === false;
+
+      pctx.save();
+      if (mirror) {
+        pctx.translate(w, 0);
+        pctx.scale(-1, 1);
+      }
+      pctx.drawImage(video, 0, 0, w, h);
+      pctx.restore();
+
+      const cellW = w / GRID_W;
+      const cellH = h / GRID_H;
+      for (let row = 0; row < GRID_H; row++) {
+        for (let col = 0; col < GRID_W; col++) {
+          const i = row * GRID_W + col;
+          const b = cellBrightness[i];
+          const o = i * 4;
+          const r = gridImg.data[o];
+          const g = gridImg.data[o + 1];
+          const bl = gridImg.data[o + 2];
+          pctx.fillStyle = `rgba(${r},${g},${bl},${0.15 + b * 0.55})`;
+          pctx.fillRect(col * cellW, row * cellH, cellW + 1, cellH + 1);
+        }
+      }
+    }
+
+    function resizePreview() {
+      if (running) analyzeFrame();
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("status", "Camera not supported", "warn");
+        return false;
+      }
+      const workshop = workshopMode.checked;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: workshop ? { ideal: "environment" } : "user",
+            width: { ideal: workshop ? 320 : 480 },
+            height: { ideal: workshop ? 240 : 360 },
+          },
+          audio: false,
+        });
+      } catch {
+        setStatus("status", "Camera denied", "warn");
+        return false;
+      }
+      video.srcObject = stream;
+      await video.play();
+      return true;
+    }
+
+    function stopAll() {
+      running = false;
+      clearTimeout(analyzeTimer);
+      clearTimeout(grainTimer);
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      document.getElementById("liveBadge").hidden = true;
+      document.getElementById("stopBtn").hidden = true;
+      consentGate.classList.remove("hidden");
+      setStatus("status", "", "");
+    }
+
+    async function onConsent() {
+      consentBtn.disabled = true;
+      await startAudio((c) => {
+        ctx = c;
+        ({ master } = createMasterBus(c, 0.45));
+        buildGrainBuffer(c);
+      });
+      if (!(await startCamera())) {
+        consentBtn.disabled = false;
+        return;
+      }
+      consentGate.classList.add("hidden");
+      document.getElementById("liveBadge").hidden = false;
+      document.getElementById("stopBtn").hidden = false;
+      setStatus("status", "Workshop · live only on device", "ok");
+      running = true;
+      scheduleGrain();
+      const loop = () => {
+        if (!running) return;
+        analyzeFrame();
+        analyzeTimer = setTimeout(loop, ANALYZE_MS);
+      };
+      loop();
+      new ResizeObserver(resizePreview).observe(preview.parentElement);
+    }
+
+    consentBtn.addEventListener("click", () => void onConsent());
+    document.getElementById("stopBtn").addEventListener("click", stopAll);
+    window.addEventListener("pagehide", stopAll);
+  </script>
+</body>
+</html>

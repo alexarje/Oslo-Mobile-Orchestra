@@ -127,6 +127,19 @@ a {
   min-height: 28px;
 }
 
+.audio-status {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.audio-status[hidden] {
+  display: none;
+}
+
 /* Overlay — does not push main UI down */
 .learn-panel.panel {
   display: none;

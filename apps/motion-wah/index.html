@@ -17,17 +17,15 @@
     <h2>Resonant filter</h2>
     <p>Hold to play; tilt sweeps a band-pass filter.</p>
   </div>
-  <p class="status-bar" id="status">Hold to play · tilt for wah</p>
   <div class="main-stage">
     <div class="touch-zone" id="touchZone">
       <div class="phone-icon" id="phone"></div>
-      <p>Hold here · tilt forward / back</p>
       <div class="meter"><div class="meter-fill" id="meter"></div></div>
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
-    import { createMasterBus, getAudioContext, unlockAudio } from "../../shared/audio.js";
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onMotion, normalizeAccel } from "../../shared/sensors.js";
 
     bindLearn();
@@ -57,7 +55,6 @@
       gate.connect(master);
       osc.start();
       built = true;
-      setStatus("status", "Hold & tilt", "ok");
     }
 
     async function enableTilt() {
@@ -71,9 +68,6 @@
           meter.style.width = `${tilt * 100}%`;
           phone.style.transform = `rotateX(${tilt * 40 - 20}deg)`;
         });
-        setStatus("status", "Hold & tilt", "ok");
-      } else {
-        setStatus("status", "Hold (tilt unavailable)", "warn");
       }
     }
 
@@ -89,13 +83,7 @@
 
     touchZone.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
-      if (!built) {
-        const c = getAudioContext();
-        pingIOSUnlock(c);
-        buildVoice(c);
-        void enableTilt();
-      }
-      await unlockAudio(ctx);
+      await startAudio(!built ? (c) => { buildVoice(c); void enableTilt(); } : undefined);
       activePointer = e.pointerId;
       touchZone.setPointerCapture(e.pointerId);
       holding = true;

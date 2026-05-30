@@ -17,7 +17,6 @@
     <h2>Sound synthesis</h2>
     <p><strong>X</strong> = pitch. <strong>Y</strong> = filter. <strong>FM</strong> = frequency modulation.</p>
   </div>
-  <p class="status-bar" id="status">Hold pad to play</p>
   <div class="control-row">
     <label for="wave">Wave</label>
     <select id="wave">
@@ -31,8 +30,8 @@
     <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="cursor"></div></div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
-    import { applyEnvelope, createMasterBus, getAudioContext, midiToFreq, unlockAudio } from "../../shared/audio.js";
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { applyEnvelope, createMasterBus, midiToFreq } from "../../shared/audio.js";
 
     bindLearn();
     const pad = document.getElementById("pad");
@@ -46,7 +45,6 @@
       ctx = c;
       ({ master } = createMasterBus(ctx));
       built = true;
-      setStatus("status", "Hold & drag", "ok");
     }
 
     function stopVoice() {
@@ -129,12 +127,7 @@
 
     pad.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
-      if (!built) {
-        const c = getAudioContext();
-        pingIOSUnlock(c);
-        buildAudio(c);
-      }
-      await unlockAudio(ctx);
+      await startAudio(!built ? buildAudio : undefined);
       activePointer = e.pointerId;
       pad.setPointerCapture(e.pointerId);
       pad.classList.add("active");

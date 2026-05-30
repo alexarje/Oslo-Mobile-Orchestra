@@ -16,7 +16,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 | **Delay Throw** | Rhythmic layers | Tap screen → sample captured → tilt controls delay feedback time |
 | **Bow Phone** | Sustained strings | Hold + horizontal drag = bow pressure; vertical = pitch on a string |
 | **NFC / QR Part** | Instant seating | Scan QR on stage → opens app with `?part=7` and suggested instrument |
-| **Photo Sonifier** | Texture from environment | Camera frame → brightness map → grain density (with consent / workshop mode) |
+| ~~**Photo Sonifier**~~ | Texture from environment | → [Photo Sonifier](../apps/photo-sonifier/) |
 
 ---
 

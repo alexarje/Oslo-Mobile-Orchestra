@@ -17,7 +17,6 @@
     <h2>Machine learning</h2>
     <p>Record still vs shake examples → k-NN classifier on motion features.</p>
   </div>
-  <p class="status-bar" id="status">Record 3+ each, then listen</p>
   <div class="pred-display still" id="pred">—</div>
   <p class="status-bar" id="counts">Still: 0 · Shake: 0</p>
   <div class="btn-grid-2">
@@ -27,7 +26,7 @@
     <button type="button" class="btn-danger btn btn-sm" id="clearBtn">Clear</button>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { bindLearn, createAudioBoot } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onMotion } from "../../shared/sensors.js";
     import { KNNClassifier, FeatureNormalizer, extractMotionFeatures } from "../../shared/ml.js";

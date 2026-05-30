@@ -17,7 +17,7 @@
     <h2>Breath + pentatonic</h2>
     <p>Tap pad → allow mic → blow past yellow line. Slide for pitch (C major pentatonic).</p>
   </div>
-  <p class="status-bar" id="status">Tap pad · blow into mic</p>
+  <p class="status-bar" id="status"></p>
   <div class="breath-row">
     <label>Breath</label>
     <div class="breath-meter breath-threshold" id="breathWrap" style="--thresh: 35%">
@@ -168,7 +168,6 @@
       await calibrate();
       ready = true;
       tick();
-      setStatus("status", "Blow · slide pitch", "ok");
     }, { screenTap: false });
 
     flutePad.addEventListener("pointerdown", async (e) => {

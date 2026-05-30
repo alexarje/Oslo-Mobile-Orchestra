@@ -1,38 +1,30 @@
 /* drums.js – Web Audio drum machine */
 
+import { startAudio, ensureAudioBadge } from '../../shared/app.js';
+
+ensureAudioBadge();
+
 (function () {
   'use strict';
 
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
   let ctx = null;
   let masterGain = null;
 
   const volumeSlider = document.getElementById('volume');
 
-  function pingIOS(c) {
-    const buf = c.createBuffer(1, 1, c.sampleRate);
-    const src = c.createBufferSource();
-    src.buffer = buf;
-    src.connect(c.destination);
-    src.start();
-    src.stop();
-  }
-
   function ensureCtx() {
-    if (!ctx) {
-      ctx = new AudioContext();
+    void startAudio(!ctx ? (c) => {
+      ctx = c;
       masterGain = ctx.createGain();
       masterGain.gain.value = parseFloat(volumeSlider.value);
       masterGain.connect(ctx.destination);
-    } else if (ctx.state === 'suspended') {
-      void ctx.resume();
-    }
-    pingIOS(ctx);
+    } : undefined);
   }
 
   document.body.addEventListener('pointerdown', () => {
     ensureCtx();
   }, { once: true, capture: true });
+
   volumeSlider.addEventListener('input', () => {
     if (masterGain) masterGain.gain.value = parseFloat(volumeSlider.value);
   });
@@ -46,7 +38,7 @@
     { name: 'Tom 1',    icon: '🟤', key: '5', play: playTom1 },
     { name: 'Tom 2',    icon: '🟠', key: '6', play: playTom2 },
     { name: 'Clap',     icon: '👏', key: '7', play: playClap },
-    { name: 'Cowbell',  icon: '🐄', key: '8', play: playCowbell },
+    { name: 'Cowbell',  icon: '🔔', key: '8', play: playCowbell },
   ];
 
   // ── Sound synthesis helpers ─────────────────────────────────────────────────
@@ -65,7 +57,6 @@
   }
 
   function playSnare() {
-    // Tonal body
     const osc = ctx.createOscillator();
     const oscEnv = ctx.createGain();
     osc.frequency.setValueAtTime(200, ctx.currentTime);
@@ -77,7 +68,6 @@
     osc.start();
     osc.stop(ctx.currentTime + 0.15);
 
-    // Noise "snare rattle"
     const bufLen = ctx.sampleRate * 0.2;
     const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
     const data = buf.getChannelData(0);
@@ -87,7 +77,6 @@
     const noiseEnv = ctx.createGain();
     noiseEnv.gain.setValueAtTime(1, ctx.currentTime);
     noiseEnv.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-    // High-pass to brighten noise
     const hp = ctx.createBiquadFilter();
     hp.type = 'highpass';
     hp.frequency.value = 1000;
@@ -143,7 +132,6 @@
   function playTom2() { playTom(120, 0.35); }
 
   function playClap() {
-    // Multiple short noise bursts to simulate a clap
     [0, 0.01, 0.02].forEach((offset) => {
       const bufLen = Math.floor(ctx.sampleRate * 0.05);
       const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
@@ -168,8 +156,7 @@
   }
 
   function playCowbell() {
-    const freqs = [562, 845];
-    freqs.forEach((freq) => {
+    [562, 845].forEach((freq) => {
       const osc = ctx.createOscillator();
       osc.type = 'square';
       osc.frequency.value = freq;
@@ -188,7 +175,6 @@
     });
   }
 
-  // ── Build pad UI ────────────────────────────────────────────────────────────
   const grid = document.getElementById('pads-grid');
   const keyToPad = {};
 
@@ -216,7 +202,6 @@
     keyToPad[pad.key] = { index: i, el, play: pad.play };
   });
 
-  // ── Trigger helper ──────────────────────────────────────────────────────────
   function triggerPad(i, el) {
     ensureCtx();
     PADS[i].play();
@@ -224,7 +209,6 @@
     setTimeout(() => el.classList.remove('active'), 120);
   }
 
-  // ── Keyboard events ─────────────────────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     if (e.repeat) return;
     const entry = keyToPad[e.key];

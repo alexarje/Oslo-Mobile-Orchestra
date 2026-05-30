@@ -54,7 +54,7 @@
     <h2>Loop sampler</h2>
     <p><strong>Hold</strong> the pad to record from the mic. <strong>Release</strong> to loop the sample. <strong>Tilt</strong> = filter + delay FX.</p>
   </div>
-  <p class="status-bar" id="status">Hold pad to record</p>
+  <p class="status-bar" id="status"></p>
   <div class="readout-row">
     <p class="value-chip">Filter <strong id="filterOut">—</strong> Hz</p>
     <p class="value-chip">Delay <strong id="delayOut">—</strong></p>
@@ -64,13 +64,13 @@
     <div id="pad" class="stage-fill play-grid">
       <div class="sampler-hint">
         <span class="rec-dot" id="recDot"></span>
-        <span id="padHint">Hold to record · release to loop</span>
+        <span id="padHint"></span>
       </div>
     </div>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
-    import { createMasterBus, getAudioContext, unlockAudio } from "../../shared/audio.js";
+    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
     bindLearn();
@@ -180,7 +180,6 @@
           document.getElementById("delayOut").textContent = `${(fb * 100).toFixed(0)}%`;
           document.getElementById("pitchOut").textContent = playbackRate.toFixed(2);
         });
-        setStatus("status", "Hold · tilt for FX", "ok");
       }
     }
 
@@ -211,7 +210,6 @@
       loopSource.start();
       pad.classList.add("looping");
       padHint.textContent = "Looping · hold again to re-record";
-      setStatus("status", "Looping · tilt FX", "ok");
     }
 
     function teardownScriptCapture() {
@@ -251,22 +249,22 @@
 
     async function commitLoopFromBlob(blob) {
       padHint.textContent = "Processing…";
-      await unlockAudio(ctx);
+      await startAudio();
       try {
         const ab = await blob.arrayBuffer();
         loopBuffer = await ctx.decodeAudioData(ab);
         startLoop();
       } catch {
-        padHint.textContent = "Hold to record · release to loop";
+        padHint.textContent = "";
         setStatus("status", "Too short — try again", "warn");
       }
     }
 
     async function commitLoopFromScript() {
-      await unlockAudio(ctx);
+      await startAudio();
       loopBuffer = bufferFromScriptCapture();
       if (!loopBuffer) {
-        padHint.textContent = "Hold to record · release to loop";
+        padHint.textContent = "";
         setStatus("status", "Too short — try again", "warn");
         return;
       }
@@ -349,13 +347,7 @@
 
     pad.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
-      if (!built) {
-        const c = getAudioContext();
-        pingIOSUnlock(c);
-        buildAudio(c);
-        void enableTilt();
-      }
-      await unlockAudio(ctx);
+      await startAudio(!built ? (c) => { buildAudio(c); void enableTilt(); } : undefined);
       if (!(await ensureMic())) return;
       activePointer = e.pointerId;
       pad.setPointerCapture(e.pointerId);
@@ -366,18 +358,14 @@
       if (e.pointerId !== activePointer) return;
       activePointer = null;
       if (pad.hasPointerCapture(e.pointerId)) pad.releasePointerCapture(e.pointerId);
-      pingIOSUnlock(ctx);
-      await unlockAudio(ctx);
+      await startAudio();
       await endRecording();
     };
 
     pad.addEventListener("pointerup", release);
     pad.addEventListener("pointercancel", release);
     pad.addEventListener("lostpointercapture", () => {
-      if (recording) {
-        pingIOSUnlock(ctx);
-        void unlockAudio(ctx).then(() => endRecording());
-      }
+      if (recording) void startAudio().then(() => endRecording());
       activePointer = null;
     });
   </script>
