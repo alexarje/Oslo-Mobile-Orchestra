@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Bowed string</h2>
-    <p>Turn <strong>Audio on</strong>, <strong>hold</strong> the pad for pitch (up = high), then <strong>rock the phone back and forth</strong> like a bow — more motion = more sound.</p>
+    <p>Turn <strong>Audio on</strong>, <strong>hold</strong> the pad for pitch (up = high), then <strong>rock the phone back and forth</strong> — amplitude follows how much you move.</p>
     <p>Allow <strong>motion</strong> when asked on iPhone. Sound fades when you stop moving.</p>
   </div>
   <div class="breath-row">
@@ -25,7 +25,7 @@
   </div>
   <div class="readout-row">
     <p class="value-chip">Pitch <strong id="pOut">220</strong> Hz</p>
-    <p class="value-chip">Motion <strong id="bOut">0</strong></p>
+    <p class="value-chip">Amp <strong id="bOut">0</strong></p>
   </div>
   <div class="main-stage">
     <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
@@ -44,9 +44,17 @@
     let sensorsReady = false;
     let holding = false;
     let activePointer = null;
-    let bowEnergy = 0;
+    let bowAmp = 0;
     let lastAccel = { x: 0, y: 0, z: 0 };
+    let motionPrimed = false;
     let pitchHz = 220;
+
+    function motionToAmplitude(jerk, rotAlpha, rotBeta, rotGamma) {
+      const rotMag = Math.sqrt(rotAlpha ** 2 + rotBeta ** 2 + rotGamma ** 2);
+      const fromRot = Math.min(1, rotMag / 95);
+      const fromJerk = Math.min(1, jerk / 2.4);
+      return Math.min(1, fromRot * 0.8 + fromJerk * 0.2);
+    }
 
     function buildAudio(c) {
       ctx = c;
@@ -79,37 +87,42 @@
       if (sensorsReady) return;
       const ok = await enableSensors(SENSOR_OPTS);
       if (!ok) return;
-      onMotion(({ x, y, z }) => {
+      onMotion(({ x, y, z, rotAlpha, rotBeta, rotGamma }) => {
         if (!holding || !built) return;
+        if (!motionPrimed) {
+          lastAccel = { x, y, z };
+          motionPrimed = true;
+          return;
+        }
         const dx = x - lastAccel.x;
         const dy = y - lastAccel.y;
         const dz = z - lastAccel.z;
         lastAccel = { x, y, z };
         const jerk = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        const spike = Math.min(1, jerk / 3.2);
-        bowEnergy = Math.min(1, bowEnergy * 0.75 + spike * 0.25);
+        const target = motionToAmplitude(jerk, rotAlpha, rotBeta, rotGamma);
+        bowAmp = Math.min(1, bowAmp * 0.78 + target * 0.22);
       });
       sensorsReady = true;
     }
 
     function applyBow() {
       if (!built || !ctx) return;
-      const e = bowEnergy;
+      const amp = holding ? bowAmp : 0;
       const t = ctx.currentTime;
-      toneGain.gain.setTargetAtTime(holding ? e * 0.24 : 0, t, 0.03);
-      noiseGain.gain.setTargetAtTime(holding ? e * 0.3 : 0, t, 0.03);
+      toneGain.gain.setTargetAtTime(amp * 0.34, t, 0.025);
+      noiseGain.gain.setTargetAtTime(amp * 0.4, t, 0.025);
       osc.frequency.setTargetAtTime(pitchHz, t, 0.04);
-      document.getElementById("bOut").textContent = e.toFixed(2);
-      document.getElementById("bowMeter").style.width = `${e * 100}%`;
-      document.getElementById("bowMeter").classList.toggle("blowing", e > 0.06);
+      document.getElementById("bOut").textContent = amp.toFixed(2);
+      document.getElementById("bowMeter").style.width = `${amp * 100}%`;
+      document.getElementById("bowMeter").classList.toggle("blowing", amp > 0.05);
       document.getElementById("pOut").textContent = pitchHz.toFixed(0);
     }
 
     function tick() {
       if (!built) return;
       if (holding) {
-        bowEnergy *= 0.9;
-        if (bowEnergy < 0.004) bowEnergy = 0;
+        bowAmp *= 0.88;
+        if (bowAmp < 0.003) bowAmp = 0;
       }
       applyBow();
       requestAnimationFrame(tick);
@@ -134,7 +147,8 @@
       pad.setPointerCapture(e.pointerId);
       pad.classList.add("active");
       lastAccel = { x: 0, y: 0, z: 0 };
-      bowEnergy = 0;
+      motionPrimed = false;
+      bowAmp = 0;
       setPitchFromTouch(e);
     }
 
@@ -152,7 +166,8 @@
       if (e.pointerId !== activePointer) return;
       holding = false;
       activePointer = null;
-      bowEnergy = 0;
+      bowAmp = 0;
+      motionPrimed = false;
       pad.classList.remove("active");
       dot.style.opacity = "0";
       if (built && ctx) {

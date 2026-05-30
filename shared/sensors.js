@@ -59,14 +59,14 @@ export function primeSensors(opts) {
 export function onMotion(callback) {
   motionHandler = (e) => {
     const a = e.accelerationIncludingGravity || e.acceleration;
-    if (!a) return;
+    const r = e.rotationRate;
     callback({
-      x: a.x ?? 0,
-      y: a.y ?? 0,
-      z: a.z ?? 0,
-      alpha: e.rotationRate?.alpha,
-      beta: e.rotationRate?.beta,
-      gamma: e.rotationRate?.gamma,
+      x: a?.x ?? 0,
+      y: a?.y ?? 0,
+      z: a?.z ?? 0,
+      rotAlpha: r?.alpha ?? 0,
+      rotBeta: r?.beta ?? 0,
+      rotGamma: r?.gamma ?? 0,
     });
   };
   window.addEventListener("devicemotion", motionHandler, { passive: true });
