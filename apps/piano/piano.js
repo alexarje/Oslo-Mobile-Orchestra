@@ -151,7 +151,7 @@
     keyboard.innerHTML = '';
     NOTE_DEFS.forEach((def) => {
       const el = document.createElement('div');
-      el.classList.add('key', def.black ? 'black' : 'white');
+      el.classList.add('piano-key', def.black ? 'black' : 'white');
       el.dataset.semi = def.semi;
 
       const noteLabel = document.createElement('span');

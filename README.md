@@ -1,6 +1,6 @@
 # Oslo Mobile Orchestra
 
-Web-based instruments for musicians using only their phones (Android + iPhone). No need to install anything — open in the browser, tap **Start sound**, and play.
+Web-based instruments for musicians using only their phones (Android + iPhone). Open in the browser and **tap to play** — audio starts on first touch; allow mic or motion when prompted.
 
 **Live site:** https://alexarje.github.io/Oslo-Mobile-Orchestra/
 
@@ -50,7 +50,7 @@ Each app has a **Learn** panel with short explanations (where applicable). Piano
 
 | Topic | Android (Chrome) | iPhone (Safari) |
 |-------|------------------|-----------------|
-| Web Audio | Good | Requires user tap to start (`Start sound`) |
+| Web Audio | Good | Unlocks on first tap in each app |
 | Motion | Usually automatic | Tap to allow when prompted |
 | Orientation | Often available | iOS 13+ permission dialog |
 | Silent switch | N/A | Physical mute affects speaker |

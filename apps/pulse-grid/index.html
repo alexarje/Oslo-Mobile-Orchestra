@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
   <title>Pulse Grid — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
@@ -27,16 +28,17 @@
     <label for="bpm">BPM</label>
     <input type="range" id="bpm" min="60" max="140" value="100" />
     <span id="bpmVal">100</span>
+    <button type="button" class="btn btn-play" id="playBtn">▶</button>
   </div>
-  <p class="status-bar" id="status">Toggle steps, start</p>
+  <p class="status-bar" id="status">Toggle steps · tap ▶</p>
   <div class="main-stage">
     <div class="seq-grid" id="grid"></div>
   </div>
-  <div class="app-toolbar">
-    <button type="button" class="btn" id="startBtn">Start</button>
-  </div>
   <script type="module">
-    import { getAudioContext, unlockAudio, createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { createMasterBus, midiToFreq } from "../../shared/audio.js";
+
+    bindLearn();
 
     const steps = Array(16).fill(false);
     const grid = document.getElementById("grid");
@@ -54,8 +56,7 @@
       grid.appendChild(btn);
     }
 
-    document.getElementById("learnBtn").onclick = () =>
-      document.getElementById("learnPanel").classList.toggle("open");
+    bindLearn();
 
     document.getElementById("bpm").oninput = (e) => {
       document.getElementById("bpmVal").textContent = e.target.value;
@@ -131,23 +132,32 @@
       requestAnimationFrame(scheduler);
     }
 
-    document.getElementById("startBtn").onclick = async () => {
-      ctx = getAudioContext();
-      await unlockAudio(ctx);
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
       ({ master } = createMasterBus(ctx, 0.6));
+    });
+
+    document.getElementById("playBtn").onclick = async () => {
+      await ensureReady();
+      if (playing) {
+        playing = false;
+        document.getElementById("playBtn").classList.remove("active");
+        document.getElementById("playBtn").textContent = "▶";
+        setStatus("status", "Paused", "");
+        return;
+      }
       playing = true;
       stepIndex = 0;
+      document.getElementById("playBtn").classList.add("active");
+      document.getElementById("playBtn").textContent = "■";
       if (urlStart) {
         const startMs = parseInt(urlStart, 10);
-        const delay = Math.max(0, (startMs - Date.now()) / 1000);
-        nextTime = ctx.currentTime + delay;
+        nextTime = ctx.currentTime + Math.max(0, (startMs - Date.now()) / 1000);
       } else {
         nextTime = ctx.currentTime + 0.05;
       }
       scheduler();
-      document.getElementById("status").textContent = "Playing";
-      document.getElementById("status").classList.add("ok");
-      document.getElementById("startBtn").disabled = true;
+      setStatus("status", "Playing", "ok");
     };
   </script>
 </body>

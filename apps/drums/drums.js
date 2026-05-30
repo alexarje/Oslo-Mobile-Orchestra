@@ -180,7 +180,7 @@
 
   PADS.forEach((pad, i) => {
     const el = document.createElement('div');
-    el.className = 'pad';
+    el.className = 'drum-pad';
     el.dataset.pad = i;
     el.innerHTML = `
       <span class="pad-icon">${pad.icon}</span>

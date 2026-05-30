@@ -3,40 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
   <title>Synth Pad — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
-  <style>
-    #pad {
-      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-      border: 2px solid #334155;
-    }
-    #pad .cursor {
-      position: absolute;
-      width: 36px;
-      height: 36px;
-      margin: -18px 0 0 -18px;
-      border-radius: 50%;
-      border: 2px solid var(--accent);
-      pointer-events: none;
-      opacity: 0;
-    }
-    #pad.active .cursor { opacity: 1; }
-  </style>
 </head>
 <body class="app-shell">
   <header class="app-header">
-    <a class="back-link" href="../../" aria-label="Back">←</a>
+    <a class="back-link" href="../../">←</a>
     <h1>Synth Pad</h1>
     <button type="button" class="learn-toggle" id="learnBtn">Learn</button>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Sound synthesis</h2>
-    <p><strong>X</strong> = pitch. <strong>Y</strong> = filter brightness. <strong>FM</strong> = frequency modulation.</p>
+    <p><strong>X</strong> = pitch. <strong>Y</strong> = filter. <strong>FM</strong> = frequency modulation.</p>
   </div>
-  <p class="status-bar" id="status">Start sound, drag pad</p>
-  <div class="main-stage">
-    <div id="pad" class="stage-fill"><div class="cursor" id="cursor"></div></div>
-  </div>
+  <p class="status-bar" id="status">Tap pad to play</p>
   <div class="control-row">
     <label for="wave">Wave</label>
     <select id="wave">
@@ -46,40 +27,33 @@
       <option value="fm">FM</option>
     </select>
   </div>
-  <div class="app-toolbar">
-    <button type="button" class="btn" id="startBtn">Start sound</button>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="cursor"></div></div>
   </div>
   <script type="module">
-    import { getAudioContext, unlockAudio, applyEnvelope, createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { applyEnvelope, createMasterBus, midiToFreq } from "../../shared/audio.js";
 
+    bindLearn();
     const pad = document.getElementById("pad");
     const cursor = document.getElementById("cursor");
-    const status = document.getElementById("status");
     const waveSel = document.getElementById("wave");
     let ctx, master, voice = null;
 
-    document.getElementById("learnBtn").onclick = () =>
-      document.getElementById("learnPanel").classList.toggle("open");
-
-    document.getElementById("startBtn").onclick = async () => {
-      ctx = getAudioContext();
-      await unlockAudio(ctx);
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
       ({ master } = createMasterBus(ctx));
-      status.textContent = "Drag pad";
-      status.classList.add("ok");
-      document.getElementById("startBtn").disabled = true;
-    };
+      setStatus("status", "Drag pad", "ok");
+    });
 
     function stopVoice() {
       if (!voice) return;
       voice.env.release();
-      const nodes = voice.nodes;
-      setTimeout(() => nodes.forEach((n) => { try { n.disconnect(); } catch {} }), 400);
+      setTimeout(() => voice.nodes.forEach((n) => { try { n.disconnect(); } catch {} }), 400);
       voice = null;
     }
 
     function startVoice(freq, cutoff) {
-      if (!ctx) return;
       stopVoice();
       const t = ctx.currentTime;
       const gain = ctx.createGain();
@@ -90,12 +64,9 @@
       filter.Q.value = 8;
       filter.connect(gain);
       const env = applyEnvelope(gain, ctx, { peak: 0.5, sustain: 0.4, release: 0.25 });
-
-      const type = waveSel.value;
       const nodes = [gain, filter];
       let osc;
-
-      if (type === "fm") {
+      if (waveSel.value === "fm") {
         const carrier = ctx.createOscillator();
         const mod = ctx.createOscillator();
         const modGain = ctx.createGain();
@@ -104,8 +75,7 @@
         mod.connect(modGain);
         modGain.connect(carrier.frequency);
         carrier.frequency.value = freq;
-        carrier.type = "sine";
-        mod.type = "sine";
+        carrier.type = mod.type = "sine";
         carrier.connect(filter);
         carrier.start(t);
         mod.start(t);
@@ -113,27 +83,13 @@
         osc = carrier;
       } else {
         osc = ctx.createOscillator();
-        osc.type = type;
+        osc.type = waveSel.value;
         osc.frequency.value = freq;
         osc.connect(filter);
         osc.start(t);
         nodes.push(osc);
       }
-
       voice = { env, nodes, filter, osc };
-    }
-
-    function updateFromXY(nx, ny, active) {
-      const midi = 48 + nx * 24;
-      const freq = midiToFreq(midi);
-      const cutoff = 200 + (1 - ny) * 8000;
-      if (active) {
-        if (!voice) startVoice(freq, cutoff);
-        else {
-          voice.osc.frequency.setTargetAtTime(freq, ctx.currentTime, 0.02);
-          voice.filter.frequency.setTargetAtTime(cutoff, ctx.currentTime, 0.02);
-        }
-      } else stopVoice();
     }
 
     function pointer(e) {
@@ -142,10 +98,17 @@
       const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
       cursor.style.left = `${nx * 100}%`;
       cursor.style.top = `${ny * 100}%`;
-      updateFromXY(nx, ny, true);
+      const freq = midiToFreq(48 + nx * 24);
+      const cutoff = 200 + (1 - ny) * 8000;
+      if (!voice) startVoice(freq, cutoff);
+      else {
+        voice.osc.frequency.setTargetAtTime(freq, ctx.currentTime, 0.02);
+        voice.filter.frequency.setTargetAtTime(cutoff, ctx.currentTime, 0.02);
+      }
     }
 
-    pad.addEventListener("pointerdown", (e) => {
+    pad.addEventListener("pointerdown", async (e) => {
+      await ensureReady();
       pad.setPointerCapture(e.pointerId);
       pad.classList.add("active");
       pointer(e);

@@ -3,69 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
   <title>Drums — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
-  <style>
-    .pads-grid {
-      flex: 1;
-      min-height: 0;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      gap: 8px;
-      padding: 0.35rem 0.5rem;
-    }
-    .pad {
-      border-radius: 10px;
-      border: 2px solid transparent;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      font-weight: 600;
-      touch-action: manipulation;
-      min-height: 0;
-    }
-    .pad:active, .pad.active {
-      filter: brightness(1.4);
-      transform: scale(0.96);
-      border-color: #fff6;
-    }
-    .pad .pad-icon { font-size: 1.4rem; pointer-events: none; }
-    .pad .pad-name { font-size: 0.65rem; color: #eee; pointer-events: none; }
-    .pad[data-pad="0"] { background: linear-gradient(135deg, #c0392b, #922b21); }
-    .pad[data-pad="1"] { background: linear-gradient(135deg, #e67e22, #b9770e); }
-    .pad[data-pad="2"] { background: linear-gradient(135deg, #f1c40f, #b7950b); }
-    .pad[data-pad="3"] { background: linear-gradient(135deg, #27ae60, #1e8449); }
-    .pad[data-pad="4"] { background: linear-gradient(135deg, #2980b9, #1a5276); }
-    .pad[data-pad="5"] { background: linear-gradient(135deg, #8e44ad, #6c3483); }
-    .pad[data-pad="6"] { background: linear-gradient(135deg, #16a085, #0e6655); }
-    .pad[data-pad="7"] { background: linear-gradient(135deg, #7f8c8d, #566573); }
-    .vol-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.25rem 0.5rem;
-      flex-shrink: 0;
-      font-size: 0.75rem;
-    }
-    .vol-row input { flex: 1; min-height: 32px; }
-  </style>
 </head>
 <body class="app-shell">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Drum Machine</h1>
   </header>
-  <p class="status-bar">Tap pads to play</p>
-  <div class="vol-row">
+  <p class="status-bar" id="status">Tap pads</p>
+  <div class="control-row">
     <label for="volume">Volume</label>
     <input type="range" id="volume" min="0" max="1" step="0.01" value="0.7" />
   </div>
   <div class="main-stage">
-    <div class="pads-grid" id="pads-grid"></div>
+    <div class="drums-grid" id="pads-grid"></div>
   </div>
   <script src="drums.js"></script>
 </body>

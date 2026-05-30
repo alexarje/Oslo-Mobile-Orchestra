@@ -3,14 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
   <title>Granular Tilt — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
-  <style>
-    #scope {
-      background: #111827;
-      border-radius: 8px;
-    }
-  </style>
 </head>
 <body class="app-shell">
   <header class="app-header">
@@ -20,113 +15,97 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Granular synthesis</h2>
-    <p>Short grains in a cloud. Tilt = rate; roll = pitch.</p>
+    <p>Tap to start grain cloud. Tilt = rate; roll = pitch.</p>
   </div>
-  <p class="status-bar" id="status"><span id="rateOut">Rate: —</span> · <span id="pitchOut">Pitch: —</span></p>
+  <p class="status-bar" id="status">Tap view to start</p>
+  <div class="readout-row">
+    <p class="value-chip">Rate <strong id="rateOut">—</strong>/s</p>
+    <p class="value-chip">Pitch <strong id="pitchOut">—</strong>×</p>
+  </div>
   <div class="main-stage">
-    <div class="stage-fill">
+    <div id="tapZone" class="stage-fill play-grid">
       <canvas id="scope" class="canvas-fill"></canvas>
     </div>
   </div>
-  <div class="app-toolbar">
-    <button type="button" class="btn" id="startBtn">Start sound</button>
-  </div>
   <script type="module">
-    import { getAudioContext, unlockAudio, createMasterBus } from "../../shared/audio.js";
+    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
-    let ctx, master, grainTimer, buffer;
+    bindLearn();
+    const tapZone = document.getElementById("tapZone");
     const canvas = document.getElementById("scope");
     const g = canvas.getContext("2d");
+    let ctx, master, buffer, running = false;
     let beta = 45, gamma = 0;
-
-    document.getElementById("learnBtn").onclick = () =>
-      document.getElementById("learnPanel").classList.toggle("open");
 
     function resizeCanvas() {
       const box = canvas.parentElement.getBoundingClientRect();
-      const w = Math.max(1, Math.floor(box.width * devicePixelRatio));
-      const h = Math.max(1, Math.floor(box.height * devicePixelRatio));
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
-    }
-
-    function makeGrainBuffer() {
-      const len = ctx.sampleRate * 0.5;
-      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
-      }
-      return buf;
-    }
-
-    function spawnGrain() {
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      const pos = Math.random() * (buffer.duration - 0.04);
-      const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
-      const duration = 0.02 + Math.random() * 0.03;
-      src.playbackRate.value = rate;
-      const gNode = ctx.createGain();
-      gNode.connect(master);
-      const t = ctx.currentTime;
-      src.connect(gNode);
-      src.start(t, pos, duration);
-      gNode.gain.setValueAtTime(0, t);
-      gNode.gain.linearRampToValueAtTime(0.2, t + 0.005);
-      gNode.gain.linearRampToValueAtTime(0, t + duration);
+      canvas.width = Math.max(1, Math.floor(box.width * devicePixelRatio));
+      canvas.height = Math.max(1, Math.floor(box.height * devicePixelRatio));
     }
 
     function draw() {
+      if (!running) return;
       resizeCanvas();
-      const w = canvas.width;
-      const h = canvas.height;
-      g.fillStyle = "#111827";
+      const w = canvas.width, h = canvas.height;
+      g.fillStyle = "#0f172a";
       g.fillRect(0, 0, w, h);
       g.strokeStyle = "#6ee7b7";
       g.beginPath();
       for (let i = 0; i < 40; i++) {
         const x = (i / 40) * w;
         const y = h / 2 + Math.sin(i * 0.5 + performance.now() / 200) * (beta / 90) * h * 0.3;
-        if (i === 0) g.moveTo(x, y);
-        else g.lineTo(x, y);
+        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
       }
       g.stroke();
       requestAnimationFrame(draw);
     }
 
-    const ro = new ResizeObserver(() => resizeCanvas());
-    ro.observe(canvas.parentElement);
+    function spawnGrain() {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const rate = 0.5 + ((gamma + 90) / 180) * 1.5;
+      const dur = 0.02 + Math.random() * 0.03;
+      src.playbackRate.value = rate;
+      const gn = ctx.createGain();
+      gn.connect(master);
+      const t = ctx.currentTime;
+      src.connect(gn);
+      src.start(t, Math.random() * (buffer.duration - 0.04), dur);
+      gn.gain.setValueAtTime(0, t);
+      gn.gain.linearRampToValueAtTime(0.2, t + 0.005);
+      gn.gain.linearRampToValueAtTime(0, t + dur);
+    }
 
-    document.getElementById("startBtn").onclick = async () => {
-      ctx = getAudioContext();
-      await unlockAudio(ctx);
+    function schedule() {
+      if (!running) return;
+      spawnGrain();
+      setTimeout(schedule, 1000 / (5 + (beta / 90) * 25));
+    }
+
+    const ensureReady = createAudioBoot(async (c) => {
+      ctx = c;
       ({ master } = createMasterBus(ctx, 0.5));
-      buffer = makeGrainBuffer();
-      resizeCanvas();
-      draw();
-
+      const len = ctx.sampleRate * 0.5;
+      buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buffer.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI);
       await enableSensors();
       onOrientation((o) => {
         beta = o.beta ?? 45;
         gamma = o.gamma ?? 0;
-        document.getElementById("rateOut").textContent = `${(5 + (beta / 90) * 25).toFixed(0)}/s`;
-        document.getElementById("pitchOut").textContent = `${(0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2)}×`;
+        document.getElementById("rateOut").textContent = (5 + (beta / 90) * 25).toFixed(0);
+        document.getElementById("pitchOut").textContent = (0.5 + ((gamma + 90) / 180) * 1.5).toFixed(2);
       });
-
-      function schedule() {
-        const hz = 5 + (beta / 90) * 25;
-        spawnGrain();
-        grainTimer = setTimeout(schedule, 1000 / hz);
-      }
+      running = true;
+      draw();
       schedule();
+      setStatus("status", "Tilt to sculpt", "ok");
+    });
 
-      document.getElementById("status").classList.add("ok");
-      document.getElementById("startBtn").disabled = true;
-    };
+    new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
+    tapZone.addEventListener("pointerdown", async () => { await ensureReady(); });
   </script>
 </body>
 </html>
