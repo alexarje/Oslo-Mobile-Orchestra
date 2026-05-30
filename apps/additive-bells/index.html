@@ -7,7 +7,7 @@
   <title>Additive Bells — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell additive-bells-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Additive Bells</h1>
@@ -22,10 +22,10 @@
     <input type="range" id="root" min="48" max="72" value="60" />
     <span id="rootLbl">C4</span>
   </div>
-  <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"></div>
+  <div id="partials" class="bells-partials"></div>
+  <div class="bells-pad-wrap">
+    <div id="pad" class="bells-pad play-grid" role="button" tabindex="0" aria-label="Strike bell"></div>
   </div>
-  <div id="partials" class="scroll-panel partial-sliders"></div>
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
