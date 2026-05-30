@@ -17,7 +17,7 @@
     <h2>FM synthesis</h2>
     <p><strong>X</strong> = carrier pitch. <strong>Y</strong> = modulator pitch &amp; depth. Hold to play.</p>
   </div>
-  <p class="status-bar" id="status">Tap screen to start</p>
+  <p class="status-bar" id="status">Hold pad to play</p>
   <div class="main-stage">
     <div id="playArea" class="stage-fill play-grid">
       <div class="touch-dot" id="dot"></div>
@@ -28,26 +28,30 @@
     <p class="value-chip">Mod <strong id="modHz">110</strong> Hz</p>
   </div>
   <script type="module">
-    import { bindLearn, setStatus, createAudioBoot } from "../../shared/app.js";
-    import { createMasterBus } from "../../shared/audio.js";
+    import { bindLearn, setStatus, pingIOSUnlock } from "../../shared/app.js";
+    import { createMasterBus, getAudioContext, unlockAudio } from "../../shared/audio.js";
 
     bindLearn();
     const playArea = document.getElementById("playArea");
     const dot = document.getElementById("dot");
-    let carrierOsc, modOsc, modGain, ampGain, master;
+    let ctx, master, carrierOsc, modOsc, modGain, ampGain;
+    let built = false;
     let activePointerId = null;
 
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const mapX = (nx) => 90 * Math.pow(880 / 90, nx);
     const mapY = (ny) => 40 * Math.pow(1200 / 40, 1 - ny);
 
-    const ensureReady = createAudioBoot(async (ctx) => {
+    function buildVoice(c) {
+      ctx = c;
       ({ master } = createMasterBus(ctx, 0.55));
       carrierOsc = ctx.createOscillator();
       modOsc = ctx.createOscillator();
       modGain = ctx.createGain();
       ampGain = ctx.createGain();
       carrierOsc.type = modOsc.type = "sine";
+      carrierOsc.frequency.value = 220;
+      modOsc.frequency.value = 110;
       modGain.gain.value = 180;
       ampGain.gain.value = 0;
       modOsc.connect(modGain);
@@ -56,16 +60,17 @@
       ampGain.connect(master);
       carrierOsc.start();
       modOsc.start();
-      setStatus("status", "Drag to play", "ok");
-    });
+      built = true;
+      setStatus("status", "Hold & drag", "ok");
+    }
 
     function setFromEvent(ev) {
       const rect = playArea.getBoundingClientRect();
       const x = clamp(ev.clientX - rect.left, 0, rect.width);
       const y = clamp(ev.clientY - rect.top, 0, rect.height);
-      const nx = x / rect.width;
-      const ny = y / rect.height;
-      const t = carrierOsc.context.currentTime;
+      const nx = rect.width > 0 ? x / rect.width : 0;
+      const ny = rect.height > 0 ? y / rect.height : 0;
+      const t = ctx.currentTime;
       carrierOsc.frequency.setTargetAtTime(mapX(nx), t, 0.02);
       modOsc.frequency.setTargetAtTime(mapY(ny), t, 0.02);
       modGain.gain.setTargetAtTime(40 + (1 - ny) * 420, t, 0.03);
@@ -77,27 +82,39 @@
 
     playArea.addEventListener("pointerdown", async (ev) => {
       ev.preventDefault();
-      await ensureReady();
+      if (!built) {
+        const c = getAudioContext();
+        pingIOSUnlock(c);
+        buildVoice(c);
+      }
+      await unlockAudio(ctx);
       activePointerId = ev.pointerId;
       playArea.setPointerCapture(activePointerId);
       playArea.classList.add("active");
       setFromEvent(ev);
-      ampGain.gain.setTargetAtTime(0.24, carrierOsc.context.currentTime, 0.01);
+      ampGain.gain.cancelScheduledValues(ctx.currentTime);
+      ampGain.gain.setTargetAtTime(0.24, ctx.currentTime, 0.01);
       setStatus("status", "Playing", "ok");
     });
+
     playArea.addEventListener("pointermove", (ev) => {
-      if (ev.pointerId !== activePointerId) return;
+      if (!built || ev.pointerId !== activePointerId) return;
+      ev.preventDefault();
       setFromEvent(ev);
     });
+
     const stop = (ev) => {
-      if (ev.pointerId !== activePointerId) return;
+      if (!built || ev.pointerId !== activePointerId) return;
       playArea.classList.remove("active");
-      ampGain?.gain.setTargetAtTime(0, carrierOsc.context.currentTime, 0.03);
-      setStatus("status", "Drag to play", "ok");
+      ampGain.gain.cancelScheduledValues(ctx.currentTime);
+      ampGain.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
+      setStatus("status", "Hold & drag", "ok");
       activePointerId = null;
     };
+
     playArea.addEventListener("pointerup", stop);
     playArea.addEventListener("pointercancel", stop);
+    playArea.addEventListener("lostpointercapture", stop);
   </script>
 </body>
 </html>
