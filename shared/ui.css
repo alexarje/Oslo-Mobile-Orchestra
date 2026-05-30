@@ -633,6 +633,11 @@ body.hub {
   touch-action: manipulation;
 }
 
+/* Bow phone — motion-driven bow */
+.bow-phone-app .stage-fill.play-grid {
+  touch-action: manipulation;
+}
+
 /* Tilt harp — slide across strings */
 .tilt-harp-app .harp-strings {
   position: relative;
