@@ -7,7 +7,7 @@
   <title>Drum Sequencer — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell drum-seq-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Drum Sequencer</h1>
@@ -17,14 +17,18 @@
     <h2>4-track × 8-step</h2>
     <p>Turn <strong>Audio on</strong>, toggle steps, press ▶. <strong>Swing</strong> delays every other step for a shuffle feel.</p>
   </div>
-  <div class="control-row">
-    <label for="bpm">BPM</label>
-    <input type="range" id="bpm" min="60" max="160" value="100" />
-    <span id="bpmVal">100</span>
-    <label for="swing">Swing</label>
-    <input type="range" id="swing" min="0" max="75" value="0" />
-    <span id="swingVal">0%</span>
-    <button type="button" class="btn btn-play" id="playBtn">▶</button>
+  <div class="seq-toolbar">
+    <div class="control-row">
+      <label for="bpm">BPM</label>
+      <input type="range" id="bpm" min="60" max="160" value="100" />
+      <span id="bpmVal">100</span>
+      <button type="button" class="btn btn-play" id="playBtn">▶</button>
+    </div>
+    <div class="control-row">
+      <label for="swing">Swing</label>
+      <input type="range" id="swing" min="0" max="75" value="0" />
+      <span id="swingVal">0%</span>
+    </div>
   </div>
   <div class="main-stage">
     <div class="drum-seq" id="seq"></div>

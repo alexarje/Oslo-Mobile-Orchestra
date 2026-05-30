@@ -612,9 +612,28 @@ body.hub {
 .drum-pad[data-pad="7"] { background: linear-gradient(135deg, #475569, #1e293b); }
 
 /* Drum sequencer — 4 rows × 8 steps */
-.drum-seq {
+.drum-seq-app .seq-toolbar {
+  flex-shrink: 0;
+  background: #111827;
+}
+
+.drum-seq-app .seq-toolbar .control-row {
+  padding: 0.2rem 0.5rem;
+}
+
+.drum-seq-app .seq-toolbar .control-row input[type="range"] {
+  flex: 1 1 5rem;
+  max-width: 8rem;
+}
+
+.drum-seq-app .main-stage {
   flex: 1;
   min-height: 0;
+}
+
+.drum-seq {
+  flex: 1;
+  min-height: 11rem;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -623,11 +642,11 @@ body.hub {
 }
 
 .drum-seq-row {
-  flex: 1;
-  min-height: 52px;
+  flex: 1 1 0;
+  min-height: 44px;
   display: grid;
-  grid-template-columns: 40px repeat(8, 1fr);
-  gap: 6px;
+  grid-template-columns: 36px repeat(8, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .drum-row-label {
@@ -643,7 +662,9 @@ body.hub {
 }
 
 .drum-seq-cell {
+  min-width: 0;
   min-height: 44px;
+  width: 100%;
   border-radius: 8px;
   border: 1px solid #334155;
   background: #334155;
