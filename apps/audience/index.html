@@ -21,12 +21,6 @@
       width: min(85vw, 280px);
       height: min(85vw, 280px);
       border-radius: 50%;
-      font-size: 1.1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 1rem;
       pointer-events: none;
     }
     .audience-stage.holding #swellBtn {
@@ -45,7 +39,7 @@
     <p>Turn <strong>Audio on</strong>, then <strong>hold</strong> the circle — drag your finger inside for more vibrato. Release anywhere to fade out.</p>
   </div>
   <div class="audience-stage" id="stage" role="button" aria-label="Hold to swell">
-    <div class="btn" id="swellBtn">Hold<br />to swell</div>
+    <div class="btn" id="swellBtn"></div>
   </div>
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";

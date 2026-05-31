@@ -66,8 +66,28 @@ export const LEARN_PEDAGOGY = {
   ],
 
   "compass-wah": [
-    "One filtered tone is controlled by how you move the phone. Modes swap the mapping: compass heading, tilt, shake, flat-table gate, or panned choir.",
-    "Shows that the same synthesizer can feel different when sensor features change — mapping design is part of instrument identity.",
+    "Hold the screen and rotate flat — compass heading sweeps a lowpass filter while tilt and shake add volume and vibrato.",
+    "Many sensor dimensions on one filtered tone: mapping design makes the same synth feel like a new instrument.",
+  ],
+
+  "motion-wah": [
+    "A bandpass filter follows phone tilt: forward/back sweeps wah frequency, sideways changes resonance.",
+    "Classic motion-controlled timbre — the body becomes the filter knob without touching the screen after the initial hold.",
+  ],
+
+  "shake-filter": [
+    "Hold for a steady tone; sudden accelerometer jerks open the filter cutoff and resonance.",
+    "Onset and gesture energy map to brightness — sharp physical moves become audible swells.",
+  ],
+
+  "flat-edge": [
+    "The drone only sounds when the phone lies flat on a table; tilt away and the gate closes.",
+    "Orientation as an on/off condition — useful for tabletop ensemble games and deliberate stillness.",
+  ],
+
+  "heading-choir": [
+    "Hold and turn your body — compass heading pans a detuned choir in stereo.",
+    "Spatial ensemble: where you face in the room becomes your place in the mix.",
   ],
 
   harmonizer: [
@@ -376,10 +396,6 @@ export const LEARN_PEDAGOGY = {
   ],
 
   // Legacy URLs (redirect apps) — same pedagogy as canonical instrument
-  "motion-wah": "See Motion Filter → Tilt mode: bandpass frequency and resonance follow gravity tilt.",
-  "shake-filter": "See Motion Filter → Shake mode: jerk on the accelerometer opens the filter.",
-  "flat-edge": "See Motion Filter → Flat mode: tone only when the phone lies flat.",
-  "heading-choir": "See Motion Filter → Choir mode: stereo pan follows compass heading.",
   "ks-pluck": "See Resonant Wire → Pocket range: wider pitch span, same Karplus–Strong model.",
   "fm-touch-tilt": "See FM Fingerpaint → Tilt mod: modulator rate from phone angle.",
   "motion-grid": "See Motion Cam: frame differencing drives density.",

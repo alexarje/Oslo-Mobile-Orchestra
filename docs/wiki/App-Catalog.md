@@ -20,7 +20,11 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 |-----|--------|------------|
 | [Held Voices](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/drone-choir/) | Harmonic mass | Hold sustain; pad ±5 semitones; portrait |
 | [Tilt Wah](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/motion-wah/) | Filter sweeps | Hold pad; tilt ↕ wah, ↔ resonance |
-| [North Filter](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/compass-wah/) | Compass filter | Hold screen; heading → cutoff; tilt → level |
+| [Tilt Wah](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/motion-wah/) | Bandpass wah | Hold pad; tilt → frequency & resonance |
+| [Compass Weirdness](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/compass-wah/) | Compass filter | Hold screen; heading → cutoff; tilt → level |
+| [Jerk Wah](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/shake-filter/) | Shake filter | Hold pad; jerk opens filter |
+| [Table Drone](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/flat-edge/) | Flat gate | Sound only when phone is flat |
+| [Heading Choir](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/heading-choir/) | Compass pans | Hold pad; facing direction pans choir |
 | [Neighbourhood Chord](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/harmonizer/) | Group pitch | FFT chroma consensus; hold for root/chord |
 | [Murmuration](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/audience/) | Crowd layer | Hold circle; finger motion → vibrato |
 
