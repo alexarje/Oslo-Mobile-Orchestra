@@ -40,9 +40,12 @@ export function karplusPluck(ctx, dest, pool, freq, opts = {}) {
   const dampHz = opts.dampHz ?? Math.min(6000, Math.max(400, freq * 4));
   const level = opts.level ?? 0.28;
   const decaySec = opts.decaySec ?? 2.2;
-  const feedback = opts.feedback ?? 0.92;
 
   const hz = Math.max(50, Math.min(1000, freq));
+  /** Keep loop gain below 1 — high feedback + bright damping rings and stacks harshly. */
+  const feedback =
+    opts.feedback ??
+    Math.min(0.9, 0.82 + (dampHz / 8000) * 0.06 - (hz / 1000) * 0.04);
   const sr = ctx.sampleRate;
   const now = ctx.currentTime;
   const period = 1 / hz;

@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Karplus–Strong</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>Tap</strong> to excite a delay-line string. <strong>X</strong> = pitch. A short noise burst feeds the loop; the filter shapes decay.</p>
+    <p>Turn <strong>Audio on</strong>, then <strong>Tap</strong> to excite a delay-line string. <strong>X</strong> = pitch. Feedback is kept moderate so rapid taps stay clean.</p>
     <p>For hold-to-pluck + tilt damping, try <a href="../ks-string/">Karplus–Strong String</a>.</p>
   </div>
   <div class="readout-row">
@@ -31,14 +31,14 @@
     bindLearn();
     const pad = document.getElementById("pad");
     let ctx, master, built = false;
-    const pool = createKSPool(3);
+    const pool = createKSPool(2);
 
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const mapX = (nx) => 55 * Math.pow(880 / 55, nx);
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.5));
+      ({ master } = createMasterBus(c, 0.38));
       built = true;
     }
 
@@ -49,7 +49,13 @@
       const r = pad.getBoundingClientRect();
       const nx = clamp((e.clientX - r.left) / r.width, 0, 1);
       const freq = mapX(nx);
-      karplusPluck(ctx, master, pool, freq, { strength: 0.5, level: 0.3 });
+      karplusPluck(ctx, master, pool, freq, {
+        strength: 0.36,
+        level: 0.18,
+        feedback: 0.8,
+        dampHz: Math.min(5200, Math.max(500, freq * 5)),
+        decaySec: 1.6,
+      });
       document.getElementById("freqOut").textContent = freq.toFixed(0);
       const ripple = document.createElement("div");
       ripple.className = "pluck-ripple";
