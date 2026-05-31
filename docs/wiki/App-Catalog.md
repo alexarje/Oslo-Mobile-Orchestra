@@ -36,7 +36,6 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 | [Wedge Lead](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/synth-pad/) | Lead pad | Waveforms, filter, aftertouch |
 | [Humming Stone](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/mic-theremin/) | Sung pitch | Autocorrelation → sine; hold to play |
 | [Breath Flute](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/flute-blow/) | Breath melody | Mic gate; pentatonic holes |
-| [Shadow Tone](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/light-theremin/) | Shadow pitch | Ambient light sensor or slider; hold pad |
 | [Gravity Harp](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/tilt-harp/) | Harp gliss | Tap strings; tilt = key |
 | [Selfie Bow](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/bow-phone/) | Bowed tone | Pitch pad + selfie hand-bow tracking |
 

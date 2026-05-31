@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Chaos controls</h2>
-    <p>Turn <strong>Audio on</strong>, allow <strong>motion</strong> if asked. <strong>Hold</strong> the pad — a logistic map and Lorenz attractor steer filter, pitch, and noise. <strong>Tap</strong> to reseed; tilt perturbs the orbit.</p>
+    <p>Turn <strong>Audio on</strong>, allow <strong>motion</strong> if asked. <strong>Hold</strong> the pad — a logistic map and Lorenz attractor steer filter, pitch, and level. <strong>Tap</strong> to reseed; tilt perturbs the orbit.</p>
   </div>
   <div class="readout-row">
     <p class="value-chip">Cutoff <strong id="cutOut">—</strong></p>
@@ -41,7 +41,7 @@
     const tg = trail.getContext("2d");
     const SENSOR_OPTS = { needMotion: true, needOrientation: false };
 
-    let ctx, master, osc, filter, amp, noise, noiseGain;
+    let ctx, master, osc, filter, amp;
     let built = false;
     let holding = false;
     let logistic = createLogisticMap(0.41);
@@ -70,18 +70,6 @@
       filter.connect(amp);
       amp.connect(master);
       osc.start();
-      const len = ctx.sampleRate;
-      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-      noise = ctx.createBufferSource();
-      noise.buffer = buf;
-      noise.loop = true;
-      noiseGain = ctx.createGain();
-      noiseGain.gain.value = 0;
-      noise.connect(noiseGain);
-      noiseGain.connect(master);
-      noise.start();
       built = true;
       void enableSensors(SENSOR_OPTS).then((ok) => {
         if (!ok) return;
@@ -129,7 +117,6 @@
         filter.frequency.setTargetAtTime(ctl.cutoff, t, 0.04);
         osc.detune.setTargetAtTime(ctl.detune * 100, t, 0.05);
         amp.gain.setTargetAtTime(ctl.amp, t, 0.03);
-        noiseGain.gain.setTargetAtTime(ctl.noise, t, 0.04);
         document.getElementById("cutOut").textContent = `${ctl.cutoff | 0}`;
         document.getElementById("detOut").textContent = `${ctl.detune.toFixed(1)} st`;
         drawTrail();
@@ -155,10 +142,7 @@
       if (!holding) return;
       holding = false;
       pad.classList.remove("active");
-      if (ctx) {
-        amp.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
-        noiseGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
-      }
+      if (ctx) amp.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
     };
     pad.addEventListener("pointerup", stop);
     pad.addEventListener("pointercancel", stop);

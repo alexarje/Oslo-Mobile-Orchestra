@@ -115,11 +115,6 @@ export const LEARN_PEDAGOGY = {
     "Combines excitation (breath) with resonance (pitch selection) — you must control both to phrase musically.",
   ],
 
-  "light-theremin": [
-    "Ambient light level (when available) or brightness proxy controls pitch — cover the sensor for darker tone.",
-    "Analogous to optical theremins: one continuous dimension maps to frequency; encourages slow, deliberate motion.",
-  ],
-
   "tilt-harp": [
     "Plucked or struck string models (Karplus–Strong or similar) with pitch from touch and damping from tilt.",
     "Tilt as “string length” or damping teaches that gesture after the attack still shapes the sound.",
@@ -345,11 +340,6 @@ export const LEARN_PEDAGOGY = {
     "No mic needed — tilt controls “breath” and pitch of the resonance.",
   ],
 
-  "grain-rain": [
-    "Acceleration shakes trigger dense grains — physical shaking = shower of sound particles.",
-    "Texture from impulsive excitation many times per second.",
-  ],
-
   "scrub-tape": [
     "Drag scrubs through a recorded buffer forward and backward — tape-head metaphor.",
     "Time manipulation as performance: hear the past under your finger.",
@@ -360,19 +350,9 @@ export const LEARN_PEDAGOGY = {
     "Robot voice effect; choir when carrier is rich and modulation is smooth.",
   ],
 
-  "ir-cathedral": [
-    "Convolution reverb uses a measured impulse response; tilt may change wet/dry or tone.",
-    "Real acoustic spaces imprinted on any input — architecture as filter.",
-  ],
-
   "one-shot-orchestra": [
     "Screen zones trigger different pre-shaped hits — orchestral gesture as spatial game.",
     "Orchestration by region: each player chooses when and where to attack.",
-  ],
-
-  "live-loop-slicer": [
-    "A loop is divided into slices; tilt or touch jumps playback position.",
-    "Granular DJ technique on the phone — re-order time in a fixed buffer.",
   ],
 
   "gesture-regression": [

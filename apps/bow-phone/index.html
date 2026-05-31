@@ -47,7 +47,7 @@
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus, unlockAudio } from "../../shared/audio.js";
-    import { bowFromHandSpeed, bowFromZoneMotion, trackHandInBowZone } from "../../shared/hand-bow.js";
+    import { bowFromHandSpeed, bowFromZoneMotion, createHandBowState, trackHandInBowZone } from "../../shared/hand-bow.js";
     import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
@@ -63,8 +63,8 @@
     const sctx = sample.getContext("2d", { willReadFrequently: true });
 
     const SENSOR_OPTS = { needMotion: true, needOrientation: false };
-    const CAM_W = 96;
-    const CAM_H = 72;
+    const CAM_W = 128;
+    const CAM_H = 96;
     const BOW_ZONE = 0.55;
     const BOW_SPEED_GAIN = 14;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -77,7 +77,7 @@
     let camReady = false;
     let useCameraBow = false;
     let camRaf = 0;
-    let prevGray = null;
+    let handState = null;
     let lastHandCx = null;
     let handTrack = { present: false, nx: 0.5, ny: 0.25, mass: 0 };
     let sensorsReady = false;
@@ -196,11 +196,13 @@
       }
       sctx.drawImage(video, 0, 0, CAM_W, CAM_H);
       const img = sctx.getImageData(0, 0, CAM_W, CAM_H);
-      const n = CAM_W * CAM_H;
-      if (!prevGray || prevGray.length !== n) prevGray = new Float32Array(n);
+      const n = CAM_W * Math.floor(CAM_H * BOW_ZONE);
+      if (!handState || handState.prevGray.length !== n) {
+        handState = createHandBowState(CAM_W, CAM_H, BOW_ZONE);
+      }
 
-      const zoneTarget = bowFromZoneMotion(img, CAM_W, CAM_H, prevGray, BOW_ZONE);
-      handTrack = trackHandInBowZone(img, CAM_W, CAM_H, prevGray, BOW_ZONE);
+      const zoneTarget = bowFromZoneMotion(img, CAM_W, CAM_H, handState, BOW_ZONE);
+      handTrack = trackHandInBowZone(img, CAM_W, CAM_H, handState, BOW_ZONE);
       document.getElementById("handOut").textContent = handTrack.present ? "yes" : "—";
 
       let target = zoneTarget * 0.65;
@@ -215,11 +217,13 @@
 
     function camLoop() {
       if (!stream) return;
-      drawCamHud();
-      if (holding && stream && video.readyState >= 2) {
+      if (camReady && video.readyState >= 2) {
         const target = measureHandBow();
-        cameraBow = Math.min(1, cameraBow * 0.72 + target * 0.28);
+        if (holding) {
+          cameraBow = Math.min(1, cameraBow * 0.72 + target * 0.28);
+        }
       }
+      drawCamHud();
       camRaf = requestAnimationFrame(camLoop);
     }
 
@@ -255,7 +259,7 @@
       camReady = video.videoWidth > 0;
       if (!camReady) return false;
       useCameraBow = true;
-      prevGray = null;
+      handState = createHandBowState(CAM_W, CAM_H, BOW_ZONE);
       lastHandCx = null;
       handTrack = { present: false, nx: 0.5, ny: 0.25, mass: 0 };
       camStart.classList.add("hidden");
@@ -275,7 +279,7 @@
       video.srcObject = null;
       camReady = false;
       useCameraBow = false;
-      prevGray = null;
+      handState = createHandBowState(CAM_W, CAM_H, BOW_ZONE);
       lastHandCx = null;
       handTrack = { present: false, nx: 0.5, ny: 0.25, mass: 0 };
       camStart.classList.remove("hidden");

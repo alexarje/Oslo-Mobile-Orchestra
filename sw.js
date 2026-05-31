@@ -1,4 +1,4 @@
-const CACHE = "omo-v30";
+const CACHE = "omo-v34";
 const ASSETS = [
   "./",
   "./index.html",

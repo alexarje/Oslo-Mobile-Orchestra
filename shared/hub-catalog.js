@@ -129,13 +129,6 @@ export const HUB_APPS = [
     sensors: "Mic · touch",
   },
   {
-    href: "apps/light-theremin/",
-    title: "Shadow Tone",
-    section: "melody",
-    synth: "Light theremin",
-    sensors: "Light · touch",
-  },
-  {
     href: "apps/tilt-harp/",
     title: "Gravity Harp",
     section: "melody",
@@ -315,12 +308,9 @@ export const HUB_APPS = [
   { href: "apps/bowed-waveguide/", title: "Drag Bow", section: "melody", synth: "Continuous KS", sensors: "Touch drag" },
   { href: "apps/pluck-bowl/", title: "Bowl Splash", section: "synthesis", synth: "Resonant burst", sensors: "Touch position" },
   { href: "apps/wind-bottle/", title: "Bottle Breath", section: "texture", synth: "Noise resonator", sensors: "Tilt · touch" },
-  { href: "apps/grain-rain/", title: "Shake Dust", section: "texture", synth: "Grain shower", sensors: "Accel · touch" },
   { href: "apps/scrub-tape/", title: "Tape Scrub", section: "texture", synth: "Buffer scrub", sensors: "Touch drag" },
   { href: "apps/vocoder-choir/", title: "Robot Hall", section: "texture", synth: "Band vocoder", sensors: "Mic · tilt" },
-  { href: "apps/ir-cathedral/", title: "Space Convolve", section: "texture", synth: "IR convolution", sensors: "Tilt · touch" },
   { href: "apps/one-shot-orchestra/", title: "Zone Hits", section: "rhythm", synth: "Multi-zone", sensors: "Touch zones" },
-  { href: "apps/live-loop-slicer/", title: "Slice Bar", section: "rhythm", synth: "Loop slices", sensors: "Tilt · touch" },
   { href: "apps/gesture-regression/", title: "Tilt Learn", section: "ai", synth: "ML → filter", sensors: "Motion · touch" },
   {
     href: "apps/swarm-bloom/",
