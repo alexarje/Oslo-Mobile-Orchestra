@@ -60,7 +60,29 @@ Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache
 ### 5. “Spatial circle”
 - 20× **Gyro Compass** — each phone pans by compass heading in the room.
 
-## Browser & sensor notes
+## Browsers (iOS & Android)
+
+Use a **normal mobile browser**, not an in-app browser (Instagram, Messenger, email readers, etc.) — those often block the mic, camera, or motion sensors.
+
+### iPhone / iPad (iOS)
+
+| | |
+|--|--|
+| **Use** | **Safari** (best for workshops) |
+| **Also OK** | Chrome, Firefox, Edge — all use Safari’s engine on iOS, so behaviour is similar |
+| **Avoid** | In-app browsers; “Private” mode if you need saved settings between sessions |
+| **Tips** | Turn the **silent switch off** (ring/vibrate mode). Tap **Allow** for mic, camera, and **Motion & Orientation** when asked. For full-screen: **Share → Add to Home Screen**, then open from the home icon |
+
+### Android
+
+| | |
+|--|--|
+| **Use** | **Chrome** (recommended) |
+| **Also OK** | Firefox, Samsung Internet, Edge — test once before a big group |
+| **Avoid** | In-app browsers; very old “Internet” browsers on budget phones |
+| **Tips** | Allow mic/camera/motion when prompted. **Install app** or **Add to Home screen** from the browser menu for a cleaner full-screen view |
+
+### Sensors & audio (both platforms)
 
 | Topic | Android (Chrome) | iPhone (Safari) |
 |-------|------------------|-----------------|

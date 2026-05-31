@@ -9,9 +9,10 @@
 ## Before the room (15 min)
 
 1. Test Wi‑Fi or mobile hotspot; phones need the same host URL.
-2. Conductor phone: full volume, Do Not Disturb on.
-3. Pre-assign roles on a slide (optional): row A = drones, row B = rhythm, etc.
-4. Demo once: **tap anywhere** on the app screen → allow mic or motion when prompted.
+2. **Browsers:** iPhone/iPad → **Safari**; Android → **Chrome**. Avoid opening the link inside Instagram, email, or chat apps — use “Open in browser” if needed.
+3. Conductor phone: full volume, Do Not Disturb on.
+4. Pre-assign roles on a slide (optional): row A = drones, row B = rhythm, etc.
+5. Demo once: **tap anywhere** on the app screen → allow mic or motion when prompted.
 
 ## Facilitator script (45 min)
 
@@ -45,6 +46,7 @@ All screens down; one sustained drone from a single phone. Discuss what felt “
 
 | Problem | Fix |
 |---------|-----|
+| Mic/camera/motion blocked | Use Safari (iOS) or Chrome (Android); not an in-app browser |
 | No sound | Tap anywhere on the screen first; check mute switch (iOS) |
 | Motion flat | Reload; Settings → Safari → Motion & Orientation |
 | Out of sync | Use Conductor link; accept ~50–100 ms spread without server |
