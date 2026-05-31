@@ -1080,6 +1080,54 @@ body.hub {
   margin-left: auto;
 }
 
+/* Evo drumkit */
+.evo-drumkit-app .evo-toolbar {
+  flex-shrink: 0;
+  padding: 0 0.5rem 0.35rem;
+  background: #111827;
+}
+
+.evo-drumkit-app .evo-toolbar .control-row {
+  padding: 0.2rem 0;
+}
+
+.evo-drumkit-app .evo-toolbar .control-row input[type="range"] {
+  flex: 1 1 4rem;
+  max-width: 6rem;
+}
+
+.evo-drumkit-app .evo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.25rem 0;
+}
+
+.evo-drumkit-app .evo-stats {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 0.72rem;
+}
+
+.evo-drumkit-app .evo-pattern-viz {
+  width: 100%;
+  height: 48px;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.evo-drumkit-app #recordBtn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(110, 231, 183, 0.12);
+}
+
+.evo-drumkit-app .main-stage {
+  flex: 1;
+  min-height: 0;
+  padding: 0 0.5rem calc(0.35rem + var(--safe-b));
+}
+
 .pluck-ripple {
   position: absolute;
   width: 48px;
