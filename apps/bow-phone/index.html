@@ -100,7 +100,7 @@
         lastAccel = { x, y, z };
         const jerk = Math.sqrt(dx * dx + dy * dy + dz * dz);
         const target = motionToAmplitude(jerk, rotAlpha, rotBeta, rotGamma);
-        bowAmp = Math.min(1, bowAmp * 0.78 + target * 0.22);
+        bowAmp = Math.min(1, bowAmp * 0.86 + target * 0.14);
       });
       sensorsReady = true;
     }
@@ -121,8 +121,8 @@
     function tick() {
       if (!built) return;
       if (holding) {
-        bowAmp *= 0.88;
-        if (bowAmp < 0.003) bowAmp = 0;
+        bowAmp *= 0.94;
+        if (bowAmp < 0.002) bowAmp = 0;
       }
       applyBow();
       requestAnimationFrame(tick);

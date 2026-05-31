@@ -81,7 +81,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Camera → grains</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>Start camera</strong>. Even scenes sound smooth; busy, high-contrast scenes get grainier.</p>
+    <p>Turn <strong>Audio on</strong> (top right), then <strong>Start camera</strong> and allow the camera. Even scenes sound smooth; busy scenes get grainier.</p>
     <p>Camera is used <strong>only while open</strong>. Nothing is recorded, uploaded, or saved. <strong>Workshop mode</strong> uses the rear camera at low resolution.</p>
   </div>
 
@@ -92,7 +92,7 @@
         <input type="checkbox" id="workshopMode" checked />
         <span>Workshop mode (rear · low res)</span>
       </label>
-      <button type="button" class="btn" id="consentBtn">Start camera</button>
+      <button type="button" class="btn" id="consentBtn">Audio on + Start camera</button>
     </div>
   </div>
 
@@ -201,7 +201,7 @@
     }
 
     function spawnGrain(col, row, level) {
-      if (!ctx || !buffer) return;
+      if (!ctx || !buffer || ctx.state !== "running") return;
       const tex = smoothTexture;
       const even = 1 - tex;
       const src = ctx.createBufferSource();
@@ -219,7 +219,7 @@
       gn.connect(pan);
       src.connect(gn);
       const t = ctx.currentTime;
-      const amp = 0.05 + even * 0.05 + level * (0.1 + tex * 0.18);
+      const amp = 0.08 + even * 0.06 + level * (0.14 + tex * 0.22);
       const attack = 0.003 + even * 0.006;
       src.start(t, Math.random() * Math.max(0.01, buffer.duration - dur), dur);
       gn.gain.setValueAtTime(0, t);
@@ -318,26 +318,29 @@
       if (running) analyzeFrame();
     }
 
-    async function startCamera() {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setStatus("status", "Camera not supported", "warn");
-        return false;
-      }
+    function requestCameraStream() {
+      if (!navigator.mediaDevices?.getUserMedia) return null;
       const workshop = workshopMode.checked;
+      return navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: workshop ? { ideal: "environment" } : "user",
+          width: { ideal: workshop ? 320 : 480 },
+          height: { ideal: workshop ? 240 : 360 },
+        },
+        audio: false,
+      });
+    }
+
+    async function attachCamera(camPromise) {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: workshop ? { ideal: "environment" } : "user",
-            width: { ideal: workshop ? 320 : 480 },
-            height: { ideal: workshop ? 240 : 360 },
-          },
-          audio: false,
-        });
+        stream = await camPromise;
       } catch {
-        setStatus("status", "Camera denied", "warn");
+        setStatus("status", "Camera denied — allow in Settings", "warn");
         return false;
       }
       video.srcObject = stream;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
       await video.play();
       return true;
     }
@@ -360,9 +363,9 @@
     async function bootAudio(c) {
       if (ctx) return;
       ctx = c;
-      ({ master } = createMasterBus(c, 0.45));
+      ({ master } = createMasterBus(c, 0.58));
       dryGain = ctx.createGain();
-      dryGain.gain.value = 0.78;
+      dryGain.gain.value = 0.85;
       dryGain.connect(master);
       reverb = ctx.createConvolver();
       reverb.buffer = reverbImpulse(c, 1.6);
@@ -377,8 +380,15 @@
 
     async function onConsent() {
       consentBtn.disabled = true;
+      setStatus("status", "Starting camera & audio…", "");
+      const camPromise = requestCameraStream();
+      if (!camPromise) {
+        setStatus("status", "Camera not supported", "warn");
+        consentBtn.disabled = false;
+        return;
+      }
       await startAudio(bootAudio);
-      if (!(await startCamera())) {
+      if (!(await attachCamera(camPromise))) {
         consentBtn.disabled = false;
         return;
       }

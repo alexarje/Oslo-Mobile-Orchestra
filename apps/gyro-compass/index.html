@@ -14,8 +14,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Pan + pitch</h2>
-    <p>Tap the compass and allow <strong>motion/orientation</strong> on iPhone. Hold the phone flat and rotate for stereo pan.</p>
-    <p><strong>Tilt</strong> forward/back for pitch, or drag up/down on the circle.</p>
+    <p>Turn <strong>Audio on</strong>, tap the compass, and allow <strong>motion</strong> on iPhone.</p>
+    <p>Hold the phone <strong>flat</strong> and rotate for stereo pan. <strong>Tilt</strong> forward/back for pitch, or drag on the circle.</p>
   </div>
   <p class="status-bar" id="status">Tap compass · Audio on</p>
   <div class="readout-row">
@@ -38,6 +38,8 @@
     const MIDI_MIN = 48;
     const MIDI_MAX = 76;
     const SENSOR_OPTS = { needMotion: false, needOrientation: true };
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    const safeNum = (v, fb) => (typeof v === "number" && Number.isFinite(v) ? v : fb);
 
     let ctx, panner, osc, built = false;
     let sensorsReady = false;
@@ -52,14 +54,22 @@
     }
 
     function midiFromBeta(b) {
-      const t = Math.max(0, Math.min(1, (b - 25) / 110));
+      const t = clamp((safeNum(b, 90) - 25) / 110, 0, 1);
       return MIDI_MIN + t * (MIDI_MAX - MIDI_MIN);
     }
 
     function midiFromTouchY(clientY) {
       const r = canvas.getBoundingClientRect();
-      const ny = 1 - Math.max(0, Math.min(1, (clientY - r.top) / r.height));
+      const ny = 1 - clamp((clientY - r.top) / Math.max(1, r.height), 0, 1);
       return MIDI_MIN + ny * (MIDI_MAX - MIDI_MIN);
+    }
+
+    function headingFromOrientation(o) {
+      if (typeof o.webkitCompassHeading === "number" && Number.isFinite(o.webkitCompassHeading)) {
+        return o.webkitCompassHeading;
+      }
+      if (typeof o.alpha === "number" && Number.isFinite(o.alpha)) return o.alpha;
+      return alpha;
     }
 
     function currentMidi() {
@@ -81,7 +91,7 @@
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.4));
+      ({ master } = createMasterBus(c, 0.48));
       panner = c.createStereoPanner();
       osc = c.createOscillator();
       osc.type = "sine";
@@ -101,13 +111,17 @@
         return false;
       }
       onOrientation((o) => {
-        if (o.alpha != null && !Number.isNaN(o.alpha)) alpha = o.alpha;
-        if (o.beta != null && !Number.isNaN(o.beta)) beta = o.beta;
-        else if (o.gamma != null && !Number.isNaN(o.gamma)) beta = 90 - o.gamma;
+        alpha = headingFromOrientation(o);
+        const b = safeNum(o.beta, beta);
+        if (Number.isFinite(b) && b !== 0) beta = clamp(b, 20, 160);
+        else {
+          const g = safeNum(o.gamma, 0);
+          if (g !== 0) beta = clamp(90 - g, 20, 160);
+        }
         if (activePointer == null) applyMotion();
       });
       sensorsReady = true;
-      setStatus("status", "Rotate flat for pan · tilt for pitch", "ok");
+      setStatus("status", "Flat · rotate for pan · tilt for pitch", "ok");
       applyMotion();
       return true;
     }

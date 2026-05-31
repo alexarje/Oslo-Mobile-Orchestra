@@ -50,7 +50,7 @@
 
     function build(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.5));
+      ({ master } = createMasterBus(c, 0.62));
       osc = ctx.createOscillator();
       gain = ctx.createGain();
       gain.gain.value = 0;
@@ -67,7 +67,7 @@
       e.preventDefault();
       await startAudio(!built ? build : undefined);
       btn.classList.add("active");
-      gain.gain.setTargetAtTime(0.45, ctx.currentTime, 0.15);
+      gain.gain.setTargetAtTime(0.62, ctx.currentTime, 0.15);
       osc.frequency.setTargetAtTime(180 + Math.random() * 80, ctx.currentTime, 0.2);
     });
     const off = () => {

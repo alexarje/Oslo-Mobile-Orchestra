@@ -94,6 +94,11 @@
     .legend-still::before { background: #38bdf8; }
     .legend-sway::before { background: #a78bfa; }
     .legend-shake::before { background: #fb923c; }
+    .rec-hold.recording {
+      border-color: var(--accent) !important;
+      background: rgba(110, 231, 183, 0.15) !important;
+      color: var(--accent);
+    }
   </style>
 </head>
 <body class="app-shell">
@@ -103,7 +108,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Machine learning</h2>
-    <p>Turn <strong>Audio on</strong>. Record <strong>still</strong>, <strong>sway</strong>, and <strong>shake</strong> (at least three of each), then <strong>Listen</strong>.</p>
+    <p>Turn <strong>Audio on</strong>. <strong>Hold</strong> each teach button while you perform the gesture (3+ seconds). Record <strong>still</strong>, <strong>sway</strong>, and <strong>shake</strong> (3+ each), then <strong>Listen</strong>.</p>
     <p>Compare <strong>k-NN</strong> vs a <strong>tiny 2-layer net</strong> — all on your phone, no server.</p>
     <p><strong>Feature map</strong> — each dot is one example (mag vs jitter). White ring = live reading while listening.</p>
     <p><strong>Confusion matrix</strong> — rows = true label, columns = predicted; off-diagonal = mislabels on your training set.</p>
@@ -115,9 +120,9 @@
   <p class="status-bar" id="counts">Still: 0 · Sway: 0 · Shake: 0</p>
 
   <div class="btn-grid-3">
-    <button type="button" class="btn-secondary btn btn-sm" id="recStill">Still</button>
-    <button type="button" class="btn-secondary btn btn-sm" id="recSway">Sway</button>
-    <button type="button" class="btn-secondary btn btn-sm" id="recShake">Shake</button>
+    <button type="button" class="btn-secondary btn btn-sm rec-hold" id="recStill">Hold · Still</button>
+    <button type="button" class="btn-secondary btn btn-sm rec-hold" id="recSway">Hold · Sway</button>
+    <button type="button" class="btn-secondary btn btn-sm rec-hold" id="recShake">Hold · Shake</button>
   </div>
   <div class="btn-grid-2">
     <button type="button" class="btn btn-sm" id="playBtn" disabled>Listen</button>
@@ -173,7 +178,7 @@
   <script type="module">
     import { bindLearn, createAudioBoot, setStatus, registerAudioBoot } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
-    import { enableSensors, onMotion, stopSensors } from "../../shared/sensors.js";
+    import { enableSensors, onMotion, primeSensors, stopSensors } from "../../shared/sensors.js";
     import {
       KNNClassifier,
       FeatureNormalizer,
@@ -341,25 +346,55 @@
       return `${a} · ${b}`;
     }
 
-    function recordLabel(label, durationMs = 0) {
-      const samples = [];
-      const handler = (e) => {
-        const a = e.accelerationIncludingGravity || e.acceleration;
-        if (!a) return;
-        const f = extractMotionFeatures({ x: a.x, y: a.y, z: a.z }, magHistory);
-        magHistory.push(Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2));
-        if (magHistory.length > 12) magHistory.shift();
-        samples.push(f);
-        normalizer.push(f);
-      };
-      window.addEventListener("devicemotion", handler);
-      const done = () => {
-        window.removeEventListener("devicemotion", handler);
+    function bindHoldRecord(btn, label, hint, minMs = 1200) {
+      let recording = false;
+      let t0 = 0;
+      let handler = null;
+
+      btn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        void withSensors(() => {
+          recording = true;
+          t0 = performance.now();
+          btn.classList.add("recording");
+          btn.setPointerCapture(e.pointerId);
+          setStatus("status", hint, "ok");
+          const samples = [];
+          handler = (ev) => {
+            if (!recording) return;
+            const a = ev.accelerationIncludingGravity || ev.acceleration;
+            if (!a) return;
+            const f = extractMotionFeatures({ x: a.x, y: a.y, z: a.z }, magHistory);
+            magHistory.push(Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2));
+            if (magHistory.length > 12) magHistory.shift();
+            samples.push(f);
+            normalizer.push(f);
+          };
+          window.addEventListener("devicemotion", handler);
+          btn._samples = samples;
+        });
+      });
+
+      const end = () => {
+        if (!recording) return;
+        recording = false;
+        btn.classList.remove("recording");
+        if (handler) window.removeEventListener("devicemotion", handler);
+        handler = null;
+        const samples = btn._samples || [];
+        btn._samples = [];
+        if (performance.now() - t0 < minMs || samples.length < 8) {
+          setStatus("status", "Too short — hold & perform longer", "warn");
+          return;
+        }
         samples.forEach((f) => classifier.addSample(normalizer.normalize(f), label));
         updateCounts();
-        setStatus("status", `+${samples.length} ${label}`, "ok");
+        setStatus("status", `Saved ${samples.length} × ${label}`, "ok");
       };
-      setTimeout(done, durationMs > 0 ? durationMs : 1500);
+
+      btn.addEventListener("pointerup", end);
+      btn.addEventListener("pointercancel", end);
+      btn.addEventListener("lostpointercapture", end);
     }
 
     function applyLabelSound(label) {
@@ -386,34 +421,30 @@
     }
 
     async function withSensors(recordFn) {
+      primeSensors({ needMotion: true, needOrientation: false });
       await ensureAudio();
-      if (!(await enableSensors())) {
-        setStatus("status", "Motion not available", "warn");
+      if (!(await enableSensors({ needMotion: true, needOrientation: false }))) {
+        setStatus("status", "Allow motion access — then try again", "warn");
         return;
       }
       recordFn();
     }
 
-    document.getElementById("recStill").onclick = () => {
-      void withSensors(() => {
-        setStatus("status", "Hold still…", "");
-        recordLabel("still");
-      });
-    };
-
-    document.getElementById("recSway").onclick = () => {
-      void withSensors(() => {
-        setStatus("status", "Sway side to side…", "");
-        recordLabel("sway", 2500);
-      });
-    };
-
-    document.getElementById("recShake").onclick = () => {
-      void withSensors(() => {
-        setStatus("status", "Shake!", "");
-        recordLabel("shake", 3000);
-      });
-    };
+    bindHoldRecord(
+      document.getElementById("recStill"),
+      "still",
+      "Hold… keep phone still on a table or lap"
+    );
+    bindHoldRecord(
+      document.getElementById("recSway"),
+      "sway",
+      "Hold… sway side to side slowly"
+    );
+    bindHoldRecord(
+      document.getElementById("recShake"),
+      "shake",
+      "Hold… shake the phone firmly"
+    );
 
     document.getElementById("clearBtn").onclick = () => {
       classifier.clear();
@@ -494,10 +525,14 @@
     };
 
     document.getElementById("playBtn").onclick = async () => {
+      primeSensors({ needMotion: true, needOrientation: false });
       await ensureAudio();
-      if (!(await enableSensors())) return;
+      if (!(await enableSensors({ needMotion: true, needOrientation: false }))) {
+        setStatus("status", "Allow motion access — then Listen again", "warn");
+        return;
+      }
       listening = true;
-      setStatus("status", "Perform · drag k to compare", "ok");
+      setStatus("status", "Listen on — still, sway, or shake the phone", "ok");
       stopSensors();
       onMotion((e) => {
         if (!listening) return;

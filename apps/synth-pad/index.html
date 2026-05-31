@@ -59,6 +59,12 @@
       if (typeof p === "number" && p > 0 && (p < 0.48 || p > 0.52 || p >= 0.99)) {
         return { value: clamp(p, 0.05, 1), source: "force" };
       }
+      const rx = e.radiusX ?? 0;
+      const ry = e.radiusY ?? 0;
+      if (rx > 0.5 || ry > 0.5) {
+        const size = Math.max(rx, ry) * 2;
+        return { value: clamp(0.22 + size / 26, 0.22, 1), source: "size" };
+      }
       const w = e.width ?? 0;
       const h = e.height ?? 0;
       if (w > 1.2 || h > 1.2) {
@@ -111,11 +117,13 @@
       voice.amp.gain.setTargetAtTime(level, when, 0.03);
       voice.filter.Q.setTargetAtTime(2 + pressure * 18, when, 0.04);
       if (voice.modGain) {
-        voice.modGain.gain.setTargetAtTime(voice.baseMod * (0.45 + pressure * 0.85), when, 0.04);
+        const modDepth = voice.baseMod * (0.45 + pressure * 0.85);
+        const yBoost = voice.fmYNorm != null ? voice.baseMod * voice.fmYNorm * 0.35 : 0;
+        voice.modGain.gain.setTargetAtTime(modDepth + yBoost, when, 0.04);
       }
     }
 
-    function startVoice(freq, cutoff, pressure) {
+    function startVoice(freq, cutoff, pressure, ny = 0.5) {
       if (!built) return;
       stopVoice();
       const t = ctx.currentTime;
@@ -165,7 +173,17 @@
         osc.start(t);
         nodes.push(osc);
       }
-      voice = { env, nodes, filter: filt, osc, modOsc, modGain, amp, baseMod };
+      voice = {
+        env,
+        nodes,
+        filter: filt,
+        osc,
+        modOsc,
+        modGain,
+        amp,
+        baseMod,
+        fmYNorm: waveSel.value === "fm" ? 1 - ny : null,
+      };
       applyPressure(pressure, t);
     }
 
@@ -174,6 +192,7 @@
       const rect = pad.getBoundingClientRect();
       const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      if (voice?.modGain && waveSel.value === "fm") voice.fmYNorm = 1 - ny;
       const { value: pressure, source } = readPressure(e);
       cursor.style.left = `${nx * 100}%`;
       cursor.style.top = `${ny * 100}%`;
@@ -182,7 +201,7 @@
       const freq = midiToFreq(48 + nx * 24);
       const cutoff = 200 + (1 - ny) * 8000;
       const t = ctx.currentTime;
-      if (!voice) startVoice(freq, cutoff, pressure);
+      if (!voice) startVoice(freq, cutoff, pressure, ny);
       else {
         voice.osc.frequency.setTargetAtTime(freq, t, 0.02);
         if (voice.modOsc) {

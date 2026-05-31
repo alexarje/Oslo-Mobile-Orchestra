@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Ensemble harmony</h2>
-    <p>Turn <strong>Audio on</strong>. Pick a chord tone (F minor), <strong>hold</strong> the pad to sustain, slide <strong>up/down</strong> for ±5 semitones, rotate to detune in cents.</p>
+    <p>Keep the phone <strong>portrait</strong> (vertical — turn off landscape lock if needed). Turn <strong>Audio on</strong>, pick a chord tone, <strong>hold</strong> the pad, slide <strong>up/down</strong> for pitch, rotate to detune.</p>
   </div>
   <p class="pick-label" aria-hidden="true">F minor</p>
   <div class="note-grid" id="notes"></div>
@@ -30,7 +30,7 @@
   <script type="module">
     import { bindLearn, createAudioBoot } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
-    import { enableSensors, onOrientation } from "../../shared/sensors.js";
+    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     const CHORD = [{ name: "F", midi: 53 }, { name: "A♭", midi: 56 }, { name: "C", midi: 60 }, { name: "E♭", midi: 63 }];
@@ -72,9 +72,11 @@
       gain.connect(master);
       osc.start();
       lfo.start();
-      await enableSensors();
+      primeSensors({ needMotion: false, needOrientation: true });
+      await enableSensors({ needMotion: false, needOrientation: true });
       onOrientation(({ gamma }) => {
-        orientDetune = Math.max(-50, Math.min(50, (gamma || 0) * 0.5));
+        const g = typeof gamma === "number" && Number.isFinite(gamma) ? gamma : 0;
+        orientDetune = Math.max(-50, Math.min(50, g * 0.5));
         applyPitch();
       });
       applyPitch();
@@ -88,16 +90,22 @@
       applyPitch();
     }
 
+    function nyFromEvent(e) {
+      const r = pitchPad.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (e.clientY - r.top) / Math.max(1, r.height)));
+    }
+
     pitchPad.addEventListener("pointerdown", async (e) => {
+      primeSensors({ needMotion: false, needOrientation: true });
       await ensureReady();
       pitchPad.setPointerCapture(e.pointerId);
       pitchPad.classList.add("active");
       gain.gain.setTargetAtTime(0.4, ctx.currentTime, 0.06);
-      placeFinger(Math.max(0, Math.min(1, (e.clientY - pitchPad.getBoundingClientRect().top) / pitchPad.offsetHeight)));
+      placeFinger(nyFromEvent(e));
     });
     pitchPad.addEventListener("pointermove", (e) => {
       if (!pitchPad.classList.contains("active")) return;
-      placeFinger(Math.max(0, Math.min(1, (e.clientY - pitchPad.getBoundingClientRect().top) / pitchPad.offsetHeight)));
+      placeFinger(nyFromEvent(e));
     });
     pitchPad.addEventListener("pointerup", () => {
       pitchPad.classList.remove("active");

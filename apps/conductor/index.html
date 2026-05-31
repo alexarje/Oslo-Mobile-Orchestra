@@ -22,9 +22,9 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Conductor</h2>
-    <p><strong>Conduct</strong> — set BPM, run a 5-second countdown, share the musician link or QR. Everyone opens the link for the same start time.</p>
-    <p><strong>Play</strong> — musician view with shared countdown. Scan the QR to join without typing the URL.</p>
-    <p>Turn <strong>Audio on</strong> for the downbeat beep at “Go!”.</p>
+    <p><strong>1 Conduct</strong> — set BPM, tap <strong>Start 5s countdown</strong>, then show the QR so musicians scan <em>before</em> “Go!”.</p>
+    <p><strong>2 Play</strong> — musician view (or scan QR). Turn <strong>Audio on</strong> for the downbeat beep at “Go!”.</p>
+    <p>Everyone must open the musician link (same URL as the QR) — not only the Conduct tab.</p>
   </div>
   <div class="role-tabs">
     <button type="button" id="tabCond" class="active">Conduct</button>
@@ -47,13 +47,15 @@
       <div class="link-box" id="musicianLink"></div>
     </div>
     <div class="app-toolbar">
-      <button type="button" class="btn" id="goBtn">Countdown 5s</button>
+      <button type="button" class="btn" id="goBtn">Start 5s countdown</button>
       <button type="button" class="btn-secondary btn btn-sm icon-only hidden" id="copyBtn" title="Copy">⎘</button>
     </div>
   </div>
+  <p class="status-bar" id="status"></p>
 
   <div id="musicianView" class="main-stage hidden">
     <p class="status-bar" id="joinInfo">Waiting…</p>
+    <p class="status-bar" id="joinHint" style="font-size:0.72rem"></p>
     <div class="countdown-lg" id="musCountdown">—</div>
     <div class="scroll-panel">
       <p style="margin:0;font-size:0.72rem;color:var(--muted);">BPM <strong id="joinBpm">—</strong> · start <span id="joinStart">—</span></p>
@@ -64,7 +66,7 @@
   </div>
 
   <script type="module">
-    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { bindLearn, setStatus, startAudio } from "../../shared/app.js";
 
     bindLearn();
     import { renderQrCanvas } from "../../shared/qr.js";
@@ -106,13 +108,20 @@
       document.getElementById("musicianLink").textContent = url;
       renderQrCanvas(document.getElementById("shareQr"), url, { scale: 4, border: 2 });
       document.getElementById("copyBtn").classList.remove("hidden");
+      setStatus("status", "Musicians: scan QR or open link below", "ok");
       runCountdown(document.getElementById("countdown"), startMs, () => {
         document.getElementById("countdown").textContent = "Go!";
       });
     };
 
-    document.getElementById("copyBtn").onclick = () => {
-      navigator.clipboard?.writeText(document.getElementById("musicianLink").textContent);
+    document.getElementById("copyBtn").onclick = async () => {
+      const text = document.getElementById("musicianLink").textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus("status", "Link copied", "ok");
+      } catch {
+        setStatus("status", "Copy the link manually", "warn");
+      }
     };
 
     function flashBeat() {
@@ -149,8 +158,17 @@
       const bpm = params.get("bpm") || "96";
       document.getElementById("joinBpm").textContent = bpm;
       document.getElementById("joinStart").textContent = new Date(startMs).toLocaleTimeString();
-      document.getElementById("joinInfo").textContent = "Countdown";
-      runCountdown(document.getElementById("musCountdown"), startMs, () => {
+      const left = startMs - Date.now();
+      if (left < -2000) {
+        document.getElementById("joinInfo").textContent = "Start time passed";
+        document.getElementById("joinHint").textContent =
+          "Ask the conductor for a new countdown link.";
+        document.getElementById("musCountdown").textContent = "—";
+      } else {
+        document.getElementById("joinInfo").textContent = "Countdown — Audio on for beep";
+        document.getElementById("joinHint").textContent =
+          left > 8000 ? "You joined early — wait for the numbers." : "Get ready…";
+        runCountdown(document.getElementById("musCountdown"), startMs, () => {
         document.getElementById("musCountdown").textContent = "Go!";
         void startAudio((ctx) => {
           const o = ctx.createOscillator();
@@ -164,7 +182,16 @@
           o.start(t);
           o.stop(t + 0.35);
         });
-      });
+        });
+      }
+    } else {
+      tabMus.onclick = () => {
+        showRole(true);
+        document.getElementById("joinInfo").textContent = "No session yet";
+        document.getElementById("joinHint").textContent =
+          "In Conduct, tap Start 5s countdown and share the QR.";
+        document.getElementById("musCountdown").textContent = "—";
+      };
     }
   </script>
 </body>

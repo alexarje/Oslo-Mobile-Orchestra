@@ -78,14 +78,18 @@ export function onOrientation(callback) {
     window.removeEventListener("deviceorientationabsolute", orientationHandler);
   }
   orientationHandler = (e) => {
+    const safe = (v, fallback = 0) =>
+      typeof v === "number" && Number.isFinite(v) ? v : fallback;
     let alpha = e.alpha;
     if ((alpha == null || Number.isNaN(alpha)) && typeof e.webkitCompassHeading === "number") {
       alpha = e.webkitCompassHeading;
     }
     callback({
-      alpha: alpha ?? 0,
-      beta: e.beta ?? 0,
-      gamma: e.gamma ?? 0,
+      alpha: safe(alpha, 0),
+      beta: safe(e.beta, 0),
+      gamma: safe(e.gamma, 0),
+      webkitCompassHeading:
+        typeof e.webkitCompassHeading === "number" ? e.webkitCompassHeading : null,
       absolute: !!e.absolute,
     });
   };

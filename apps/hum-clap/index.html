@@ -97,12 +97,16 @@
     const LABELS = ["hum", "clap", "silence"];
     const MIN = 5;
     const FEAT_DIM = 5;
+    const CONF_MIN = 0.55;
+    const STABLE_FRAMES = 10;
     const clf = new KNNClassifier(3);
     let ctx, master, micStream, analyser, freqBuf, timeBuf;
     let humGain, humOsc;
     let listening = false;
     let monitorId = 0;
     let lastPred = null;
+    let stableLabel = null;
+    let stableCount = 0;
 
     function extractFeatures() {
       analyser.getFloatTimeDomainData(timeBuf);
@@ -132,11 +136,11 @@
       const peakiness = sum > 0 ? peak / (sum / freqBuf.length + 1) : 0;
 
       return [
-        Math.min(1, rms * 15),
+        Math.min(1, rms * 10),
         centroid,
-        Math.min(1, hf * 2),
-        Math.min(1, zcr * 10),
-        Math.min(1, peakiness / 6),
+        Math.min(1, hf * 1.6),
+        Math.min(1, zcr * 7),
+        Math.min(1, peakiness / 8),
       ];
     }
 
@@ -174,7 +178,7 @@
       humOsc.start();
       analyser = ctx.createAnalyser();
       analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.4;
+      analyser.smoothingTimeConstant = 0.72;
       freqBuf = new Uint8Array(analyser.frequencyBinCount);
       timeBuf = new Float32Array(analyser.fftSize);
       micStream = await getMicStream();
@@ -255,8 +259,19 @@
 
         if (listening && LABELS.every((_, i) => counts()[i] >= MIN)) {
           const { label, confidence } = clf.predict(normalize(f));
-          showPred(label, confidence);
-          applyLabelSound(label);
+          if (label && confidence >= CONF_MIN) {
+            if (label === stableLabel) stableCount++;
+            else {
+              stableLabel = label;
+              stableCount = 1;
+            }
+          } else {
+            stableCount = 0;
+          }
+          if (stableCount >= STABLE_FRAMES && stableLabel) {
+            showPred(stableLabel, confidence);
+            applyLabelSound(stableLabel);
+          }
         }
         monitorId = requestAnimationFrame(loop);
       };
@@ -322,6 +337,8 @@
 
     document.getElementById("clearBtn").onclick = () => {
       listening = false;
+      stableLabel = null;
+      stableCount = 0;
       document.getElementById("listenBtn").classList.remove("active");
       document.getElementById("listenBtn").textContent = "Listen";
       clf.clear();
@@ -344,6 +361,8 @@
         showPred(null, 0);
         setStatus("status", "Stopped", "");
       } else {
+        stableLabel = null;
+        stableCount = 0;
         setStatus("status", "Listening… hum, clap, or stay silent", "ok");
       }
     };
