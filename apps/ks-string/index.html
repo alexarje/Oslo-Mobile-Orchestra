@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Karplus–Strong</h2>
-    <p>Turn <strong>Audio on</strong>, then tap or hold to pluck once. <strong>X</strong> = pitch, <strong>Y</strong> = strength. Tilt = damping.</p>
+    <p>Turn <strong>Audio on</strong>, then tap to pluck. <strong>X</strong> = pitch, <strong>Y</strong> = strength. Tilt = damping. Loop feedback stays moderate so plucks don’t pile up harshly.</p>
   </div>
   <div class="main-stage">
     <div id="pad" class="stage-fill play-grid"></div>
@@ -43,7 +43,7 @@
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.38));
+      ({ master } = createMasterBus(c, 0.34));
       built = true;
     }
 
@@ -75,11 +75,14 @@
       const nx = clamp(x / r.width, 0, 1);
       const ny = clamp(y / r.height, 0, 1);
       const freq = mapX(nx);
-      const strength = 0.08 + (1 - ny) * 0.55;
+      const strength = 0.06 + (1 - ny) * 0.42;
+      const dampHz = currentDamp;
       karplusPluck(ctx, master, pool, freq, {
         strength,
-        dampHz: currentDamp,
-        level: 0.22 + strength * 0.18,
+        dampHz,
+        level: 0.14 + strength * 0.12,
+        feedback: Math.max(0.72, 0.84 - dampHz / 11000),
+        decaySec: 1.7,
       });
       document.getElementById("freqEl").textContent = freq.toFixed(0);
       document.getElementById("pluckEl").textContent = strength.toFixed(2);
@@ -107,7 +110,7 @@
       const y = clamp(ev.clientY - r.top, 0, r.height);
       const nx = x / r.width;
       document.getElementById("freqEl").textContent = mapX(nx).toFixed(0);
-      document.getElementById("pluckEl").textContent = (0.08 + (1 - y / r.height) * 0.55).toFixed(2);
+      document.getElementById("pluckEl").textContent = (0.06 + (1 - y / r.height) * 0.42).toFixed(2);
     });
 
     const stop = (ev) => {
