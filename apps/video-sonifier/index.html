@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0d0f14" />
-  <title>Photo Sonifier — OMO</title>
+  <title>Video Sonifier — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
   <style>
     .consent-gate {
@@ -77,12 +77,13 @@
 <body class="app-shell">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
-    <h1>Photo Sonifier</h1>
+    <h1>Video Sonifier</h1>
   </header>
   <div class="learn-panel panel" id="learnPanel">
-    <h2>Camera → grains</h2>
-    <p>Turn <strong>Audio on</strong> (top right), then <strong>Start camera</strong>. Even scenes play a soft chord; detailed scenes add pentatonic sparkles (not noise).</p>
-    <p>Camera is used <strong>only while open</strong>. Nothing is recorded, uploaded, or saved. <strong>Workshop mode</strong> uses the rear camera at low resolution.</p>
+    <h2>Video → music</h2>
+    <p>Turn <strong>Audio on</strong> (top right), then <strong>Start camera</strong>. Even scenes play a soft chord; detailed scenes add pentatonic sparkles.</p>
+    <p><strong>Hold the phone still</strong> — sound fades in. Movement lowers volume. Allow <strong>motion</strong> when asked on iPhone.</p>
+    <p>Camera is used <strong>only while open</strong>. Nothing is recorded or uploaded. <strong>Workshop mode</strong> uses the rear camera.</p>
   </div>
 
   <div id="consentGate" class="consent-gate">
@@ -99,6 +100,7 @@
   <p class="status-bar" id="status"></p>
   <div class="readout-row">
     <p class="value-chip">Key <strong id="keyOut">—</strong></p>
+    <p class="value-chip">Still <strong id="stillOut">—</strong></p>
     <p class="value-chip">Detail <strong id="detailOut">—</strong></p>
     <p class="value-chip">Notes <strong id="rateOut">—</strong>/s</p>
   </div>
@@ -116,6 +118,7 @@
   <script type="module">
     import { bindLearn, setStatus, startAudio, registerAudioBoot } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
 
@@ -125,6 +128,8 @@
     const MIN_NOTES = 1;
     const MAX_NOTES = 20;
     const TEXTURE_SMOOTH = 0.82;
+    const STILL_SMOOTH = 0.88;
+    const SENSOR_OPTS = { needMotion: true, needOrientation: false };
     const PENTA = [0, 2, 4, 7, 9];
     const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -141,8 +146,12 @@
     const sctx = sample.getContext("2d", { willReadFrequently: true });
 
     let stream = null;
-    let ctx, master, dryGain, reverb, reverbWet, padVoices;
+    let ctx, masterOut, ampGain, dryGain, reverb, reverbWet, padVoices;
     let running = false;
+    let sensorsReady = false;
+    let motionPrimed = false;
+    let lastAccel = { x: 0, y: 0, z: 0 };
+    let smoothStillness = 0;
     let analyzeTimer = null;
     let grainTimer = null;
     let meanBrightness = 0;
@@ -176,10 +185,41 @@
       return rootMidi + PENTA[degree] + oct * 12;
     }
 
+    function applyAmplitude() {
+      if (!ampGain || !ctx) return;
+      const level = 0.04 + smoothStillness * 0.96;
+      ampGain.gain.setTargetAtTime(level, ctx.currentTime, 0.14);
+      document.getElementById("stillOut").textContent = `${(smoothStillness * 100).toFixed(0)}%`;
+    }
+
+    async function initMotion() {
+      if (sensorsReady) return;
+      primeSensors(SENSOR_OPTS);
+      const ok = await enableSensors(SENSOR_OPTS);
+      if (!ok) {
+        setStatus("status", "Motion blocked — allow for stillness fade", "warn");
+        return;
+      }
+      onMotion(({ x, y, z }) => {
+        if (!running) return;
+        if (!motionPrimed) {
+          lastAccel = { x, y, z };
+          motionPrimed = true;
+          return;
+        }
+        const jerk = Math.hypot(x - lastAccel.x, y - lastAccel.y, z - lastAccel.z);
+        lastAccel = { x, y, z };
+        const stillScore = clamp(1 - jerk / 0.28, 0, 1);
+        smoothStillness = smoothStillness * STILL_SMOOTH + stillScore * (1 - STILL_SMOOTH);
+        applyAmplitude();
+      });
+      sensorsReady = true;
+    }
+
     function buildPad(c) {
       padVoices = { gain: c.createGain(), oscs: [] };
       padVoices.gain.gain.value = 0;
-      padVoices.gain.connect(master);
+      padVoices.gain.connect(ampGain);
       for (let i = 0; i < 3; i++) {
         const o = c.createOscillator();
         o.type = "sine";
@@ -268,7 +308,7 @@
       pan.connect(dryGain);
       pan.connect(reverb);
 
-      const amp = 0.05 + even * 0.07 + level * (0.1 + tex * 0.14);
+      const amp = (0.05 + even * 0.07 + level * (0.1 + tex * 0.14)) * (0.15 + smoothStillness * 0.85);
       gn.gain.setValueAtTime(0, t);
       gn.gain.linearRampToValueAtTime(amp, t + 0.02);
       gn.gain.exponentialRampToValueAtTime(0.001, t + dur);
@@ -417,16 +457,19 @@
     async function bootAudio(c) {
       if (ctx) return;
       ctx = c;
-      ({ master } = createMasterBus(c, 0.58));
+      ({ master: masterOut } = createMasterBus(c, 0.58));
+      ampGain = ctx.createGain();
+      ampGain.gain.value = 0;
+      ampGain.connect(masterOut);
       dryGain = ctx.createGain();
       dryGain.gain.value = 0.85;
-      dryGain.connect(master);
+      dryGain.connect(ampGain);
       reverb = ctx.createConvolver();
       reverb.buffer = reverbImpulse(c, 1.6);
       reverbWet = ctx.createGain();
       reverbWet.gain.value = 0.32;
       reverb.connect(reverbWet);
-      reverbWet.connect(master);
+      reverbWet.connect(ampGain);
       buildPad(c);
     }
 
@@ -434,6 +477,7 @@
 
     async function onConsent() {
       consentBtn.disabled = true;
+      primeSensors(SENSOR_OPTS);
       setStatus("status", "Starting camera & audio…", "");
       const camPromise = requestCameraStream();
       if (!camPromise) {
@@ -449,8 +493,12 @@
       consentGate.classList.add("hidden");
       document.getElementById("liveBadge").hidden = false;
       document.getElementById("stopBtn").hidden = false;
-      setStatus("status", "Workshop · live only on device", "ok");
+      setStatus("status", "Hold still for sound · live on device", "ok");
       running = true;
+      motionPrimed = false;
+      smoothStillness = 0;
+      applyAmplitude();
+      await initMotion();
       scheduleGrain();
       const loop = () => {
         if (!running) return;

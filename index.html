@@ -79,8 +79,8 @@
       { href: "apps/bow-phone/", tag: "Bow", title: "Bow Phone", section: "melody" },
       { href: "apps/train-shake/", tag: "ML", title: "Train & Shake", section: "ai" },
       { href: "apps/granular-tilt/", tag: "Grain", title: "Granular Tilt", section: "texture" },
-      { href: "apps/photo-sonifier/", tag: "Cam", title: "Photo Sonifier", section: "texture" },
-    ];
+      { href: "apps/video-sonifier/", tag: "Cam", title: "Video Sonifier", section: "texture" },
+    ].sort((a, b) => a.title.localeCompare(b.title, "en", { sensitivity: "base" }));
 
     const list = document.getElementById("appList");
     const filter = document.getElementById("sectionFilter");

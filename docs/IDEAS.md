@@ -16,7 +16,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 | ~~**Delay Throw**~~ | Rhythmic layers | [delay-throw](../apps/delay-throw/) |
 | ~~**Bow Phone**~~ | Sustained strings | [bow-phone](../apps/bow-phone/) |
 | ~~**NFC / QR Part**~~ | Instant seating | [part](../apps/part/) + hub `?part=` |
-| ~~**Photo Sonifier**~~ | Texture from environment | [photo-sonifier](../apps/photo-sonifier/) |
+| ~~**Video Sonifier**~~ | Texture from environment | [video-sonifier](../apps/video-sonifier/) |
 | ~~**Audience swell**~~ | Crowd layer | [audience](../apps/audience/) |
 | ~~**Compass wah**~~ | Orientation filter | [compass-wah](../apps/compass-wah/) |
 

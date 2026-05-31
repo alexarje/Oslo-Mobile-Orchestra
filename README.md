@@ -36,7 +36,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Bow Phone](apps/bow-phone/) | Bowed tone | Drag X/Y pressure + pitch |
 | [Train & Shake](apps/train-shake/) | Gesture ML | k-NN vs tiny net, teaching UI |
 | [Granular Tilt](apps/granular-tilt/) | Grain clouds | Upload, hold freeze |
-| [Photo Sonifier](apps/photo-sonifier/) | Environment texture | Camera → grain density |
+| [Video Sonifier](apps/video-sonifier/) | Environment texture | Camera → pentatonic tones · stillness fade |
 
 Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache covers core assets.
 

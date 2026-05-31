@@ -21,7 +21,7 @@ export const SECTIONS = {
   texture: {
     name: "Texture",
     color: "#6ee7b7",
-    apps: ["granular-tilt", "sampler", "photo-sonifier", "wavetable-scan"],
+    apps: ["granular-tilt", "sampler", "video-sonifier", "wavetable-scan"],
   },
   synthesis: {
     name: "Synthesis",
