@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Bowed string</h2>
-    <p>Turn <strong>Audio on</strong>, tap <strong>Start camera</strong>, then hold the <strong>lower pad</strong> for pitch. Wave your right hand in the <strong>green zone</strong> — like a violin bow.</p>
+    <p>Turn <strong>Audio on</strong>, tap <strong>Start camera</strong>, then hold the <strong>lower pad</strong> for pitch. Move your <strong>hand</strong> in the green zone — side to side like a bow; the dot follows your hand.</p>
     <p>Allow <strong>camera</strong> (front) when asked. If blocked, rocking the phone still drives the bow.</p>
   </div>
   <div class="breath-row">
@@ -26,6 +26,7 @@
   <div class="readout-row">
     <p class="value-chip">Pitch <strong id="pOut">220</strong> Hz</p>
     <p class="value-chip">Amp <strong id="bOut">0</strong></p>
+    <p class="value-chip">Hand <strong id="handOut">—</strong></p>
     <p class="value-chip">Bow <strong id="bowSrc">—</strong></p>
   </div>
   <p class="status-bar" id="status">Audio on · tap Start camera</p>
@@ -36,7 +37,7 @@
       <div class="bow-cam-start" id="camStart">
         <button type="button" class="btn" id="camBtn">Start camera</button>
       </div>
-      <span class="bow-cam-hint">Right hand · bow in green zone</span>
+      <span class="bow-cam-hint">Hand in green zone · move side to side</span>
     </div>
     <div id="pad" class="pitch-pad play-grid" role="application" aria-label="Pitch">
       <div class="touch-dot" id="dot"></div>
@@ -46,6 +47,7 @@
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
+    import { bowFromHandSpeed, trackHandInBowZone } from "../../shared/hand-bow.js";
     import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
@@ -61,9 +63,10 @@
     const sctx = sample.getContext("2d", { willReadFrequently: true });
 
     const SENSOR_OPTS = { needMotion: true, needOrientation: false };
-    const CAM_W = 64;
-    const CAM_H = 48;
-    const BOW_ZONE = 0.5;
+    const CAM_W = 96;
+    const CAM_H = 72;
+    const BOW_ZONE = 0.55;
+    const BOW_SPEED_GAIN = 14;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     sample.width = CAM_W;
@@ -75,6 +78,8 @@
     let useCameraBow = false;
     let camRaf = 0;
     let prevGray = null;
+    let lastHandCx = null;
+    let handTrack = { present: false, nx: 0.5, ny: 0.25, mass: 0 };
     let sensorsReady = false;
     let holding = false;
     let activePointer = null;
@@ -161,47 +166,57 @@
       hudCtx.strokeStyle = "rgba(110, 231, 183, 0.6)";
       hudCtx.lineWidth = Math.max(2, 2 * dpr);
       hudCtx.strokeRect(dpr, dpr, w - 2 * dpr, zoneH - 2 * dpr);
+
+      if (handTrack.present) {
+        const hx = (1 - handTrack.nx) * w;
+        const hy = handTrack.ny * zoneH;
+        hudCtx.strokeStyle = "#6ee7b7";
+        hudCtx.fillStyle = "rgba(110, 231, 183, 0.35)";
+        hudCtx.lineWidth = 2.5 * dpr;
+        hudCtx.beginPath();
+        hudCtx.arc(hx, hy, 16 * dpr, 0, Math.PI * 2);
+        hudCtx.fill();
+        hudCtx.stroke();
+        hudCtx.strokeStyle = "rgba(110, 231, 183, 0.25)";
+        hudCtx.lineWidth = 1.5 * dpr;
+        hudCtx.beginPath();
+        hudCtx.moveTo(hx - 28 * dpr, hy);
+        hudCtx.lineTo(hx + 28 * dpr, hy);
+        hudCtx.stroke();
+      }
     }
 
     const camWrap = document.getElementById("camWrap");
 
-    function measureCameraBow() {
-      if (!video.videoWidth) return 0;
+    function measureHandBow() {
+      if (!video.videoWidth) {
+        handTrack = { present: false, nx: 0.5, ny: 0.25, mass: 0 };
+        return 0;
+      }
       sctx.drawImage(video, 0, 0, CAM_W, CAM_H);
       const img = sctx.getImageData(0, 0, CAM_W, CAM_H);
-      const data = img.data;
-      const yMax = Math.floor(CAM_H * BOW_ZONE);
-      const n = CAM_W * yMax;
+      const n = CAM_W * CAM_H;
       if (!prevGray || prevGray.length !== n) prevGray = new Float32Array(n);
 
-      let diffSum = 0;
-      let horizSum = 0;
-      for (let y = 0; y < yMax; y++) {
-        for (let x = 0; x < CAM_W; x++) {
-          const i = (y * CAM_W + x) * 4;
-          const g = (data[i] + data[i + 1] + data[i + 2]) / 765;
-          const pi = y * CAM_W + x;
-          const d = Math.abs(g - prevGray[pi]);
-          diffSum += d;
-          if (x > 0) {
-            const iL = (y * CAM_W + (x - 1)) * 4;
-            const gL = (data[iL] + data[iL + 1] + data[iL + 2]) / 765;
-            horizSum += Math.abs(g - gL);
-          }
-          prevGray[pi] = g;
-        }
+      handTrack = trackHandInBowZone(img, CAM_W, CAM_H, prevGray, BOW_ZONE);
+      document.getElementById("handOut").textContent = handTrack.present ? "yes" : "—";
+
+      let target = 0;
+      if (handTrack.present) {
+        target = bowFromHandSpeed(lastHandCx, handTrack.cx, CAM_W, BOW_SPEED_GAIN);
+        lastHandCx = handTrack.cx;
+      } else {
+        lastHandCx = null;
       }
-      const motion = diffSum / n;
-      const horiz = horizSum / Math.max(1, n - yMax);
-      return clamp((horiz - 0.012) * 9 + (motion - 0.018) * 5, 0, 1);
+      return target;
     }
 
     function camLoop() {
       if (!stream) return;
       drawCamHud();
       if (holding && useCameraBow && video.readyState >= 2) {
-        const target = measureCameraBow();
-        bowAmp = Math.min(1, bowAmp * 0.82 + target * 0.18);
+        const target = measureHandBow();
+        bowAmp = Math.min(1, bowAmp * 0.78 + target * 0.22);
       }
       camRaf = requestAnimationFrame(camLoop);
     }
@@ -239,9 +254,11 @@
       if (!camReady) return false;
       useCameraBow = true;
       prevGray = null;
+      lastHandCx = null;
+      handTrack = { present: false, nx: 0.5, ny: 0.25, mass: 0 };
       camStart.classList.add("hidden");
-      document.getElementById("bowSrc").textContent = "Cam";
-      setStatus("status", "Hold pitch pad · wave hand in green zone", "ok");
+      document.getElementById("bowSrc").textContent = "Hand";
+      setStatus("status", "Hold pitch pad · move hand in green zone", "ok");
       if (!camRaf) camLoop();
       return true;
     }
@@ -257,6 +274,8 @@
       camReady = false;
       useCameraBow = false;
       prevGray = null;
+      lastHandCx = null;
+      handTrack = { present: false, nx: 0.5, ny: 0.25, mass: 0 };
       camStart.classList.remove("hidden");
       drawCamHud();
     }
