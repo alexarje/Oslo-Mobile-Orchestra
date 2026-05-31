@@ -1,5 +1,3 @@
-# Browsers & hardware
-
 ## Recommended browsers
 
 | Platform | Use | Avoid |

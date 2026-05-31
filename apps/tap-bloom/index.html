@@ -15,7 +15,7 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Generative blooms</h2>
     <p>In the spirit of Brian Eno’s <em>Bloom</em>: turn <strong>Audio on</strong>, then <strong>tap</strong> anywhere. Each touch plants one pentatonic tone that <strong>pulses evenly</strong> — same pitch, steady rhythm.</p>
-    <p>Higher on the screen = higher notes. Tap again to layer more blooms.</p>
+    <p>Higher on the screen = higher notes. Each bloom pulses once per second and fades slowly — tap again to layer more.</p>
   </div>
   <p class="status-bar" id="status">Turn Audio on, then tap the canvas</p>
   <div class="main-stage tap-bloom-stage">
@@ -30,9 +30,9 @@
     const canvas = document.getElementById("bloomCanvas");
     const g = canvas.getContext("2d");
     const PENTA = [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86];
-    const PULSE_SEC = 0.52;
-    const PULSES = 14;
-    const NOTE_DUR = 0.36;
+    const PULSE_SEC = 1;
+    const PULSES = 28;
+    const NOTE_DUR = 0.42;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     let ctx, master, inputBus, built = false;
@@ -93,7 +93,7 @@
       const freq = midiToFreq(PENTA[idx]);
       const t = ctx.currentTime;
       for (let i = 0; i < PULSES; i++) {
-        const peak = 0.2 * Math.pow(0.93, i);
+        const peak = 0.2 * Math.pow(0.975, i);
         playPulse(freq, t + i * PULSE_SEC, peak);
       }
       blooms.push({

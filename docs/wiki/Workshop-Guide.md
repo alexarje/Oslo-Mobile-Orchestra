@@ -1,5 +1,3 @@
-# Workshop guide
-
 ## Goals
 
 - Play together with phones only — no cables.

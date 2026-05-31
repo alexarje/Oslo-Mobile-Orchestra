@@ -12,11 +12,23 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export { slugToTitle };
 
+const SITE = "https://alexarje.github.io/Oslo-Mobile-Orchestra";
+
+const WIKI_SECTIONS = [
+  ["rhythm", "Rhythm"],
+  ["drones", "Drones & filters"],
+  ["melody", "Melody"],
+  ["synthesis", "Synthesis"],
+  ["texture", "Texture"],
+  ["ai", "AI & learning"],
+];
+
 function parseCatalogEntries(catalog) {
   const entries = [];
-  const re = /href:\s*"apps\/([^/]+)\/"[\s\S]*?title:\s*"([^"]*)"[\s\S]*?section:\s*"([^"]*)"/g;
+  const re =
+    /href:\s*"apps\/([^/]+)\/"[\s\S]*?title:\s*"([^"]*)"[\s\S]*?section:\s*"([^"]*)"[\s\S]*?synth:\s*"([^"]*)"[\s\S]*?sensors:\s*"([^"]*)"/g;
   for (const m of catalog.matchAll(re)) {
-    entries.push({ slug: m[1], title: m[2], section: m[3] });
+    entries.push({ slug: m[1], title: m[2], section: m[3], synth: m[4], sensors: m[5] });
   }
   return entries;
 }
@@ -74,18 +86,31 @@ function updateReadme(entries) {
   fs.writeFileSync(file, md);
 }
 
-function updateWikiCatalog() {
+function updateWikiCatalog(entries) {
   const file = path.join(root, "docs/wiki/App-Catalog.md");
-  let md = fs.readFileSync(file, "utf8");
-  md = md.replace(
-    /\| \[([^\]]*)\]\((https?:\/\/[^)]+\/apps\/([^/)]+)\/)\)/g,
-    (_, _old, url, slug) => `| [${slugToTitle(slug)}](${url})`
+  const lines = [
+    "Live links use the [GitHub Pages site](" + SITE + "/) (same paths as the repo).",
+    "Instrument **titles match folder names** (Title Case slugs under `apps/`).",
+    "",
+  ];
+  for (const [sec, label] of WIKI_SECTIONS) {
+    const apps = entries.filter((e) => e.section === sec);
+    if (!apps.length) continue;
+    lines.push(`## ${label}`, "", "| App | Synth / role | Sensors |", "|-----|--------------|---------|");
+    for (const a of apps) {
+      lines.push(
+        `| [${a.title}](${SITE}/apps/${a.slug}/) | ${a.synth} | ${a.sensors} |`
+      );
+    }
+    lines.push("");
+  }
+  lines.push(
+    "## Removed apps",
+    "",
+    "Some older experiments redirect to the hub (`index.html` stub). Examples: Light Theremin, Grain Rain, Live Loop Slicer, IR Cathedral, Hard Sync Lead, Haptic Click, Geo Drone. **Audience** redirects to **Green Button** (`apps/green-button/`).",
+    ""
   );
-  md = md.replace(
-    /\| \[([^\]]*)\]\(\.\.\/\.\.\/apps\/([^/)]+)\/\)/g,
-    (_, _old, slug) => `| [${slugToTitle(slug)}](../../apps/${slug}/)`
-  );
-  fs.writeFileSync(file, md);
+  fs.writeFileSync(file, lines.join("\n"));
 }
 
 function bumpSwCache() {
@@ -103,6 +128,6 @@ const catalog = updateHubCatalog();
 updateAppHtml();
 const entries = parseCatalogEntries(catalog);
 updateReadme(entries);
-updateWikiCatalog();
+updateWikiCatalog(entries);
 bumpSwCache();
 console.log(`Updated ${entries.length} catalog titles from folder slugs.`);

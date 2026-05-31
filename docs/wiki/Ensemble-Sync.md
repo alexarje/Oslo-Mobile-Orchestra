@@ -1,5 +1,3 @@
-# Ensemble sync (no central server)
-
 These apps coordinate **acoustically** or via **shared URLs** — not WebRTC (yet; see [Ideas](../IDEAS.md)).
 
 ## Conductor

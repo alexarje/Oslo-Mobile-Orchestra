@@ -1,5 +1,3 @@
-# Architecture
-
 Static site on **GitHub Pages** — no backend required for performance.
 
 ## Layout

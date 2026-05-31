@@ -14,7 +14,7 @@ The apps should (in theory) work on all modern browsers, but we have seen that t
 ## Quick start
 
 1. Open the site in a browser (not inside a communication app or email; then you should use "Open in browser" command).
-2. Choose the app to play — each card lists **synthesis** and **sensors**. Several apps combine former variants behind a **mode** menu (old URLs still redirect).
+2. Choose the app to play — each card lists **synthesis** and **sensors**. Display names match **folder names** (Title Case under `apps/`). Several apps combine former variants behind a **mode** menu (old URLs still redirect).
 3. Apps will ask for different permissions, including the microphone, motion, or camera. Permissions may need to be given both within the browser and in the OS.
 4. Turn up the volume to at least 70%. Turn off silent mode on iPhone.
 5. In every app: **Learn** = how to play · **QR** = share this instrument with others· **Audio on** = activate sound if it doesn't start automatically.
