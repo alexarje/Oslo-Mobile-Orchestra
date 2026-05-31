@@ -44,7 +44,7 @@
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.38));
+      ({ master } = createMasterBus(c, 0.52));
       built = true;
     }
 
@@ -77,12 +77,12 @@
       const nx = clamp(x / r.width, 0, 1);
       const ny = clamp(y / r.height, 0, 1);
       const freq = mapX(nx);
-      const strength = 0.06 + (1 - ny) * 0.38;
+      const strength = 0.1 + (1 - ny) * 0.48;
       const dampHz = currentDamp;
       karplusPluck(ctx, master, pool, freq, {
         strength,
         dampHz,
-        level: 0.14 + strength * 0.1,
+        level: 0.22 + strength * 0.18,
         feedback: Math.max(0.72, 0.8 - dampHz / 12000),
         decaySec: 1.6,
       });
@@ -97,7 +97,7 @@
       const nx = clamp(x / r.width, 0, 1);
       const ny = clamp(y / r.height, 0, 1);
       document.getElementById("freqOut").textContent = mapX(nx).toFixed(0);
-      document.getElementById("pluckOut").textContent = (0.06 + (1 - ny) * 0.38).toFixed(2);
+      document.getElementById("pluckOut").textContent = (0.1 + (1 - ny) * 0.48).toFixed(2);
     }
 
     pad.addEventListener("pointerdown", async (ev) => {

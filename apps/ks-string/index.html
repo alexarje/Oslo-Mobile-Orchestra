@@ -43,7 +43,7 @@
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.34));
+      ({ master } = createMasterBus(c, 0.52));
       built = true;
     }
 
@@ -75,12 +75,12 @@
       const nx = clamp(x / r.width, 0, 1);
       const ny = clamp(y / r.height, 0, 1);
       const freq = mapX(nx);
-      const strength = 0.06 + (1 - ny) * 0.42;
+      const strength = 0.1 + (1 - ny) * 0.5;
       const dampHz = currentDamp;
       karplusPluck(ctx, master, pool, freq, {
         strength,
         dampHz,
-        level: 0.14 + strength * 0.12,
+        level: 0.22 + strength * 0.2,
         feedback: Math.max(0.72, 0.84 - dampHz / 11000),
         decaySec: 1.7,
       });
@@ -110,7 +110,7 @@
       const y = clamp(ev.clientY - r.top, 0, r.height);
       const nx = x / r.width;
       document.getElementById("freqEl").textContent = mapX(nx).toFixed(0);
-      document.getElementById("pluckEl").textContent = (0.06 + (1 - y / r.height) * 0.42).toFixed(2);
+      document.getElementById("pluckEl").textContent = (0.1 + (1 - y / r.height) * 0.5).toFixed(2);
     });
 
     const stop = (ev) => {
