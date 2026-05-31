@@ -33,12 +33,14 @@
       <p class="value-chip">Lock <strong id="lockOut">0</strong>%</p>
       <p class="value-chip">Peaks <strong id="peaksOut">0</strong></p>
     </div>
-    <canvas id="chromaViz" class="harm-chroma-viz" width="320" height="56" aria-label="Chroma consensus"></canvas>
   </div>
-  <div class="main-stage harm-stage">
+  <div class="main-stage harm-main">
+    <div class="harm-chroma-wrap">
+      <canvas id="chromaViz" class="harm-chroma-viz" aria-label="Chroma consensus"></canvas>
+    </div>
     <button type="button" class="harm-hold-btn" id="holdBtn" disabled aria-label="Hold to play aligned tone">
       <span class="harm-glow" id="glow"></span>
-      <span class="harm-hold-label">Hold to harmonize</span>
+      <span class="harm-hold-label">Hold</span>
     </button>
   </div>
   <script type="module">
@@ -51,6 +53,7 @@
 
     const NOTE = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
     const chromaCanvas = document.getElementById("chromaViz");
+    const chromaWrap = chromaCanvas.parentElement;
     const cg = chromaCanvas.getContext("2d");
     const holdBtn = document.getElementById("holdBtn");
     const glow = document.getElementById("glow");
@@ -69,26 +72,43 @@
       return `${NOTE[((n % 12) + 12) % 12]}${Math.floor(n / 12) - 1}`;
     }
 
-    function drawChroma(chroma, rootPc) {
+    function sizeChromaCanvas() {
       const dpr = devicePixelRatio || 1;
-      const w = Math.floor(chromaCanvas.clientWidth * dpr) || 320;
-      const h = Math.floor(56 * dpr);
-      if (chromaCanvas.width !== w) chromaCanvas.width = w;
-      if (chromaCanvas.height !== h) chromaCanvas.height = h;
+      const rect = chromaWrap.getBoundingClientRect();
+      const w = Math.max(1, Math.floor(rect.width * dpr));
+      const h = Math.max(1, Math.floor(56 * dpr));
+      if (chromaCanvas.width !== w || chromaCanvas.height !== h) {
+        chromaCanvas.width = w;
+        chromaCanvas.height = h;
+      }
+      return { w, h, dpr };
+    }
+
+    function drawChroma(chroma, rootPc) {
+      const { w, h, dpr } = sizeChromaCanvas();
       const barW = w / 12;
-      const max = Math.max(...chroma, 1e-6);
+      let max = 1e-6;
+      for (let i = 0; i < 12; i++) max = Math.max(max, chroma[i]);
       cg.setTransform(1, 0, 0, 1, 0, 0);
       cg.fillStyle = "#0f172a";
       cg.fillRect(0, 0, w, h);
       for (let i = 0; i < 12; i++) {
-        const bh = (chroma[i] / max) * (h - 14 * dpr);
+        const norm = chroma[i] / max;
+        const bh = Math.max(4 * dpr, norm * (h - 16 * dpr));
         cg.fillStyle = i === rootPc ? "#6ee7b7" : "#334155";
-        cg.fillRect(i * barW + 2, h - bh, barW - 4, bh);
+        cg.fillRect(i * barW + 2 * dpr, h - bh, barW - 4 * dpr, bh);
         cg.fillStyle = "#94a3b8";
-        cg.font = `${8 * dpr}px system-ui`;
+        cg.font = `${9 * dpr}px system-ui,sans-serif`;
         cg.textAlign = "center";
-        cg.fillText(NOTE[i], i * barW + barW / 2, h - 2);
+        cg.textBaseline = "bottom";
+        cg.fillText(NOTE[i], i * barW + barW / 2, h - 2 * dpr);
       }
+    }
+
+    function drawIdleChroma() {
+      const idle = new Float32Array(12);
+      for (let i = 0; i < 12; i++) idle[i] = 0.08;
+      drawChroma(idle, 0);
     }
 
     function setVoiceHz(list) {
@@ -180,7 +200,7 @@
       holdBtn.disabled = false;
       document.getElementById("startBtn").textContent = "■ Stop";
       document.getElementById("startBtn").classList.add("active");
-      setStatus("status", "Listening… hold to play aligned tone", "ok");
+      setStatus("status", "Listening… hold circle below", "ok");
       listenFrame();
     }
 
@@ -193,6 +213,7 @@
       document.getElementById("startBtn").textContent = "Start";
       document.getElementById("startBtn").classList.remove("active");
       setStatus("status", "Stopped", "");
+      drawIdleChroma();
     }
 
     document.getElementById("startBtn").addEventListener("click", () => {
@@ -227,9 +248,12 @@
     holdBtn.addEventListener("lostpointercapture", endHold);
 
     new ResizeObserver(() => {
-      if (running) drawChroma(consensus.getChromaView(), ((consensus.getRootMidi() % 12) + 12) % 12);
-    }).observe(chromaCanvas);
+      const rootPc = ((consensus.getRootMidi() % 12) + 12) % 12;
+      if (running) drawChroma(consensus.getChromaView(), rootPc);
+      else drawIdleChroma();
+    }).observe(chromaWrap);
 
+    requestAnimationFrame(() => drawIdleChroma());
     window.addEventListener("pagehide", stop);
   </script>
 </body>
