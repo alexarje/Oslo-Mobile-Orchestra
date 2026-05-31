@@ -9,11 +9,22 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
  * @param {AudioNode} dest
  */
 export function createFeedbackMatrix(ctx, dest) {
-  const input = ctx.createGain();
-  input.gain.value = 0.35;
+  const merger = ctx.createGain();
+  merger.gain.value = 1;
   const mix = ctx.createGain();
-  mix.gain.value = 0.45;
+  mix.gain.value = 0.48;
   mix.connect(dest);
+  merger.connect(mix);
+
+  /** Sustained excitation (noise) — not ducked by ping(). */
+  const sustain = ctx.createGain();
+  sustain.gain.value = 1;
+  sustain.connect(merger);
+
+  /** Short bursts — ping() only touches this gain. */
+  const burst = ctx.createGain();
+  burst.gain.value = 0;
+  burst.connect(merger);
 
   const n = 4;
   const delays = [];
@@ -23,7 +34,7 @@ export function createFeedbackMatrix(ctx, dest) {
     const d = ctx.createDelay(0.6);
     d.delayTime.value = 0.08 + i * 0.06;
     const tap = ctx.createGain();
-    tap.gain.value = 0.3;
+    tap.gain.value = 0.32;
     d.connect(tap);
     tap.connect(mix);
     delays.push(d);
@@ -37,11 +48,10 @@ export function createFeedbackMatrix(ctx, dest) {
     }
   }
 
-  input.connect(delays[0]);
-
   return {
-    input,
-    /** @param {{ alpha?: number, beta?: number, gamma?: number }} rot rotation rates */
+    /** Connect noise or other held exciters here. */
+    input: sustain,
+    /** @param {{ alpha?: number, beta?: number, gamma?: number }} rot rotation rates (deg/s) */
     setRouting(rot, when = ctx.currentTime) {
       const a = clamp((rot.alpha ?? 0) / 120, -1, 1);
       const b = clamp((rot.beta ?? 0) / 120, -1, 1);
@@ -60,9 +70,9 @@ export function createFeedbackMatrix(ctx, dest) {
       }
     },
     ping(level = 0.5, when = ctx.currentTime) {
-      input.gain.cancelScheduledValues(when);
-      input.gain.setValueAtTime(level, when);
-      input.gain.exponentialRampToValueAtTime(0.001, when + 0.35);
+      burst.gain.cancelScheduledValues(when);
+      burst.gain.setValueAtTime(level, when);
+      burst.gain.exponentialRampToValueAtTime(0.001, when + 0.35);
     },
   };
 }
