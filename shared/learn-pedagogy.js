@@ -50,9 +50,9 @@ export const LEARN_PEDAGOGY = {
     "Introduces evolution as a compositional idea — variation within constraints, not pure random noise.",
   ],
 
-  audience: [
-    "Many simple voices follow motion or touch rules and drift slightly out of phase, like a flock.",
-    "Good for exploring texture and collective density: more movement often means more activity in the swarm.",
+  "green-button": [
+    "Hold the green circle to swell a sine drone; finger motion inside adds vibrato and shimmer.",
+    "Simple hold-to-play drone — one big button, collective density when many phones swell together.",
   ],
 
   "drone-choir": [
@@ -168,6 +168,11 @@ export const LEARN_PEDAGOGY = {
   "spectral-freeze": [
     "Analysis splits sound into partials or bands; freezing holds the spectrum while you reshape or sustain.",
     "Bridges spectral thinking — timbre as a set of frequencies, not only a single waveform.",
+  ],
+
+  "tap-bloom": [
+    "Each tap plants a pentatonic tone and expanding ripple; delay feedback and delayed “child” notes keep the field evolving.",
+    "Generative ambient play — minimal gesture, rich overlap; vertical position chooses pitch height.",
   ],
 
   "wavetable-scan": [

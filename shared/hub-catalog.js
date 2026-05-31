@@ -59,8 +59,8 @@ export const HUB_APPS = [
     sensors: "Touch · mic",
   },
   {
-    href: "apps/audience/",
-    title: "Audience",
+    href: "apps/green-button/",
+    title: "Green Button",
     section: "drones",
     synth: "Swarm tones",
     sensors: "Touch · motion",
@@ -204,6 +204,13 @@ export const HUB_APPS = [
     section: "texture",
     synth: "FFT partials",
     sensors: "Mic · touch",
+  },
+  {
+    href: "apps/tap-bloom/",
+    title: "Tap Bloom",
+    section: "texture",
+    synth: "Generative blooms",
+    sensors: "Touch",
   },
   {
     href: "apps/wavetable-scan/",

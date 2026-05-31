@@ -764,6 +764,20 @@ body.hub {
   pointer-events: none;
 }
 
+.tap-bloom-app .tap-bloom-stage {
+  flex: 1;
+  min-height: 0;
+  background: radial-gradient(circle at 50% 40%, #141c28 0%, #050608 72%);
+  touch-action: none;
+}
+
+.tap-bloom-app .tap-bloom-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
 /* Compass Wah — compass rose canvas */
 .compass-wah-app .main-stage {
   flex: 1 1 auto;

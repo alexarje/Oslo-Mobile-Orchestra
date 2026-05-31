@@ -26,7 +26,7 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 | [Flat Edge](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/flat-edge/) | Flat gate | Sound only when phone is flat |
 | [Heading Choir](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/heading-choir/) | Compass pans | Hold pad; facing direction pans choir |
 | [Harmonizer](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/harmonizer/) | Group pitch | FFT chroma consensus; hold for root/chord |
-| [Audience](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/audience/) | Crowd layer | Hold circle; finger motion → vibrato |
+| [Green Button](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/green-button/) | Crowd swell | Hold green circle; finger motion → vibrato |
 
 ## Melody
 
