@@ -52,12 +52,36 @@
       ctx = c;
       ({ master } = createMasterBus(c, 0.62));
       osc = ctx.createOscillator();
-      gain = ctx.createGain();
-      gain.gain.value = 0;
       osc.type = "sine";
       osc.frequency.value = 220;
-      osc.connect(gain);
+
+      const trem = ctx.createGain();
+      trem.gain.value = 1;
+
+      const pitchLfo = ctx.createOscillator();
+      pitchLfo.type = "sine";
+      pitchLfo.frequency.value = 0.12 + Math.random() * 0.1;
+      const pitchDepth = ctx.createGain();
+      pitchDepth.gain.value = 5 + Math.random() * 4;
+      pitchLfo.connect(pitchDepth);
+      pitchDepth.connect(osc.detune);
+
+      const ampLfo = ctx.createOscillator();
+      ampLfo.type = "sine";
+      ampLfo.frequency.value = 0.2 + Math.random() * 0.15;
+      const ampDepth = ctx.createGain();
+      ampDepth.gain.value = 0.04;
+      ampLfo.connect(ampDepth);
+      ampDepth.connect(trem.gain);
+
+      gain = ctx.createGain();
+      gain.gain.value = 0;
+      osc.connect(trem);
+      trem.connect(gain);
       gain.connect(master);
+
+      pitchLfo.start();
+      ampLfo.start();
       osc.start();
       built = true;
     }

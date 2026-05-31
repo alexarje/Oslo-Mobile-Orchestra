@@ -16,6 +16,8 @@ bindLearn();
   const BLACK_SEMIS = new Set([1, 3, 6, 8, 10]);
   const KEY_BY_SEMI = { 0: 'a', 1: 'w', 2: 's', 3: 'e', 4: 'd', 5: 'f', 6: 't', 7: 'g', 8: 'y', 9: 'h', 10: 'u', 11: 'j' };
   const OCTAVES_ON_KEYBOARD = 3;
+  /** Extra top C so each visible octave can run C→C (C4–C7). */
+  const TOP_C_EXTRA = 1;
   const RELEASE_SEC = 0.1;
   const ATTACK_SEC = 0.012;
 
@@ -26,7 +28,7 @@ bindLearn();
   const octaveDisplay = document.getElementById('octave-display');
   const slideModeEl = document.getElementById('slideMode');
 
-  const WHITE_W = 28; // key 27px + 1px gap — fits 3 octaves with scroll
+  const WHITE_W = 28; // key 27px + 1px gap — C4–C7 with horizontal scroll
   const BLACK_NUDGE = 20;
 
   function ensureCtx() {
@@ -66,7 +68,7 @@ bindLearn();
 
   function buildNoteDefs() {
     const defs = [];
-    const totalSemis = OCTAVES_ON_KEYBOARD * 12;
+    const totalSemis = OCTAVES_ON_KEYBOARD * 12 + TOP_C_EXTRA;
     for (let semi = 0; semi < totalSemis; semi++) {
       const inOct = semi % 12;
       const octNum = 4 + Math.floor(semi / 12);
