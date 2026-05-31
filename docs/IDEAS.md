@@ -126,9 +126,9 @@ Different ways to generate sound beyond what the hub already demos. Pair with to
 
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
-| **Bit Crush Pad** | Reduce sample rate / bit depth | Arcade crunch | Network or shake → crush |
-| **Feedback Matrix** | Small feedback delay network | Atonal texture | Gyro routes delay paths |
-| **Shepard Glide** | Continuous Shepard tone | Infinite rise/fall | Tilt → direction & rate |
+| ~~**Bit Crush Pad**~~ | Reduce sample rate / bit depth | [Arcade Static](../apps/bit-crush-pad/) | Touch · motion · network |
+| ~~**Feedback Matrix**~~ | Small feedback delay network | [Delay Maze](../apps/feedback-matrix/) | Touch · gyro |
+| ~~**Shepard Glide**~~ | Continuous Shepard tone | [Endless Rise](../apps/shepard-glide/) | Touch · tilt |
 
 ### Already on hub (reference)
 

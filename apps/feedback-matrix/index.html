@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Delay Maze — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell feedback-matrix-app">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Delay Maze</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Feedback matrix</h2>
+    <p>Turn <strong>Audio on</strong>, allow <strong>motion</strong>. <strong>Hold</strong> the pad to excite a web of delay lines. <strong>Rotate</strong> the phone — gyro steers which delays feed back into each other.</p>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Gyro <strong id="gyroOut">—</strong></p>
+  </div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"></div>
+  </div>
+  <script type="module">
+    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { createFeedbackMatrix } from "../../shared/feedback-matrix.js";
+    import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
+
+    bindLearn();
+    const pad = document.getElementById("pad");
+    const SENSOR_OPTS = { needMotion: true, needOrientation: false };
+
+    let ctx, master, matrix, noise, noiseGain, built = false;
+    let holding = false;
+    let activeId = null;
+    let pingTimer = null;
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.5));
+      matrix = createFeedbackMatrix(ctx, master);
+      const len = ctx.sampleRate * 0.15;
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      noise.loop = true;
+      noiseGain = ctx.createGain();
+      noiseGain.gain.value = 0;
+      noise.connect(noiseGain);
+      noiseGain.connect(matrix.input);
+      noise.start();
+      built = true;
+      void enableSensors(SENSOR_OPTS).then((ok) => {
+        if (!ok) return;
+        onMotion(({ rotAlpha, rotBeta, rotGamma }) => {
+          matrix.setRouting({ alpha: rotAlpha, beta: rotBeta, gamma: rotGamma });
+          const mag = Math.sqrt(rotAlpha ** 2 + rotBeta ** 2 + rotGamma ** 2);
+          document.getElementById("gyroOut").textContent = `${mag.toFixed(0)}°/s`;
+        });
+      });
+    }
+
+    function excite() {
+      if (!matrix || !ctx) return;
+      matrix.ping(0.55, ctx.currentTime);
+      noiseGain.gain.setTargetAtTime(0.12, ctx.currentTime, 0.02);
+    }
+
+    pad.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      primeSensors(SENSOR_OPTS);
+      await startAudio(!built ? buildAudio : undefined);
+      if (!built) return;
+      holding = true;
+      activeId = e.pointerId;
+      pad.setPointerCapture(activeId);
+      pad.classList.add("active");
+      excite();
+      pingTimer = setInterval(excite, 280);
+    });
+
+    const stop = (e) => {
+      if (e.pointerId !== activeId) return;
+      holding = false;
+      activeId = null;
+      pad.classList.remove("active");
+      clearInterval(pingTimer);
+      pingTimer = null;
+      if (ctx) noiseGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
+    };
+    pad.addEventListener("pointerup", stop);
+    pad.addEventListener("pointercancel", stop);
+    pad.addEventListener("lostpointercapture", stop);
+  </script>
+</body>
+</html>

@@ -275,6 +275,27 @@ export const HUB_APPS = [
     synth: "Chaotic subtractive",
     sensors: "Touch · motion",
   },
+  {
+    href: "apps/bit-crush-pad/",
+    title: "Arcade Static",
+    section: "texture",
+    synth: "Bit crush",
+    sensors: "Touch · motion · network",
+  },
+  {
+    href: "apps/feedback-matrix/",
+    title: "Delay Maze",
+    section: "texture",
+    synth: "Feedback delays",
+    sensors: "Touch · gyro",
+  },
+  {
+    href: "apps/shepard-glide/",
+    title: "Endless Rise",
+    section: "drones",
+    synth: "Shepard tone",
+    sensors: "Touch · tilt",
+  },
 ];
 
 /** @param {string} href e.g. "apps/piano/" */
