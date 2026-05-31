@@ -1,5 +1,7 @@
 # Workshop guide — Oslo Mobile Orchestra
 
+> Extended version with scenarios and assessment: **[GitHub Wiki → Workshop guide](https://github.com/alexarje/Oslo-Mobile-Orchestra/wiki/Workshop-Guide)**
+
 ## Goals
 
 - **Play together** with phones only — no cables, minimal setup.
@@ -30,8 +32,9 @@ Open hub → **Synth Pad**. Everyone finds one note. Conductor counts 1–2–3�
 ### Ensemble (15 min)
 1. Conductor sets 96 BPM, **Start countdown**, share link (AirDrop, QR, shout URL shortener).
 2. Drones: **Drone Choir** — assign F / A♭ / C / E♭ counts (5 each).
-3. Rhythm: **Drum Sequencer Linear** or **Drumkit** — split roles; use conductor link `start` + `bpm` if needed.
-4. Texture: 4 players **Granular Tilt** behind the group.
+3. Rhythm: **Drum Sequencer Linear/Circular**, **Drumkit**, or **Firefly** — split roles; Conductor link `start` + `bpm` if needed.
+4. Optional **Harmonizer** — blend into room tonality; **Firefly** for pulse sync.
+5. Texture: **Granular Tilt** or **Video Sonifier** behind the group.
 
 ### Cool-down (5 min)
 All screens down; one sustained drone from a single phone. Discuss what felt “musical” vs “tech demo.”
