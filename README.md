@@ -20,6 +20,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Drumkit](apps/drumkit/) | Rhythm hits | 8 drum pads |
 | [Drum Sequencer](apps/drum-sequencer/) | Patterns | 4×8 steps, swing |
 | [Circular Drum](apps/circular-drum/) | Ring patterns | 4×16 steps on concentric rings |
+| [Firefly](apps/firefly/) | Sync pulses | Mic entrainment — phones align click rate & phase |
 | [Delay Throw](apps/delay-throw/) | Echo layers | Tap sample + tilt delay |
 | [Sampler](apps/sampler/) | Loop textures | Mic loop + tilt FX |
 | [FM Touch / + Tilt](apps/fm-touch/) | FM timbre | Touch + optional tilt mod |

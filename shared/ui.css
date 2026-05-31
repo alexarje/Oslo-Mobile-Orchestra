@@ -1126,6 +1126,63 @@ body.hub {
   padding: 0 0.5rem calc(0.35rem + var(--safe-b));
 }
 
+/* Firefly pulse sync */
+.firefly-app .firefly-toolbar {
+  flex-shrink: 0;
+  padding: 0 0.5rem 0.35rem;
+  background: #111827;
+}
+
+.firefly-app .firefly-toolbar .control-row {
+  padding: 0.2rem 0;
+}
+
+.firefly-app .firefly-toolbar .control-row input[type="range"] {
+  flex: 1 1 5rem;
+  max-width: 8rem;
+}
+
+.firefly-app .evo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.25rem 0;
+  align-items: center;
+}
+
+.firefly-app .firefly-stage {
+  flex: 1;
+  min-height: 10rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0.5rem calc(0.35rem + var(--safe-b));
+  border-radius: 16px;
+  background: radial-gradient(ellipse at center, #0f172a 0%, #020617 75%);
+  overflow: hidden;
+}
+
+.firefly-app .firefly-glow {
+  width: min(55vw, 200px);
+  height: min(55vw, 200px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.08) 0%, transparent 70%);
+  transition: transform 0.05s ease-out, opacity 0.08s;
+  opacity: 0.35;
+}
+
+.firefly-app .firefly-glow.on {
+  opacity: 1;
+  transform: scale(1.12);
+  background: radial-gradient(circle, rgba(253, 224, 71, 0.55) 0%, rgba(250, 204, 21, 0.12) 45%, transparent 72%);
+  box-shadow: 0 0 48px rgba(250, 204, 21, 0.35);
+}
+
+.firefly-app .firefly-stage.pulse {
+  background: radial-gradient(ellipse at center, #1a2e1a 0%, #020617 75%);
+}
+
 .pluck-ripple {
   position: absolute;
   width: 48px;
