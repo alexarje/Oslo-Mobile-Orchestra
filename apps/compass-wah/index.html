@@ -7,28 +7,61 @@
   <title>Compass Wah — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell">
+<body class="app-shell compass-wah-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Compass Wah</h1>
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Compass filter</h2>
-    <p>Turn <strong>Audio on</strong>, then Rotate phone flat like a compass — <strong>alpha</strong> heading sweeps a resonant lowpass (wah by orientation).</p>
+    <p>Turn <strong>Audio on</strong>, tap the compass, and allow <strong>orientation</strong> on iPhone.</p>
+    <p>Rotate the phone flat — the <strong>needle</strong> shows heading and sweeps a resonant lowpass (wah).</p>
   </div>
+  <p class="status-bar" id="status">Tap compass · Audio on</p>
   <div class="readout-row">
+    <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
     <p class="value-chip">Cutoff <strong id="cutOut">—</strong> Hz</p>
   </div>
   <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"></div>
+    <canvas id="compass" class="canvas-fill" aria-label="Compass"></canvas>
   </div>
   <script type="module">
-    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
+    import { drawCompassRose, sizeCompassCanvas } from "../../shared/compass-rose.js";
     import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
+    const canvas = document.getElementById("compass");
+    const g = canvas.getContext("2d");
+
     let ctx, master, osc, filt, gate, built = false;
+    let sensorsReady = false;
+    let alpha = 0;
+    let beta = 90;
+
+    function headingFromOrientation(o) {
+      if (typeof o.webkitCompassHeading === "number" && Number.isFinite(o.webkitCompassHeading)) {
+        return o.webkitCompassHeading;
+      }
+      if (typeof o.alpha === "number" && Number.isFinite(o.alpha)) return o.alpha;
+      return alpha;
+    }
+
+    function draw() {
+      const { w, h, dpr } = sizeCompassCanvas(canvas);
+      drawCompassRose(g, w, h, dpr, { heading: alpha, beta });
+    }
+
+    function applyOrientation() {
+      if (!built || !ctx) return;
+      const heading = ((alpha % 360) + 360) % 360;
+      const cut = 200 + (heading / 360) * 6000;
+      filt.frequency.setTargetAtTime(cut, ctx.currentTime, 0.04);
+      document.getElementById("headOut").textContent = heading.toFixed(0);
+      document.getElementById("cutOut").textContent = cut.toFixed(0);
+      draw();
+    }
 
     function buildAudio(c) {
       ctx = c;
@@ -46,24 +79,43 @@
       gate.connect(master);
       osc.start();
       built = true;
+      applyOrientation();
     }
+
+    registerAudioBoot(buildAudio);
 
     async function initSensors() {
+      if (sensorsReady) return true;
       const ok = await enableSensors({ needMotion: false, needOrientation: true });
-      if (!ok) return;
+      if (!ok) {
+        setStatus("status", "Allow orientation access in Settings", "warn");
+        draw();
+        return false;
+      }
       onOrientation((o) => {
-        const a = o.alpha ?? 0;
-        const cut = 200 + ((a % 360) / 360) * 6000;
-        filt.frequency.setTargetAtTime(cut, ctx.currentTime, 0.04);
-        document.getElementById("cutOut").textContent = cut.toFixed(0);
+        alpha = headingFromOrientation(o);
+        const b = o.beta;
+        if (typeof b === "number" && Number.isFinite(b) && b !== 0) beta = b;
+        applyOrientation();
       });
+      sensorsReady = true;
+      setStatus("status", "Rotate flat · heading drives wah", "ok");
+      return true;
     }
 
-    document.getElementById("pad").addEventListener("pointerdown", async () => {
+    async function boot() {
       primeSensors({ needMotion: false, needOrientation: true });
       await startAudio(!built ? buildAudio : undefined);
       await initSensors();
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      void boot();
     });
+
+    new ResizeObserver(() => draw()).observe(canvas.parentElement);
+    requestAnimationFrame(() => draw());
   </script>
 </body>
 </html>
