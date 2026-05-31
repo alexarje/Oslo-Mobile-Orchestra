@@ -2,13 +2,17 @@
  * Shared UI helpers — learn panel, status, iOS-safe audio unlock.
  */
 import { getAudioContext, primeMicStream, unlockAudio } from "./audio.js";
+import { renderQrCanvas } from "./qr.js";
 import { loadA11yPreference } from "./workshop.js";
 
 loadA11yPreference();
 
 const AUDIO_TOGGLE_ID = "audioToggle";
 const HEADER_CONTROLS_ID = "headerControls";
+const QR_BTN_ID = "qrBtn";
+const QR_PANEL_ID = "qrPanel";
 let audioOn = false;
+let qrBound = false;
 let optionalBootFn = null;
 let bootNeedsMic = false;
 
@@ -40,6 +44,24 @@ export function initHeaderControls() {
     if (!wrap.contains(learnBtn)) wrap.appendChild(learnBtn);
   }
 
+  let qrBtn = document.getElementById(QR_BTN_ID);
+  if (!qrBtn) {
+    qrBtn = document.createElement("button");
+    qrBtn.type = "button";
+    qrBtn.id = QR_BTN_ID;
+    qrBtn.className = "learn-toggle qr-toggle";
+    qrBtn.textContent = "QR";
+    qrBtn.setAttribute("aria-label", "Share QR code for this app");
+    qrBtn.setAttribute("aria-haspopup", "dialog");
+  } else if (qrBtn.parentElement && qrBtn.parentElement !== wrap) {
+    qrBtn.remove();
+  }
+  const audioWrapExisting = wrap.querySelector(".audio-toggle-wrap");
+  if (!wrap.contains(qrBtn)) {
+    if (audioWrapExisting) wrap.insertBefore(qrBtn, audioWrapExisting);
+    else wrap.appendChild(qrBtn);
+  }
+
   if (!document.getElementById(AUDIO_TOGGLE_ID)) {
     const audioWrap = document.createElement("div");
     audioWrap.className = "audio-toggle-wrap";
@@ -59,14 +81,96 @@ export function initHeaderControls() {
   }
 }
 
+function ensureQrPanel() {
+  let panel = document.getElementById(QR_PANEL_ID);
+  if (panel) return panel;
+
+  panel = document.createElement("div");
+  panel.id = QR_PANEL_ID;
+  panel.className = "qr-panel";
+  panel.hidden = true;
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-label", "Share QR code");
+  panel.innerHTML = `
+    <button type="button" class="qr-panel-backdrop" aria-label="Close"></button>
+    <div class="qr-panel-sheet panel">
+      <button type="button" class="qr-panel-close" aria-label="Close">×</button>
+      <h2>Share instrument</h2>
+      <p class="qr-caption">Scan to open this app on another phone</p>
+      <div class="qr-share">
+        <canvas id="qrCanvas" role="img" aria-label="QR code"></canvas>
+      </div>
+      <div class="link-box" id="qrLink"></div>
+      <button type="button" class="btn btn-secondary btn-sm" id="qrCopyBtn">Copy link</button>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  const close = () => closeQrPanel();
+  panel.querySelector(".qr-panel-backdrop")?.addEventListener("click", close);
+  panel.querySelector(".qr-panel-close")?.addEventListener("click", close);
+  panel.querySelector("#qrCopyBtn")?.addEventListener("click", async () => {
+    const text = document.getElementById("qrLink")?.textContent || location.href;
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus(document.getElementById("qrCopyBtn"), "Copied!", "ok");
+      setTimeout(() => {
+        const b = document.getElementById("qrCopyBtn");
+        if (b) b.textContent = "Copy link";
+      }, 1400);
+    } catch {
+      setStatus(document.getElementById("qrCopyBtn"), "Copy manually", "warn");
+    }
+  });
+
+  return panel;
+}
+
+function closeQrPanel() {
+  const panel = document.getElementById(QR_PANEL_ID);
+  const btn = document.getElementById(QR_BTN_ID);
+  if (panel) panel.hidden = true;
+  btn?.setAttribute("aria-expanded", "false");
+}
+
+export function openQrPanel(url = location.href) {
+  const panel = ensureQrPanel();
+  const linkEl = document.getElementById("qrLink");
+  const canvas = document.getElementById("qrCanvas");
+  if (linkEl) linkEl.textContent = url;
+  if (canvas) renderQrCanvas(canvas, url, { scale: 4, border: 2 });
+  document.getElementById("learnPanel")?.classList.remove("open");
+  document.getElementById("learnBtn")?.setAttribute("aria-expanded", "false");
+  panel.hidden = false;
+  document.getElementById(QR_BTN_ID)?.setAttribute("aria-expanded", "true");
+  panel.querySelector(".qr-panel-close")?.focus();
+}
+
+/** Header QR button — opens share dialog for the current page URL. */
+export function bindQr(btnId = QR_BTN_ID) {
+  initHeaderControls();
+  if (qrBound) return;
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  qrBound = true;
+  btn.addEventListener("click", () => {
+    const panel = document.getElementById(QR_PANEL_ID);
+    if (panel && !panel.hidden) closeQrPanel();
+    else openQrPanel();
+  });
+}
+
 export function bindLearn(learnBtnId = "learnBtn", panelId = "learnPanel") {
   initHeaderControls();
+  bindQr();
   const btn = document.getElementById(learnBtnId);
   const panel = document.getElementById(panelId);
   btn?.addEventListener("click", () => {
     panel?.classList.toggle("open");
     const open = panel?.classList.contains("open");
     btn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) closeQrPanel();
   });
   btn?.setAttribute("aria-controls", panelId);
 }
@@ -192,7 +296,10 @@ export function createAudioBoot(initFn, { screenTap = true, mic = false } = {}) 
 }
 
 function autoInitHeaderControls() {
-  if (document.querySelector(".app-header, .hub-header")) initHeaderControls();
+  if (document.querySelector(".app-header, .hub-header")) {
+    initHeaderControls();
+    bindQr();
+  }
 }
 
 if (typeof document !== "undefined") {

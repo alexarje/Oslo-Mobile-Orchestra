@@ -146,9 +146,75 @@ a {
   touch-action: manipulation;
 }
 
-.learn-toggle[aria-expanded="true"] {
+.learn-toggle[aria-expanded="true"],
+.qr-toggle[aria-expanded="true"] {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.qr-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + var(--safe-b));
+}
+
+.qr-panel[hidden] {
+  display: none !important;
+}
+
+.qr-panel-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(2, 6, 23, 0.82);
+  cursor: pointer;
+}
+
+.qr-panel-sheet {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 320px);
+  max-height: min(88vh, 520px);
+  overflow-y: auto;
+  padding: 0.75rem 0.65rem 0.85rem;
+}
+
+.qr-panel-sheet h2 {
+  margin: 0 1.5rem 0.35rem 0;
+  font-size: 0.95rem;
+}
+
+.qr-panel-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 6px;
+  background: #1e293b;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qr-panel-sheet .link-box {
+  font-size: 0.62rem;
+  word-break: break-all;
+  margin: 0.35rem 0;
+}
+
+.qr-panel-sheet #qrCopyBtn {
+  width: 100%;
+  margin-top: 0.25rem;
 }
 
 .audio-toggle-wrap {
@@ -1652,6 +1718,7 @@ html.omo-a11y .btn,
 html.omo-a11y .cell,
 html.omo-a11y .drum-pad,
 html.omo-a11y .learn-toggle,
+html.omo-a11y .qr-toggle,
 html.omo-a11y .audio-toggle {
   min-height: 52px;
   font-size: 0.85rem;
