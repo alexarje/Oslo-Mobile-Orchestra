@@ -14,8 +14,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Breath + finger holes</h2>
-    <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>hold</strong> one or more holes while <strong>blowing</strong> past the yellow line.</p>
-    <p>Release a hole to open it. More open holes from the <strong>bottom</strong> upward = higher notes (C → D → E → G → A → C). Bottom hole is nearest the screen edge.</p>
+    <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>blow</strong> past the yellow line.</p>
+    <p><strong>Tap a hole</strong> to cover or uncover it. Uncover from the <strong>bottom</strong> hole upward for higher notes (C → D → E → G → A → C). Bottom hole is nearest the screen edge.</p>
   </div>
   <p class="status-bar" id="status"></p>
   <div class="breath-row">
@@ -51,10 +51,10 @@
     let ready = false;
     let booting = false;
     let timeData = new Float32Array(2048);
-    /** true = hole covered (finger down). */
-    const holesCovered = [false, false, false, false, false];
-    const heldHoles = new Set();
+    /** true = hole covered. */
+    const holesCovered = [true, true, true, true, true];
     const holeBtns = [];
+    let bootPromise = null;
 
     function indexToMidi(i) {
       const idx = Math.max(0, Math.min(5, Math.round(i)));
@@ -96,66 +96,27 @@
       });
     }
 
-    function muteVoice(when) {
-      if (!ctx || !toneGain) return;
-      toneGain.gain.cancelScheduledValues(when);
-      toneGain.gain.setTargetAtTime(0, when, 0.02);
-      noiseGain.gain.cancelScheduledValues(when);
-      noiseGain.gain.setTargetAtTime(0, when, 0.02);
-      setVibrato(false, 0, when);
-    }
-
     function syncPitchIfPlaying() {
-      if (!ctx || !isHoldingHoles()) return;
-      const blowing = getRms() > blowThreshold;
-      if (blowing) setPitch(ctx.currentTime);
+      if (!ctx || !toneOsc) return;
+      if (getRms() > blowThreshold) setPitch(ctx.currentTime);
     }
 
-    function isHoldingHoles() {
-      return heldHoles.size > 0;
-    }
-
-    function onHoleDown(i, e) {
+    function onHoleTap(i, e) {
       e.preventDefault();
       e.stopPropagation();
       primeMicStream();
       void enableAudio();
-      holesCovered[i] = true;
-      heldHoles.add(i);
-      holeBtns[i].setPointerCapture(e.pointerId);
+      holesCovered[i] = !holesCovered[i];
       applyFingering();
       syncPitchIfPlaying();
-    }
-
-    function onHoleUp(i, e) {
-      if (e?.pointerId != null) {
-        try {
-          if (holeBtns[i].hasPointerCapture(e.pointerId)) {
-            holeBtns[i].releasePointerCapture(e.pointerId);
-          }
-        } catch {
-          /* noop */
-        }
-      }
-      holesCovered[i] = false;
-      heldHoles.delete(i);
-      applyFingering();
-      if (!isHoldingHoles() && ctx) {
-        muteVoice(ctx.currentTime);
-      } else {
-        syncPitchIfPlaying();
-      }
     }
 
     for (let i = 0; i < HOLE_COUNT; i++) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "flute-hole open";
+      btn.className = "flute-hole covered";
       btn.dataset.hole = String(i + 1);
-      btn.addEventListener("pointerdown", (e) => onHoleDown(i, e));
-      btn.addEventListener("pointerup", (e) => onHoleUp(i, e));
-      btn.addEventListener("pointercancel", (e) => onHoleUp(i, e));
-      btn.addEventListener("lostpointercapture", () => onHoleUp(i));
+      btn.addEventListener("pointerdown", (e) => onHoleTap(i, e));
       fluteTube.appendChild(btn);
       holeBtns.push(btn);
     }
@@ -230,8 +191,7 @@
       const rms = getRms();
       document.getElementById("breathMeter").style.width = `${Math.min(100, (rms / 0.12) * 100)}%`;
       const blowing = rms > blowThreshold;
-      const fingering = isHoldingHoles();
-      const playing = blowing && fingering;
+      const playing = blowing;
       document.getElementById("breathMeter").classList.toggle("blowing", playing);
       const t = ctx.currentTime;
       if (playing) {
@@ -265,23 +225,30 @@
       analyser = ctx.createAnalyser();
       analyser.fftSize = 2048;
       timeData = new Float32Array(analyser.fftSize);
-      connectMicAnalyser(ctx, micStream, analyser);
+      connectMicAnalyser(ctx, micStream, analyser, { inputGain: 2.2 });
       createVoice();
       setStatus("status", "Calibrating… stay quiet", "");
       await calibrate();
       ready = true;
-      setStatus("status", "Hold holes + blow for tone", "ok");
+      setStatus("status", "Blow for tone · tap holes to change pitch", "ok");
       tick();
     }
 
     async function enableAudio() {
-      if (ready || booting) return;
-      booting = true;
-      try {
-        await startAudio(boot);
-      } finally {
-        booting = false;
+      if (ready) {
+        await startAudio();
+        return;
       }
+      if (bootPromise) {
+        await bootPromise;
+        return;
+      }
+      booting = true;
+      bootPromise = startAudio(boot).finally(() => {
+        booting = false;
+        bootPromise = null;
+      });
+      await bootPromise;
     }
 
     registerAudioBoot(boot, { mic: true });
