@@ -40,9 +40,10 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Phase distortion</h2>
-    <p>Casio-style waveshape. Use <strong>two fingers</strong>: <strong>left</strong> = pitch (horizontal), <strong>right</strong> = distortion (vertical).</p>
+    <p>Casio-style waveshape. Turn <strong>Audio on</strong>, then use <strong>two fingers</strong>: <strong>left</strong> = pitch (horizontal), <strong>right</strong> = distortion (vertical).</p>
     <p>One finger still works — X = pitch, Y = distortion. Softer ramps reduce clicks when you lift.</p>
   </div>
+  <p class="status-bar" id="status">Turn Audio on, then hold the pad</p>
   <div class="main-stage">
     <div id="pad" class="stage-fill play-grid">
       <div class="pd-dots">
@@ -52,7 +53,7 @@
     </div>
   </div>
   <script type="module">
-    import { bindLearn, registerAudioBoot, startAudio } from "../../shared/app.js";
+    import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
 
     bindLearn();
@@ -74,9 +75,10 @@
       if (built) return;
       ctx = c;
       ({ master } = createMasterBus(c, 0.48));
+      curveBuf = new Float32Array(256);
       osc = ctx.createOscillator();
       shaper = ctx.createWaveShaper();
-      shaper.oversample = "2x";
+      shaper.oversample = "none";
       tone = ctx.createBiquadFilter();
       tone.type = "lowpass";
       tone.frequency.value = 7200;
@@ -88,11 +90,9 @@
       shaper.connect(tone);
       tone.connect(out);
       out.connect(master);
-      osc.start();
-      curveBuf = new Float32Array(256);
-      shaper.curve = curveBuf;
-      built = true;
       syncCurve(0.5);
+      osc.start();
+      built = true;
       tickSmooth();
     }
 
@@ -106,13 +106,21 @@
     }
 
     function syncCurve(amount) {
+      if (!curveBuf || !shaper) return;
       pdCurve(amount);
+      shaper.curve = curveBuf;
     }
+
+    let lastCurveAmount = -1;
 
     function tickSmooth() {
       if (!built) return;
       smoothDistort += (targetDistort - smoothDistort) * 0.18;
-      syncCurve(1 - smoothDistort);
+      const amount = 1 - smoothDistort;
+      if (Math.abs(amount - lastCurveAmount) > 0.004) {
+        syncCurve(amount);
+        lastCurveAmount = amount;
+      }
       raf = requestAnimationFrame(tickSmooth);
     }
 
@@ -153,7 +161,7 @@
       const hz = 100 * Math.pow(6, pitchNorm());
       targetDistort = distortNorm();
       osc.frequency.setTargetAtTime(hz, t, 0.045);
-      out.gain.setTargetAtTime(on ? 0.26 : 0, t, on ? 0.055 : 0.1);
+      out.gain.setTargetAtTime(on ? 0.32 : 0, t, on ? 0.055 : 0.1);
     }
 
     function refreshDots() {
@@ -174,12 +182,20 @@
         d1 = pt;
         d2 = null;
       }
+      try {
+        pad.setPointerCapture(e.pointerId);
+      } catch {
+        /* noop */
+      }
       pad.classList.add("active");
       refreshDots();
       applyVoice(true);
+      setStatus("status", "Hold and move — left pitch, right distortion", "ok");
     }
 
     function pointerMove(e) {
+      if (d1?.id !== e.pointerId && d2?.id !== e.pointerId) return;
+      e.preventDefault();
       const n = padNorm(e);
       if (d1?.id === e.pointerId) {
         d1 = { ...d1, nx: n.nx, ny: n.ny, clientX: e.clientX, clientY: e.clientY };
@@ -205,10 +221,12 @@
     }
 
     pad.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
       await startAudio(!built ? build : undefined);
+      if (!built || !ctx) return;
       pointerDown(e);
     });
-    pad.addEventListener("pointermove", pointerMove);
+    pad.addEventListener("pointermove", pointerMove, { passive: false });
     pad.addEventListener("pointerup", pointerUp);
     pad.addEventListener("pointercancel", pointerUp);
     pad.addEventListener("lostpointercapture", pointerUp);
