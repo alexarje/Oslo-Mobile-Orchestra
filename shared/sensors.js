@@ -58,12 +58,17 @@ export function primeSensors(opts) {
  */
 export function onMotion(callback) {
   motionHandler = (e) => {
-    const a = e.accelerationIncludingGravity || e.acceleration;
+    const grav = e.accelerationIncludingGravity;
+    const lin = e.acceleration;
+    const a = lin || grav;
     const r = e.rotationRate;
     callback({
       x: a?.x ?? 0,
       y: a?.y ?? 0,
       z: a?.z ?? 0,
+      linear: lin
+        ? { x: lin.x ?? 0, y: lin.y ?? 0, z: lin.z ?? 0 }
+        : null,
       rotAlpha: r?.alpha ?? 0,
       rotBeta: r?.beta ?? 0,
       rotGamma: r?.gamma ?? 0,

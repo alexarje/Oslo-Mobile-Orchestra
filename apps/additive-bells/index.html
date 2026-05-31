@@ -15,7 +15,7 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Additive synthesis</h2>
     <p>Turn <strong>Audio on</strong>, then <strong>tap the pad</strong> to strike. Set partial sliders and <strong>root</strong> first.</p>
-    <p>Optional: enable <strong>Hit phone to strike</strong> for motion hits (allow motion on iPhone).</p>
+    <p>Optional: <strong>Hit downward</strong> — hold the phone upright and tap the bottom on a surface (allow motion on iPhone).</p>
   </div>
   <p class="status-bar" id="status">Audio on · tap pad to play</p>
   <div class="main-stage bells-layout">
@@ -28,7 +28,7 @@
       <div class="control-row">
         <label class="slide-toggle">
           <input type="checkbox" id="motionHit" />
-          Hit phone to strike
+          Hit downward to strike
         </label>
       </div>
       <div id="partials" class="bells-partials"></div>
@@ -47,18 +47,19 @@
     const RATIOS = [1, 2.56, 5.12, 8.21, 10.45, 13.8, 17.2, 21.5];
     const NAMES = ["1×", "2.6×", "5.1×", "8.2×", "10×", "14×", "17×", "22×"];
     const SENSOR_OPTS = { needMotion: true, needOrientation: false };
-    const HIT_JERK = 2.75;
-    const HIT_COOLDOWN_MS = 320;
+    /** Portrait upright: sharp +Y linear accel ≈ downward tap on a surface. */
+    const DOWN_JERK = 2.2;
+    const HIT_COOLDOWN_MS = 360;
     const GAIN_FLOOR = 0.0001;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     const pad = document.getElementById("pad");
     const motionHit = document.getElementById("motionHit");
     const partialsEl = document.getElementById("partials");
-    let ctx, master, built = false;
+    let ctx, master, reverb, reverbWet, built = false;
     let sensorsReady = false;
     let motionPrimed = false;
-    let lastAccel = null;
+    let lastDownY = 0;
     let lastHitAt = 0;
     const levels = [0.9, 0.55, 0.4, 0.35, 0.28, 0.22, 0.18, 0.14];
 
@@ -73,9 +74,25 @@
       return [...partialsEl.querySelectorAll("input[type=range]")].map((el) => +el.value / 100);
     }
 
+    function bellReverbImpulse(c, sec) {
+      const len = Math.floor(c.sampleRate * sec);
+      const b = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = b.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.2;
+      }
+      return b;
+    }
+
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.5));
+      ({ master } = createMasterBus(c, 0.52));
+      reverb = c.createConvolver();
+      reverb.buffer = bellReverbImpulse(c, 2.8);
+      reverbWet = c.createGain();
+      reverbWet.gain.value = 0.48;
+      reverb.connect(reverbWet);
+      reverbWet.connect(master);
       built = true;
       setStatus("status", "Tap pad to strike", "ok");
     }
@@ -99,50 +116,61 @@
       const f0 = midiToFreq(+document.getElementById("root").value);
       const t = ctx.currentTime;
       const bright = 0.65 + (1 - nx) * 0.35;
-      const hitGain = clamp(0.75 + impact / 3.5, 0.75, 1.2);
-      const attack = 0.006;
-      const decayBase = 1.15;
+      const hitGain = clamp(0.8 + impact / 3, 0.8, 1.25);
+      const attack = 0.004;
+      const decayBase = 2.35;
 
       RATIOS.forEach((ratio, i) => {
         const amp = amps[i];
         if (amp < 0.02) return;
         const osc = ctx.createOscillator();
         osc.type = "sine";
-        osc.frequency.value = f0 * ratio;
+        const det = 1 + (i - 3.5) * 0.0008;
+        osc.frequency.value = f0 * ratio * det;
         const g = ctx.createGain();
+        const send = ctx.createGain();
+        send.gain.value = 0.55;
         g.connect(master);
+        g.connect(send);
+        send.connect(reverb);
         osc.connect(g);
-        const peak = Math.max(GAIN_FLOOR, amp * bright * hitGain * 0.34);
-        const end = t + decayBase + i * 0.12;
+        const peak = Math.max(GAIN_FLOOR, amp * bright * hitGain * 0.38);
+        const end = t + decayBase + i * 0.22;
+        const rel = 0.12 + i * 0.04;
         g.gain.setValueAtTime(GAIN_FLOOR, t);
         g.gain.exponentialRampToValueAtTime(peak, t + attack);
-        g.gain.setValueAtTime(peak, end - 0.04);
+        g.gain.exponentialRampToValueAtTime(Math.max(GAIN_FLOOR, peak * 0.35), t + rel);
         g.gain.exponentialRampToValueAtTime(GAIN_FLOOR, end);
         osc.start(t);
-        osc.stop(end + 0.05);
+        osc.stop(end + 0.08);
       });
       flashPad();
     }
 
-    function onMotionSample({ x, y, z }) {
+    function linearY(data) {
+      return data.linear?.y ?? data.y;
+    }
+
+    function onMotionSample(data) {
       if (!built || !motionHit.checked) return;
+      const ay = linearY(data);
       if (!motionPrimed) {
-        lastAccel = { x, y, z };
+        lastDownY = ay;
         motionPrimed = true;
         return;
       }
-      const jerk = Math.hypot(x - lastAccel.x, y - lastAccel.y, z - lastAccel.z);
-      lastAccel = { x, y, z };
+      const downJerk = ay - lastDownY;
+      lastDownY = ay;
       const now = performance.now();
-      if (jerk < HIT_JERK || now - lastHitAt < HIT_COOLDOWN_MS) return;
+      if (downJerk < DOWN_JERK || now - lastHitAt < HIT_COOLDOWN_MS) return;
       lastHitAt = now;
-      const nx = clamp(0.2 + Math.min(0.75, jerk / 5), 0, 1);
-      strike(nx, jerk);
+      const nx = clamp(0.25 + Math.min(0.7, downJerk / 5), 0, 1);
+      strike(nx, downJerk);
     }
 
     async function setMotionHit(on) {
       motionPrimed = false;
-      lastAccel = null;
+      lastDownY = 0;
       if (!on) {
         stopSensors();
         sensorsReady = false;
@@ -163,7 +191,7 @@
       }
       onMotion(onMotionSample);
       sensorsReady = true;
-      setStatus("status", "Tap pad or hit the phone", "ok");
+      setStatus("status", "Tap pad or hit downward", "ok");
     }
 
     async function ensureReady() {
