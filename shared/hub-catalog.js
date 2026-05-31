@@ -74,7 +74,7 @@ export const HUB_APPS = [
   },
   {
     href: "apps/sound-saber/",
-    title: "Sabre Pulse",
+    title: "Sound Saber",
     section: "drones",
     synth: "Pulse · delay · ring",
     sensors: "Touch · motion",
