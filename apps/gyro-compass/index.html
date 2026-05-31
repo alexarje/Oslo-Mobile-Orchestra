@@ -15,9 +15,9 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Pan + pitch</h2>
     <p>Turn <strong>Audio on</strong>, tap the compass, allow <strong>orientation</strong> and <strong>motion</strong> on iPhone.</p>
-    <p><strong>Rotate</strong> flat for pan · <strong>tilt</strong> or drag for pitch · <strong>move</strong> the phone for louder tone and vibrato.</p>
+    <p><strong>Hold</strong> the compass rose to play. <strong>Rotate</strong> for pan · <strong>tilt</strong> or drag for pitch · <strong>move</strong> the phone for vibrato.</p>
   </div>
-  <p class="status-bar" id="status">Tap compass · Audio on</p>
+  <p class="status-bar" id="status">Hold compass rose · Audio on</p>
   <div class="readout-row">
     <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
     <p class="value-chip">Pan <strong id="panOut">—</strong></p>
@@ -26,7 +26,7 @@
     <p class="value-chip">Vib <strong id="vibOut">—</strong></p>
   </div>
   <div class="main-stage">
-    <canvas id="compass" class="canvas-fill" aria-label="Compass"></canvas>
+    <canvas id="compass" class="canvas-fill play-grid" aria-label="Compass"></canvas>
   </div>
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
@@ -54,6 +54,7 @@
     let beta = 90;
     let touchMidi = null;
     let activePointer = null;
+    let holding = false;
 
     function labelFromMidi(midi) {
       const n = Math.round(midi);
@@ -100,15 +101,24 @@
       if (!built || !ctx) return;
       const t = ctx.currentTime;
       const midi = currentMidi();
+      document.getElementById("headOut").textContent = alpha.toFixed(0);
+      document.getElementById("pitchOut").textContent = labelFromMidi(midi);
+      if (!holding) {
+        toneGain.gain.setTargetAtTime(0, t, 0.05);
+        vibGain.gain.setTargetAtTime(0, t, 0.05);
+        document.getElementById("panOut").textContent = "—";
+        document.getElementById("ampOut").textContent = "—";
+        document.getElementById("vibOut").textContent = "—";
+        draw();
+        return;
+      }
       const pan = Math.sin((alpha * Math.PI) / 180);
       panner.pan.setTargetAtTime(pan, t, 0.05);
       osc.frequency.setTargetAtTime(midiToFreq(midi), t, 0.05);
       toneGain.gain.setTargetAtTime(0.12 + motion.amp * 0.42, t, 0.06);
       vibGain.gain.setTargetAtTime(motion.vibCents, t, 0.07);
       vibOsc.frequency.setTargetAtTime(motion.vibHz, t, 0.08);
-      document.getElementById("headOut").textContent = alpha.toFixed(0);
       document.getElementById("panOut").textContent = pan.toFixed(2);
-      document.getElementById("pitchOut").textContent = labelFromMidi(midi);
       document.getElementById("ampOut").textContent = `${(motion.amp * 100).toFixed(0)}%`;
       document.getElementById("vibOut").textContent = motion.vibCents.toFixed(1);
       draw();
@@ -136,7 +146,8 @@
       osc.start();
       vibOsc.start();
       built = true;
-      applyVoice();
+      toneGain.gain.value = 0;
+      draw();
     }
 
     registerAudioBoot(buildAudio);
@@ -157,16 +168,17 @@
           const gam = safeNum(o.gamma, 0);
           if (gam !== 0) beta = clamp(90 - gam, 20, 160);
         }
-        if (activePointer == null) applyVoice();
+        if (holding) applyVoice();
         else draw();
       });
       onMotion((data) => {
+        if (!holding) return;
         motion = motionExpr.update(data);
         applyVoice();
       });
       sensorsReady = true;
-      setStatus("status", "Rotate · tilt · move for vibrato", "ok");
-      applyVoice();
+      setStatus("status", "Hold compass rose to play", "ok");
+      draw();
       return true;
     }
 
@@ -174,12 +186,14 @@
       primeSensors(SENSOR_OPTS);
       await startAudio(!built ? buildAudio : undefined);
       await initSensors();
-      if (e) {
-        activePointer = e.pointerId;
-        canvas.setPointerCapture(e.pointerId);
-        touchMidi = midiFromTouchY(e.clientY);
-        applyVoice();
-      }
+      holding = true;
+      activePointer = e.pointerId;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.classList.add("active");
+      touchMidi = midiFromTouchY(e.clientY);
+      motionExpr.reset();
+      motion = motionExpr.update({ x: 0, y: 0, z: 0 });
+      applyVoice();
     }
 
     canvas.addEventListener("pointerdown", (e) => {
@@ -193,12 +207,15 @@
     });
     const endTouch = (e) => {
       if (e.pointerId !== activePointer) return;
+      holding = false;
       activePointer = null;
       touchMidi = null;
+      canvas.classList.remove("active");
       applyVoice();
     };
     canvas.addEventListener("pointerup", endTouch);
     canvas.addEventListener("pointercancel", endTouch);
+    canvas.addEventListener("lostpointercapture", endTouch);
 
     new ResizeObserver(() => draw()).observe(canvas.parentElement);
     requestAnimationFrame(() => draw());

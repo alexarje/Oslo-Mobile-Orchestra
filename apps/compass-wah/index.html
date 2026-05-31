@@ -15,9 +15,9 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Compass filter</h2>
     <p>Turn <strong>Audio on</strong>, tap the compass, allow <strong>orientation</strong> and <strong>motion</strong> on iPhone.</p>
-    <p><strong>Rotate</strong> flat for wah filter · <strong>shake or sway</strong> the phone for volume and vibrato.</p>
+    <p><strong>Hold</strong> the compass rose to play. <strong>Rotate</strong> flat for wah · <strong>shake</strong> the phone for volume and vibrato.</p>
   </div>
-  <p class="status-bar" id="status">Tap compass · Audio on</p>
+  <p class="status-bar" id="status">Hold compass rose · Audio on</p>
   <div class="readout-row">
     <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
     <p class="value-chip">Cutoff <strong id="cutOut">—</strong> Hz</p>
@@ -25,7 +25,7 @@
     <p class="value-chip">Vib <strong id="vibOut">—</strong></p>
   </div>
   <div class="main-stage">
-    <canvas id="compass" class="canvas-fill" aria-label="Compass"></canvas>
+    <canvas id="compass" class="canvas-fill play-grid" aria-label="Compass"></canvas>
   </div>
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
@@ -44,6 +44,8 @@
 
     let ctx, master, osc, filt, gate, vibOsc, vibGain, built = false;
     let sensorsReady = false;
+    let holding = false;
+    let activePointer = null;
     let alpha = 0;
     let beta = 90;
 
@@ -64,12 +66,21 @@
       if (!built || !ctx) return;
       const t = ctx.currentTime;
       const heading = ((alpha % 360) + 360) % 360;
+      document.getElementById("headOut").textContent = heading.toFixed(0);
+      if (!holding) {
+        gate.gain.setTargetAtTime(0, t, 0.05);
+        vibGain.gain.setTargetAtTime(0, t, 0.05);
+        document.getElementById("cutOut").textContent = "—";
+        document.getElementById("ampOut").textContent = "—";
+        document.getElementById("vibOut").textContent = "—";
+        draw();
+        return;
+      }
       const cut = 200 + (heading / 360) * 6000;
       filt.frequency.setTargetAtTime(cut, t, 0.04);
       gate.gain.setTargetAtTime(0.08 + motion.amp * 0.38, t, 0.06);
       vibGain.gain.setTargetAtTime(motion.vibCents, t, 0.07);
       vibOsc.frequency.setTargetAtTime(motion.vibHz, t, 0.08);
-      document.getElementById("headOut").textContent = heading.toFixed(0);
       document.getElementById("cutOut").textContent = cut.toFixed(0);
       document.getElementById("ampOut").textContent = `${(motion.amp * 100).toFixed(0)}%`;
       document.getElementById("vibOut").textContent = motion.vibCents.toFixed(1);
@@ -100,7 +111,8 @@
       osc.start();
       vibOsc.start();
       built = true;
-      applyVoice();
+      gate.gain.value = 0;
+      draw();
     }
 
     registerAudioBoot(buildAudio);
@@ -120,24 +132,42 @@
         applyVoice();
       });
       onMotion((data) => {
+        if (!holding) return;
         motion = motionExpr.update(data);
         applyVoice();
       });
       sensorsReady = true;
-      setStatus("status", "Rotate for wah · move for amp & vibrato", "ok");
+      setStatus("status", "Hold compass rose to play", "ok");
+      draw();
       return true;
     }
 
-    async function boot() {
+    async function onPointerDown(e) {
+      e.preventDefault();
       primeSensors(SENSOR_OPTS);
       await startAudio(!built ? buildAudio : undefined);
       await initSensors();
+      holding = true;
+      activePointer = e.pointerId;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.classList.add("active");
+      motionExpr.reset();
+      motion = motionExpr.update({ x: 0, y: 0, z: 0 });
+      applyVoice();
     }
 
-    canvas.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      void boot();
-    });
+    const endTouch = (e) => {
+      if (e.pointerId !== activePointer) return;
+      holding = false;
+      activePointer = null;
+      canvas.classList.remove("active");
+      applyVoice();
+    };
+
+    canvas.addEventListener("pointerdown", (e) => void onPointerDown(e));
+    canvas.addEventListener("pointerup", endTouch);
+    canvas.addEventListener("pointercancel", endTouch);
+    canvas.addEventListener("lostpointercapture", endTouch);
 
     new ResizeObserver(() => draw()).observe(canvas.parentElement);
     requestAnimationFrame(() => draw());
