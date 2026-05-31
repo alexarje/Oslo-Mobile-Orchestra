@@ -15,6 +15,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Audience Swell](apps/audience/) | Crowd layer | One-button hold swell |
 | [Pentatonic Flute](apps/flute-blow/) | Melody by breath | Mic gate + pentatonic slide |
 | [Mic Theremin](apps/mic-theremin/) | Sung melody | Pitch detect → sine |
+| [Harmonizer](apps/harmonizer/) | Group tonality | Mic chroma consensus → aligned drone / chord |
 | [Hum vs Clap](apps/hum-clap/) | Call-and-response | k-NN on mic features |
 | [Piano](apps/piano/) | Melody / harmony | Keyboard + reverb |
 | [Drumkit](apps/drumkit/) | Rhythm hits | 8 drum pads |
