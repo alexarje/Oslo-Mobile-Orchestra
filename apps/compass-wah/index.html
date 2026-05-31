@@ -4,51 +4,104 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0d0f14" />
-  <title>North Filter — OMO</title>
+  <title>Motion Filter — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
 </head>
-<body class="app-shell compass-wah-app">
+<body class="app-shell compass-wah-app motion-wah-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
-    <h1>North Filter</h1>
+    <h1>Motion Filter</h1>
   </header>
   <div class="learn-panel panel" id="learnPanel">
-    <h2>Compass filter</h2>
-    <p>Turn <strong>Audio on</strong>, tap the compass, allow <strong>orientation</strong> and <strong>motion</strong> on iPhone.</p>
-    <p><strong>Hold anywhere</strong> on the screen to play. <strong>Rotate</strong> flat for wah · <strong>tilt</strong> forward/back for volume · <strong>shake</strong> for vibrato.</p>
+    <h2>Motion filter</h2>
+    <p id="learnBody">Turn <strong>Audio on</strong>, pick a mode, then play.</p>
   </div>
-  <p class="status-bar" id="status">Hold screen to play · Audio on</p>
-  <div class="readout-row">
+  <div class="control-row" style="margin:0 0.35rem">
+    <label for="modeSelect">Mode</label>
+    <select id="modeSelect" class="mode-select"></select>
+  </div>
+  <p class="status-bar" id="status">Turn Audio on · hold to play</p>
+  <div class="readout-row" id="readoutCompass">
     <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
     <p class="value-chip">Cutoff <strong id="cutOut">—</strong> Hz</p>
     <p class="value-chip">Amp <strong id="ampOut">—</strong></p>
     <p class="value-chip">Vib <strong id="vibOut">—</strong></p>
   </div>
+  <div class="readout-row hidden" id="readoutTilt">
+    <p class="value-chip">Wah <strong id="freqOut">—</strong> Hz</p>
+    <p class="value-chip">Res <strong id="qOut">—</strong></p>
+  </div>
+  <div class="readout-row hidden" id="readoutPad">
+    <p class="value-chip">Pitch <strong id="pitchOut">—</strong> Hz</p>
+    <p class="value-chip" id="extraChip">—</p>
+  </div>
   <div class="main-stage">
-    <canvas id="compass" class="canvas-fill play-grid" aria-label="Compass"></canvas>
+    <canvas id="compass" class="canvas-fill play-grid mode-stage" aria-label="Compass"></canvas>
+    <div class="touch-zone mode-stage hidden" id="tiltZone">
+      <div class="phone-icon" id="phone"></div>
+      <div class="motion-meters">
+        <label class="motion-meter-label">↕</label>
+        <div class="meter"><div class="meter-fill" id="meterY"></div></div>
+        <label class="motion-meter-label">↔</label>
+        <div class="meter"><div class="meter-fill" id="meterX"></div></div>
+      </div>
+    </div>
+    <div id="pad" class="stage-fill play-grid mode-stage hidden">
+      <div class="touch-dot" id="dot"></div>
+    </div>
   </div>
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
-    import { createMasterBus } from "../../shared/audio.js";
     import { drawCompassRose, sizeCompassCanvas } from "../../shared/compass-rose.js";
     import { wireScreenHold } from "../../shared/hold-play.js";
-    import { createMotionExpression } from "../../shared/motion-express.js";
-    import { playAmpFromTiltAndMotion } from "../../shared/tilt-amp.js";
+    import {
+      FILTER_MODES,
+      modeFromUrl,
+      buildMaster,
+      createCompassFilterVoice,
+      createTiltWahVoice,
+      createShakeFilterVoice,
+      createFlatDroneVoice,
+      createHeadingChoirVoice,
+    } from "../../shared/motion-filter-modes.js";
     import { enableSensors, onMotion, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
+    const modeSelect = document.getElementById("modeSelect");
+    const learnBody = document.getElementById("learnBody");
     const canvas = document.getElementById("compass");
     const g = canvas.getContext("2d");
-    const SENSOR_OPTS = { needMotion: true, needOrientation: true };
+    const tiltZone = document.getElementById("tiltZone");
+    const pad = document.getElementById("pad");
+    const dot = document.getElementById("dot");
+    const phone = document.getElementById("phone");
+    const meterY = document.getElementById("meterY");
+    const meterX = document.getElementById("meterX");
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-    const motionExpr = createMotionExpression({ baseAmp: 0.28 });
-    let motion = { amp: 0.28, vibCents: 0, vibHz: 5 };
-
-    let ctx, master, osc, filt, gate, vibOsc, vibGain, built = false;
+    let mode = modeFromUrl();
+    let ctx, master, built = false;
     let sensorsReady = false;
     let holding = false;
     let alpha = 0;
     let beta = 90;
+    let padNx = 0.5;
+    let activePointer = null;
+
+    let compassVoice = null;
+    let tiltVoice = null;
+    let shakeVoice = null;
+    let flatVoice = null;
+    let choirVoice = null;
+    let listenersWired = false;
+
+    Object.keys(FILTER_MODES).forEach((key) => {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = FILTER_MODES[key].label;
+      modeSelect.appendChild(opt);
+    });
+    modeSelect.value = mode;
 
     function headingFromOrientation(o) {
       if (typeof o.webkitCompassHeading === "number" && Number.isFinite(o.webkitCompassHeading)) {
@@ -58,112 +111,225 @@
       return alpha;
     }
 
-    function draw() {
+    function drawCompass() {
       const { w, h, dpr } = sizeCompassCanvas(canvas);
       drawCompassRose(g, w, h, dpr, { heading: alpha, beta });
     }
 
-    function applyVoice() {
-      if (!built || !ctx) return;
+    function setMode(next) {
+      mode = next;
+      modeSelect.value = next;
+      const u = new URL(location.href);
+      u.searchParams.set("mode", next);
+      history.replaceState({}, "", u);
+      learnBody.innerHTML = FILTER_MODES[next].learn;
+      document.getElementById("readoutCompass").classList.toggle("hidden", next !== "compass");
+      document.getElementById("readoutTilt").classList.toggle("hidden", next !== "tilt");
+      document.getElementById("readoutPad").classList.toggle("hidden", !["shake", "flat", "choir"].includes(next));
+      document.getElementById("extraChip").classList.toggle("hidden", next !== "shake");
+      canvas.classList.toggle("hidden", next !== "compass");
+      tiltZone.classList.toggle("hidden", next !== "tilt");
+      pad.classList.toggle("hidden", !["shake", "flat", "choir"].includes(next));
+      holding = false;
+      canvas.classList.remove("active");
+      tiltZone.classList.remove("active");
+      pad.classList.remove("active");
+      if (built) silence();
+      sensorsReady = false;
+    }
+
+    function silence() {
+      if (!ctx) return;
       const t = ctx.currentTime;
-      const heading = ((alpha % 360) + 360) % 360;
-      document.getElementById("headOut").textContent = heading.toFixed(0);
-      if (!holding) {
-        gate.gain.setTargetAtTime(0, t, 0.05);
-        vibGain.gain.setTargetAtTime(0, t, 0.05);
-        document.getElementById("cutOut").textContent = "—";
-        document.getElementById("ampOut").textContent = "—";
-        document.getElementById("vibOut").textContent = "—";
-        draw();
-        return;
+      if (compassVoice) compassVoice.apply({ holding: false, alpha, beta });
+      if (tiltVoice) tiltVoice.apply({ holding: false, x: 0, y: 0, z: 0 });
+      if (shakeVoice) shakeVoice.apply({ holding: false, nx: padNx, x: 0, y: 0, z: 0 });
+      if (flatVoice) flatVoice.apply({ holding: false, beta, gamma: 0, nx: padNx });
+      if (choirVoice) choirVoice.apply({ holding: false, heading01: 0 });
+    }
+
+    function applyCurrent() {
+      if (!built) return;
+      if (mode === "compass" && compassVoice) {
+        const r = compassVoice.apply({ holding, alpha, beta });
+        if (r.cut != null) {
+          document.getElementById("headOut").textContent = r.heading.toFixed(0);
+          document.getElementById("cutOut").textContent = r.cut.toFixed(0);
+          document.getElementById("ampOut").textContent = `${r.ampPct.toFixed(0)}%`;
+          document.getElementById("vibOut").textContent = r.vib.toFixed(1);
+        } else {
+          document.getElementById("cutOut").textContent = "—";
+          document.getElementById("ampOut").textContent = "—";
+          document.getElementById("vibOut").textContent = "—";
+        }
+        drawCompass();
       }
-      const cut = 200 + (heading / 360) * 6000;
-      const playAmp = playAmpFromTiltAndMotion(beta, motion.amp);
-      filt.frequency.setTargetAtTime(cut, t, 0.04);
-      gate.gain.setTargetAtTime(0.06 + playAmp * 0.44, t, 0.06);
-      vibGain.gain.setTargetAtTime(motion.vibCents, t, 0.07);
-      vibOsc.frequency.setTargetAtTime(motion.vibHz, t, 0.08);
-      document.getElementById("cutOut").textContent = cut.toFixed(0);
-      document.getElementById("ampOut").textContent = `${(playAmp * 100).toFixed(0)}%`;
-      document.getElementById("vibOut").textContent = motion.vibCents.toFixed(1);
-      draw();
+      if (mode === "tilt" && tiltVoice && holding) {
+        /* updated in motion handler */
+      }
     }
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.5));
-      gate = ctx.createGain();
-      gate.gain.value = 0.28;
-      filt = ctx.createBiquadFilter();
-      filt.type = "lowpass";
-      filt.Q.value = 10;
-      osc = ctx.createOscillator();
-      osc.type = "sawtooth";
-      osc.frequency.value = 110;
-      vibOsc = c.createOscillator();
-      vibGain = c.createGain();
-      vibOsc.type = "sine";
-      vibOsc.frequency.value = 5;
-      vibGain.gain.value = 0;
-      vibOsc.connect(vibGain);
-      vibGain.connect(osc.detune);
-      osc.connect(filt);
-      filt.connect(gate);
-      gate.connect(master);
-      osc.start();
-      vibOsc.start();
+      master = buildMaster(ctx);
+      compassVoice = createCompassFilterVoice(ctx, master);
+      tiltVoice = createTiltWahVoice(ctx, master);
+      shakeVoice = createShakeFilterVoice(ctx, master);
+      flatVoice = createFlatDroneVoice(ctx, master);
+      choirVoice = createHeadingChoirVoice(ctx, master);
       built = true;
-      gate.gain.value = 0;
-      draw();
+      drawCompass();
     }
 
     registerAudioBoot(buildAudio);
 
     async function initSensors() {
-      if (sensorsReady) return true;
-      const ok = await enableSensors(SENSOR_OPTS);
+      const opts = FILTER_MODES[mode].sensors;
+      const ok = await enableSensors(opts);
       if (!ok) {
-        setStatus("status", "Allow orientation + motion in Settings", "warn");
-        draw();
+        setStatus("status", "Allow sensors in Settings", "warn");
         return false;
       }
+      if (listenersWired) {
+        setStatus("status", "Hold to play", "ok");
+        return true;
+      }
+      listenersWired = true;
       onOrientation((o) => {
         alpha = headingFromOrientation(o);
         const b = o.beta;
         if (typeof b === "number" && Number.isFinite(b) && b !== 0) beta = b;
-        applyVoice();
+        if (mode === "compass") applyCurrent();
+        if (holding && mode === "flat" && flatVoice) {
+          flatVoice.apply({ holding: true, beta, gamma: o.gamma, nx: padNx });
+        }
+        if (holding && mode === "choir" && choirVoice) {
+          const h = (o.webkitCompassHeading ?? o.alpha ?? 0) / 360;
+          choirVoice.apply({ holding: true, heading01: h });
+        }
       });
       onMotion((data) => {
         if (!holding) return;
-        motion = motionExpr.update(data);
-        applyVoice();
+        if (mode === "compass" && compassVoice) {
+          compassVoice.apply({ holding: true, alpha, beta, motionData: data });
+          applyCurrent();
+        }
+        if (mode === "tilt" && tiltVoice) {
+          const r = tiltVoice.apply({
+            holding: true,
+            x: data.x,
+            y: data.y,
+            z: data.z,
+          });
+          meterY.style.width = `${r.tiltY * 100}%`;
+          meterX.style.width = `${r.tiltX * 100}%`;
+          document.getElementById("freqOut").textContent = r.freq.toFixed(0);
+          document.getElementById("qOut").textContent = r.q.toFixed(1);
+          phone.style.transform = `rotateX(${r.tiltY * 40 - 20}deg) rotateY(${r.tiltX * 40 - 20}deg)`;
+        }
+        if (mode === "shake" && shakeVoice) {
+          const r = shakeVoice.apply({
+            holding: true,
+            nx: padNx,
+            x: data.x,
+            y: data.y,
+            z: data.z,
+          });
+          document.getElementById("extraChip").textContent = `Shake ${r.jerk.toFixed(2)}`;
+        }
       });
       sensorsReady = true;
-      setStatus("status", "Hold screen to play", "ok");
-      draw();
+      setStatus("status", "Hold to play", "ok");
       return true;
     }
 
+    modeSelect.addEventListener("change", () => setMode(modeSelect.value));
+
+    function beginHold() {
+      holding = true;
+      if (mode === "compass") {
+        canvas.classList.add("active");
+        compassVoice?.resetMotion();
+      }
+      if (mode === "tilt") tiltZone.classList.add("active");
+      if (mode !== "compass" && mode !== "tilt") pad.classList.add("active");
+      applyCurrent();
+    }
+
+    function endHold() {
+      holding = false;
+      canvas.classList.remove("active");
+      tiltZone.classList.remove("active");
+      pad.classList.remove("active");
+      meterY.style.width = "0%";
+      meterX.style.width = "0%";
+      phone.style.transform = "";
+      silence();
+      applyCurrent();
+    }
+
     wireScreenHold(document.body, {
+      ignore: ".back-link, #learnBtn, #modeSelect, label[for='modeSelect']",
       async onStart() {
-        primeSensors(SENSOR_OPTS);
+        primeSensors(FILTER_MODES[mode].sensors);
         await startAudio(!built ? buildAudio : undefined);
         await initSensors();
-        holding = true;
-        canvas.classList.add("active");
-        motionExpr.reset();
-        motion = motionExpr.update({ x: 0, y: 0, z: 0 });
-        applyVoice();
+        beginHold();
       },
-      onEnd() {
-        holding = false;
-        canvas.classList.remove("active");
-        applyVoice();
-      },
+      onEnd: endHold,
     });
 
-    new ResizeObserver(() => draw()).observe(canvas.parentElement);
-    requestAnimationFrame(() => draw());
+    tiltZone.addEventListener("pointerdown", async (e) => {
+      if (mode !== "tilt") return;
+      e.stopPropagation();
+      primeSensors(FILTER_MODES.tilt.sensors);
+      await startAudio(!built ? buildAudio : undefined);
+      await initSensors();
+      activePointer = e.pointerId;
+      tiltZone.setPointerCapture(e.pointerId);
+      beginHold();
+    });
+    const tiltEnd = (e) => {
+      if (e.pointerId !== activePointer) return;
+      activePointer = null;
+      endHold();
+    };
+    tiltZone.addEventListener("pointerup", tiltEnd);
+    tiltZone.addEventListener("pointercancel", tiltEnd);
+
+    pad.addEventListener("pointerdown", async (e) => {
+      if (!["shake", "flat", "choir"].includes(mode)) return;
+      e.stopPropagation();
+      primeSensors(FILTER_MODES[mode].sensors);
+      await startAudio(!built ? buildAudio : undefined);
+      await initSensors();
+      activePointer = e.pointerId;
+      pad.setPointerCapture(e.pointerId);
+      const r = pad.getBoundingClientRect();
+      padNx = clamp((e.clientX - r.left) / r.width, 0, 1);
+      dot.style.left = `${padNx * 100}%`;
+      dot.style.top = `${clamp((e.clientY - r.top) / r.height, 0, 1) * 100}%`;
+      document.getElementById("pitchOut").textContent = (90 * Math.pow(6, padNx)).toFixed(0);
+      beginHold();
+    });
+    pad.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== activePointer || mode !== "shake") return;
+      const r = pad.getBoundingClientRect();
+      padNx = clamp((e.clientX - r.left) / r.width, 0, 1);
+      dot.style.left = `${padNx * 100}%`;
+      document.getElementById("pitchOut").textContent = (90 * Math.pow(6, padNx)).toFixed(0);
+    });
+    const padEnd = (e) => {
+      if (e.pointerId !== activePointer) return;
+      activePointer = null;
+      endHold();
+    };
+    pad.addEventListener("pointerup", padEnd);
+    pad.addEventListener("pointercancel", padEnd);
+
+    setMode(mode);
+    new ResizeObserver(() => drawCompass()).observe(canvas.parentElement);
+    requestAnimationFrame(() => drawCompass());
   </script>
 </body>
 </html>

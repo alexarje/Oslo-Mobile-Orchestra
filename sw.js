@@ -1,4 +1,4 @@
-const CACHE = "omo-v23";
+const CACHE = "omo-v24";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,6 +15,8 @@ const ASSETS = [
   "./shared/hand-bow.js",
   "./shared/motion-express.js",
   "./shared/sound-saber.js",
+  "./shared/motion-filter-modes.js",
+  "./shared/redirect-to.js",
   "./shared/circular-seq.js",
   "./shared/drum-sounds.js",
   "./shared/evo-pattern.js",

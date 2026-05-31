@@ -6,7 +6,7 @@ export const SECTIONS = {
   drones: {
     name: "Drones",
     color: "#38bdf8",
-    apps: ["drone-choir", "motion-wah", "compass-wah"],
+    apps: ["drone-choir", "compass-wah", "sound-saber"],
   },
   rhythm: {
     name: "Rhythm",
@@ -26,15 +26,7 @@ export const SECTIONS = {
   synthesis: {
     name: "Synthesis",
     color: "#f472b6",
-    apps: [
-      "fm-touch",
-      "fm-touch-tilt",
-      "fm-matrix",
-      "ks-string",
-      "ks-pluck",
-      "additive-bells",
-      "filter-ladder",
-    ],
+    apps: ["fm-touch", "fm-matrix", "ks-string", "additive-bells", "filter-ladder", "supersaw-stack"],
   },
   ai: {
     name: "AI",

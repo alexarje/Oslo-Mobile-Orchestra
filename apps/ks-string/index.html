@@ -14,7 +14,15 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Karplus–Strong</h2>
-    <p>Turn <strong>Audio on</strong>, then tap to pluck. <strong>X</strong> = pitch, <strong>Y</strong> = strength. Tilt = damping. Loop feedback stays moderate so plucks don’t pile up harshly.</p>
+    <p>Turn <strong>Audio on</strong>, then tap to pluck. <strong>X</strong> = pitch, <strong>Y</strong> = strength. Tilt = damping.</p>
+    <p><strong>Stage</strong> = lower, longer wire · <strong>Pocket</strong> = wider pitch range (former Pocket Pluck).</p>
+  </div>
+  <div class="control-row" style="margin:0 0.35rem">
+    <label for="rangeSelect">Range</label>
+    <select id="rangeSelect">
+      <option value="stage">Stage</option>
+      <option value="pocket">Pocket</option>
+    </select>
   </div>
   <div class="main-stage">
     <div id="pad" class="stage-fill play-grid"></div>
@@ -42,8 +50,21 @@
     let activeId = null;
     const pool = createKSPool(3);
 
+    const rangeSelect = document.getElementById("rangeSelect");
+    let range = new URLSearchParams(location.search).get("range") === "pocket" ? "pocket" : "stage";
+    if (range === "pocket") rangeSelect.value = "pocket";
+
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-    const mapX = (nx) => 40 * Math.pow(300 / 40, nx);
+    const mapX = (nx) =>
+      range === "pocket" ? 55 * Math.pow(880 / 55, nx) : 40 * Math.pow(300 / 40, nx);
+
+    rangeSelect.addEventListener("change", () => {
+      range = rangeSelect.value;
+      const u = new URL(location.href);
+      if (range === "pocket") u.searchParams.set("range", "pocket");
+      else u.searchParams.delete("range");
+      history.replaceState({}, "", u);
+    });
 
     function buildAudio(c) {
       ctx = c;
