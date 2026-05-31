@@ -18,7 +18,7 @@ export const HUB_APPS = [
   },
   {
     href: "apps/drumkit/",
-    title: "Hand Drum Circle",
+    title: "Drum Kit",
     section: "rhythm",
     synth: "Drum synthesis",
     sensors: "Touch",

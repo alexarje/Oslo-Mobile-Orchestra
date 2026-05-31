@@ -6,34 +6,167 @@
   <meta name="theme-color" content="#0d0f14" />
   <title>Hum Hive — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
-  
 </head>
-<body class="app-shell">
+<body class="app-shell mic-theremin-app pitch-hive-app">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Hum Hive</h1>
   </header>
-  <div class="learn-panel panel" id="learnPanel"><h2>Pitch hive</h2><p>Hum near the mic — partials build a chord. <strong>Hold</strong> to sustain the hive.</p></div>
-  <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Pitch hive</h2>
+    <p>Turn <strong>Audio on</strong> and allow the mic. Tap <strong>Start</strong>, then hum near the phone.</p>
+    <p><strong>Hold</strong> the pad to build a chord of partials from your pitch — release to fade the hive.</p>
+  </div>
+  <div class="app-toolbar">
+    <button type="button" class="btn btn-play" id="startBtn">Start</button>
+  </div>
+  <p class="status-bar" id="status">Turn Audio on, then tap Start</p>
+  <div class="readout-row">
+    <p class="value-chip">Pitch <strong id="hzOut">—</strong> Hz</p>
+  </div>
+  <div class="theremin-play-area">
+    <button type="button" class="theremin-play-btn" id="holdBtn" disabled aria-label="Hold to sustain hive">
+      <span class="theremin-play-inner" id="holdInner"></span>
+      <span class="theremin-play-label">Hold</span>
+    </button>
   </div>
   <script type="module">
+    import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
+    import { connectMicAnalyser, createMasterBus, getMicStream } from "../../shared/audio.js";
+    import { detectPitchHz } from "../../shared/pitch.js";
 
-import { bindLearn, startAudio } from "../../shared/app.js";
-import { createMasterBus } from "../../shared/audio.js";
-bindLearn();
-const pad=document.getElementById("pad");
-const dot=document.getElementById("dot");
-const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
-let ctx,master,built=false,holding=false,activeId=null;
+    bindLearn();
 
-import { registerAudioBoot, primeMicStream } from "../../shared/app.js";
-import { detectPitchHz } from "../../shared/pitch.js";
-let partials=[],analyser,micSrc;
-function build(c){ctx=c;({master}=createMasterBus(c,0.42));for(let i=0;i<5;i++){const o=ctx.createOscillator(),g=ctx.createGain();g.gain.value=0;o.connect(g);g.connect(master);o.start();partials.push({o,g});}built=true;}
-registerAudioBoot(async c=>{build(c);const stream=await primeMicStream();micSrc=ctx.createMediaStreamSource(stream);analyser=ctx.createAnalyser();analyser.fftSize=2048;micSrc.connect(analyser);const buf=new Float32Array(analyser.fftSize);function tick(){analyser.getFloatTimeDomainData(buf);const hz=detectPitchHz(buf,ctx.sampleRate);if(hz&&holding){partials.forEach((p,i)=>{p.o.frequency.setTargetAtTime(hz*(i+1)*0.98,ctx.currentTime,0.08);p.g.gain.setTargetAtTime(0.05/(i+1),ctx.currentTime,0.06);});}requestAnimationFrame(tick);}tick();},{mic:true});
-pad.addEventListener("pointerdown",async()=>{await startAudio();holding=true;pad.classList.add("active");});
-pad.addEventListener("pointerup",()=>{holding=false;pad.classList.remove("active");partials.forEach(p=>p.g.gain.setTargetAtTime(0,ctx.currentTime,0.1));});
+    const startBtn = document.getElementById("startBtn");
+    const holdBtn = document.getElementById("holdBtn");
+    const holdInner = document.getElementById("holdInner");
+    const hzOut = document.getElementById("hzOut");
+
+    let ctx, master, built = false;
+    let micStream = null;
+    let analyser = null;
+    let buf = null;
+    let partials = [];
+    let running = false;
+    let holding = false;
+    let raf = 0;
+    let lastHz = null;
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.42));
+      partials = [];
+      for (let i = 0; i < 5; i++) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "sine";
+        g.gain.value = 0;
+        o.connect(g);
+        g.connect(master);
+        o.start();
+        partials.push({ o, g });
+      }
+      built = true;
+    }
+
+    registerAudioBoot(buildAudio, { mic: true });
+
+    async function ensureMic() {
+      if (micStream) return true;
+      try {
+        micStream = await getMicStream();
+      } catch {
+        setStatus("status", "Mic blocked — allow microphone", "warn");
+        return false;
+      }
+      if (!analyser) {
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.4;
+        connectMicAnalyser(ctx, micStream, analyser, { inputGain: 1.6 });
+        buf = new Float32Array(analyser.fftSize);
+      }
+      return true;
+    }
+
+    function fadeHive() {
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      partials.forEach((p) => p.g.gain.setTargetAtTime(0, t, 0.08));
+      holdBtn.classList.remove("active");
+      holdInner.classList.remove("on");
+    }
+
+    function setHive(hz) {
+      if (!ctx || !holding) return;
+      const t = ctx.currentTime;
+      partials.forEach((p, i) => {
+        p.o.frequency.setTargetAtTime(hz * (i + 1) * 0.98, t, 0.08);
+        p.g.gain.setTargetAtTime(0.07 / (i + 1), t, 0.06);
+      });
+    }
+
+    function listenFrame() {
+      if (!running || !analyser || !ctx) return;
+      analyser.getFloatTimeDomainData(buf);
+      const hz = detectPitchHz(buf, ctx.sampleRate);
+      lastHz = hz;
+      hzOut.textContent = hz ? hz.toFixed(1) : "—";
+      if (holding && hz) setHive(hz);
+      raf = requestAnimationFrame(listenFrame);
+    }
+
+    async function start() {
+      await startAudio(!built ? buildAudio : undefined);
+      if (!built) return;
+      if (!(await ensureMic())) return;
+      running = true;
+      holdBtn.disabled = false;
+      startBtn.textContent = "■ Stop";
+      startBtn.classList.add("active");
+      setStatus("status", "Listening — hum, then hold the pad", "ok");
+      listenFrame();
+    }
+
+    function stop() {
+      running = false;
+      holding = false;
+      cancelAnimationFrame(raf);
+      fadeHive();
+      holdBtn.disabled = true;
+      startBtn.textContent = "Start";
+      startBtn.classList.remove("active");
+      hzOut.textContent = "—";
+      lastHz = null;
+      setStatus("status", "Stopped", "");
+    }
+
+    startBtn.addEventListener("click", () => {
+      if (running) stop();
+      else void start();
+    });
+
+    function holdOn() {
+      if (!running) return;
+      holding = true;
+      holdBtn.classList.add("active");
+      holdInner.classList.add("on");
+      if (lastHz) setHive(lastHz);
+    }
+
+    function holdOff() {
+      holding = false;
+      fadeHive();
+    }
+
+    holdBtn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      holdBtn.setPointerCapture(e.pointerId);
+      holdOn();
+    });
+    holdBtn.addEventListener("pointerup", holdOff);
+    holdBtn.addEventListener("pointercancel", holdOff);
+    holdBtn.addEventListener("lostpointercapture", holdOff);
   </script>
 </body>
 </html>
