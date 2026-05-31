@@ -1327,27 +1327,33 @@ body.hub {
 }
 
 /* Markov melody */
-.markov-pads {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+.markov-melody-app .markov-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.markov-melody-app .markov-toolbar {
+  flex-wrap: wrap;
   gap: 0.35rem;
-  padding: 0.5rem;
-  align-content: center;
+  align-items: center;
 }
 
-.markov-pad {
-  min-height: var(--touch-min);
-  border-radius: 10px;
-  border: 1px solid #334155;
-  background: #1e293b;
-  color: var(--text);
-  font-size: 0.85rem;
-  font-weight: 600;
+.markov-melody-app .piano-key.markov-out-scale {
+  opacity: 0.38;
 }
 
-.markov-pad:active {
-  background: #134e4a;
-  border-color: var(--accent);
+.markov-melody-app .piano-key.markov-in-scale {
+  opacity: 1;
+}
+
+.markov-melody-app .piano-key.markov-in-scale.white {
+  border-color: #2dd4bf;
+}
+
+.markov-melody-app .piano-key.markov-in-scale.black {
+  border-color: #5eead4;
 }
 
 /* L-system groove */

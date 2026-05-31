@@ -249,10 +249,10 @@ export const HUB_APPS = [
   },
   {
     href: "apps/markov-melody/",
-    title: "Chain Sing",
+    title: "Chain Melody",
     section: "melody",
     synth: "2nd-order Markov",
-    sensors: "Touch",
+    sensors: "Touch · keyboard",
   },
   {
     href: "apps/euclidean-rings/",
