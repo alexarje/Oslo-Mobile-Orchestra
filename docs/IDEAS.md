@@ -117,10 +117,10 @@ Different ways to generate sound beyond what the hub already demos. Pair with to
 
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
-| **Markov Melody** | Learn 2nd-order from taps | Auto continuation | Tap train; play along |
-| **Euclidean Rings** | Euclidean rhythms on circles | Polyrhythm (cousin of Circular Drum) | Rotate ring = phase shift |
-| **L-System Groove** | Rewrite rules → drum map | Evolving pattern | Step evolution each bar |
-| **Chaos Attractor** | Lorenz / logistic → params | Unpredictable but bounded | Touch seeds; motion perturbs |
+| ~~**Markov Melody**~~ | Learn 2nd-order from taps | [Chain Sing](../apps/markov-melody/) | Touch |
+| ~~**Euclidean Rings**~~ | Euclidean rhythms on circles | [Pulse Lattice](../apps/euclidean-rings/) | Touch |
+| ~~**L-System Groove**~~ | Rewrite rules → drum map | [Fractal Lane](../apps/lsystem-groove/) | Touch |
+| ~~**Chaos Attractor**~~ | Lorenz / logistic → params | [Strange Attractor](../apps/chaos-attractor/) | Touch · motion |
 
 ### Lo-fi & hybrid
 

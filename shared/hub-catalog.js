@@ -247,6 +247,34 @@ export const HUB_APPS = [
     synth: "ML gesture map",
     sensors: "Motion",
   },
+  {
+    href: "apps/markov-melody/",
+    title: "Chain Sing",
+    section: "melody",
+    synth: "2nd-order Markov",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/euclidean-rings/",
+    title: "Pulse Lattice",
+    section: "rhythm",
+    synth: "Euclidean rings",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/lsystem-groove/",
+    title: "Fractal Lane",
+    section: "rhythm",
+    synth: "L-system rewrite",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/chaos-attractor/",
+    title: "Strange Attractor",
+    section: "texture",
+    synth: "Chaotic subtractive",
+    sensors: "Touch · motion",
+  },
 ];
 
 /** @param {string} href e.g. "apps/piano/" */

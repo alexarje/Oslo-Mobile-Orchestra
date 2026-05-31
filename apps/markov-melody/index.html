@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Chain Sing — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Chain Sing</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Markov melody</h2>
+    <p>Turn <strong>Audio on</strong>. <strong>Tap</strong> the pentatonic pads to teach a short phrase (2-note memory). Tap <strong>Auto play</strong> to hear the chain continue your style.</p>
+  </div>
+  <div class="app-toolbar">
+    <button type="button" class="btn btn-sm btn-play" id="autoBtn">Auto play</button>
+    <button type="button" class="btn-secondary btn btn-sm" id="clearBtn">Clear learn</button>
+    <label for="bpm">BPM <input type="range" id="bpm" min="40" max="160" value="96" /></label>
+    <span id="bpmVal">96</span>
+  </div>
+  <p class="status-bar" id="status">Tap pads to train</p>
+  <div class="readout-row">
+    <p class="value-chip">Learned <strong id="learnOut">0</strong></p>
+    <p class="value-chip">Next <strong id="noteOut">—</strong></p>
+  </div>
+  <div class="main-stage">
+    <div id="pads" class="markov-pads stage-fill"></div>
+  </div>
+  <script type="module">
+    import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
+    import { createMasterBus, midiToFreq } from "../../shared/audio.js";
+    import { createMarkovMelody } from "../../shared/markov-melody.js";
+
+    bindLearn();
+    const markov = createMarkovMelody();
+    const scale = markov.getScale();
+    const NAMES = ["C", "D", "E", "G", "A"];
+    const ROOT = 60;
+    let ctx, master, built = false;
+    let autoOn = false;
+    let nextTick = 0;
+    let raf = 0;
+
+    function playDegree(deg, when) {
+      if (!ctx) return;
+      const midi = ROOT + scale[deg];
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = midiToFreq(midi);
+      g.gain.setValueAtTime(0.001, when);
+      g.gain.exponentialRampToValueAtTime(0.32, when + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, when + 0.35);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(when);
+      osc.stop(when + 0.4);
+      document.getElementById("noteOut").textContent = NAMES[deg];
+    }
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.52));
+      built = true;
+      const pads = document.getElementById("pads");
+      scale.forEach((_, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "markov-pad";
+        btn.textContent = NAMES[i];
+        btn.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          void tapDegree(i);
+        });
+        pads.appendChild(btn);
+      });
+    }
+
+    registerAudioBoot(buildAudio);
+
+    async function tapDegree(i) {
+      await startAudio(!built ? buildAudio : undefined);
+      if (!ctx) return;
+      markov.observeDegree(i);
+      document.getElementById("learnOut").textContent = String(markov.trainingSize());
+      playDegree(i, ctx.currentTime);
+      setStatus("status", "Training…", "ok");
+    }
+
+    function scheduler() {
+      if (!autoOn || !ctx) return;
+      const now = ctx.currentTime;
+      const bpm = +document.getElementById("bpm").value;
+      const interval = 60 / bpm;
+      while (nextTick <= now + 0.05) {
+        const deg = markov.sample();
+        playDegree(deg, nextTick);
+        nextTick += interval;
+      }
+      raf = requestAnimationFrame(scheduler);
+    }
+
+    document.getElementById("bpm").oninput = (e) => {
+      document.getElementById("bpmVal").textContent = e.target.value;
+    };
+
+    document.getElementById("clearBtn").onclick = () => {
+      markov.reset();
+      setStatus("status", "Cleared — tap to train again", "");
+    };
+
+    document.getElementById("autoBtn").onclick = async () => {
+      await startAudio(!built ? buildAudio : undefined);
+      if (!ctx) return;
+      autoOn = !autoOn;
+      const btn = document.getElementById("autoBtn");
+      btn.classList.toggle("active", autoOn);
+      btn.textContent = autoOn ? "■ Stop" : "Auto play";
+      if (autoOn) {
+        if (markov.trainingSize() < 2) {
+          setStatus("status", "Tap at least 3 notes first", "warn");
+        } else {
+          setStatus("status", "Markov playing", "ok");
+        }
+        nextTick = ctx.currentTime + 0.08;
+        cancelAnimationFrame(raf);
+        scheduler();
+      } else {
+        cancelAnimationFrame(raf);
+        setStatus("status", "Stopped", "");
+      }
+    };
+  </script>
+</body>
+</html>
