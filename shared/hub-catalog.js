@@ -293,7 +293,6 @@ export const HUB_APPS = [
   { href: "apps/shadow-sequencer/", title: "Shadow Steps", section: "rhythm", synth: "8-step mask", sensors: "Camera · touch" },
   { href: "apps/torch-pulse/", title: "Flash Beat", section: "rhythm", synth: "Click + flash", sensors: "Camera · touch" },
   { href: "apps/pinch-bass/", title: "Pinch Sub", section: "synthesis", synth: "Subtractive bass", sensors: "Pinch · touch" },
-  { href: "apps/pressure-pad/", title: "Force Bright", section: "melody", synth: "Wavetable scan", sensors: "Force · touch" },
   { href: "apps/edge-strum/", title: "Rim Pluck", section: "synthesis", synth: "KS harmonics", sensors: "Touch position" },
   { href: "apps/haptic-click/", title: "Vibe Lane", section: "rhythm", synth: "Sequencer + vibe", sensors: "Touch · vibrate" },
   { href: "apps/battery-drone/", title: "Power Thin", section: "drones", synth: "Detune drift", sensors: "Battery · touch" },

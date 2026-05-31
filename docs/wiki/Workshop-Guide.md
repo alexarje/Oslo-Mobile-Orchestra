@@ -28,7 +28,7 @@ Hub → **Synth Pad**. Everyone finds one note. Count 1–2–3–4, release on 
 
 **Train & Shake** — record still / sway / shake (3+ each). Open **Teach** panel: feature map, confusion matrix, compare k-NN vs tiny net.
 
-**Evo Drumkit** (optional) — one player records a groove (4-bar count-in); group hears evolved variants.
+**Evo Drumkit** (optional) — one player records a groove (4-beat count-in); group hears evolved variants.
 
 Discuss: What confuses the model? Data stays on device until export.
 

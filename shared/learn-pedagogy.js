@@ -265,11 +265,6 @@ export const LEARN_PEDAGOGY = {
     "Continuous control on a capacitive screen, bass-focused range.",
   ],
 
-  "pressure-pad": [
-    "Force-sensitive touch (where supported) maps pressure to level and brightness.",
-    "Expressive nuance unavailable from on/off taps alone.",
-  ],
-
   "edge-strum": [
     "Touch position near the edge emphasizes higher harmonics in a string model; centre is more fundamental.",
     "Spatial playing on one surface — same as picking near the bridge on a guitar.",

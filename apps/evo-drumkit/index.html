@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Evolutionary learning</h2>
-    <p>Turn <strong>Audio on</strong>. <strong>Record groove</strong> gives a <strong>4-bar count-in</strong>, then record a one-bar pattern on the pads.</p>
+    <p>Turn <strong>Audio on</strong>. <strong>Record groove</strong> gives a <strong>4-beat count-in</strong>, then record a one-bar pattern on the pads.</p>
     <p>Press <strong>Evolve</strong>: a population of random patterns competes; each generation keeps the fittest and breeds new ones via <strong>crossover</strong> and <strong>mutation</strong>.</p>
     <p><strong>Play best</strong> loops the winner. <strong>👍</strong> nudges the next generation toward the pattern you just heard.</p>
   </div>
@@ -174,16 +174,16 @@
       osc.stop(t + 0.09);
     }
 
-    async function runBarCountdown(bpm) {
-      const barMs = (60 / bpm) * 4 * 1000;
+    async function runBeatCountdown(bpm) {
+      const beatMs = (60 / bpm) * 1000;
       countingDown = true;
       recordBtn.disabled = true;
       countEl.classList.remove("hidden");
-      for (let bar = 4; bar >= 1; bar--) {
-        countEl.textContent = String(bar);
-        setStatus("stats", `Count-in · bar ${bar}`, "ok");
+      for (let beat = 4; beat >= 1; beat--) {
+        countEl.textContent = String(beat);
+        setStatus("stats", `Count-in · ${beat}`, "ok");
         playCountClick();
-        await sleep(barMs);
+        await sleep(beatMs);
       }
       countEl.textContent = "Go!";
       setStatus("stats", "Go! · tap your groove", "ok");
@@ -215,7 +215,7 @@
       }
       recordHits.length = 0;
       recordBtn.textContent = "Count-in…";
-      await runBarCountdown(+document.getElementById("bpm").value);
+      await runBeatCountdown(+document.getElementById("bpm").value);
       recording = true;
       recordStart = ctx.currentTime;
       recordBtn.classList.add("active");

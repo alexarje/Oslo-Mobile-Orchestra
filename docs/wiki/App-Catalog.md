@@ -65,7 +65,7 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 |-----|--------|------------|
 | [Gesture School](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/train-shake/) | Gesture bands | k-NN vs tiny net; teach UI, confusion matrix |
 | [Call & Clap](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/hum-clap/) | Call-response | k-NN on mic features |
-| [Groove Gene](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/evo-drumkit/) | Evolved grooves | 4-bar count-in; genetic pattern match |
+| [Groove Gene](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/evo-drumkit/) | Evolved grooves | 4-beat count-in; genetic pattern match |
 
 ## Hub sections
 
