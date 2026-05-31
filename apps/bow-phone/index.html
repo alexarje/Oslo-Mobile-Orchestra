@@ -46,8 +46,8 @@
   </div>
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
-    import { createMasterBus } from "../../shared/audio.js";
-    import { bowFromHandSpeed, trackHandInBowZone } from "../../shared/hand-bow.js";
+    import { createMasterBus, unlockAudio } from "../../shared/audio.js";
+    import { bowFromHandSpeed, bowFromZoneMotion, trackHandInBowZone } from "../../shared/hand-bow.js";
     import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
@@ -83,7 +83,8 @@
     let sensorsReady = false;
     let holding = false;
     let activePointer = null;
-    let bowAmp = 0;
+    let motionBow = 0;
+    let cameraBow = 0;
     let lastAccel = { x: 0, y: 0, z: 0 };
     let motionPrimed = false;
     let pitchHz = 220;
@@ -97,7 +98,7 @@
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.45));
+      ({ master } = createMasterBus(c, 0.55));
       osc = ctx.createOscillator();
       osc.type = "sawtooth";
       osc.frequency.value = pitchHz;
@@ -198,12 +199,13 @@
       const n = CAM_W * CAM_H;
       if (!prevGray || prevGray.length !== n) prevGray = new Float32Array(n);
 
+      const zoneTarget = bowFromZoneMotion(img, CAM_W, CAM_H, prevGray, BOW_ZONE);
       handTrack = trackHandInBowZone(img, CAM_W, CAM_H, prevGray, BOW_ZONE);
       document.getElementById("handOut").textContent = handTrack.present ? "yes" : "—";
 
-      let target = 0;
+      let target = zoneTarget * 0.65;
       if (handTrack.present) {
-        target = bowFromHandSpeed(lastHandCx, handTrack.cx, CAM_W, BOW_SPEED_GAIN);
+        target = Math.max(target, bowFromHandSpeed(lastHandCx, handTrack.cx, CAM_W, BOW_SPEED_GAIN));
         lastHandCx = handTrack.cx;
       } else {
         lastHandCx = null;
@@ -214,9 +216,9 @@
     function camLoop() {
       if (!stream) return;
       drawCamHud();
-      if (holding && useCameraBow && video.readyState >= 2) {
+      if (holding && stream && video.readyState >= 2) {
         const target = measureHandBow();
-        bowAmp = Math.min(1, bowAmp * 0.78 + target * 0.22);
+        cameraBow = Math.min(1, cameraBow * 0.72 + target * 0.28);
       }
       camRaf = requestAnimationFrame(camLoop);
     }
@@ -302,7 +304,7 @@
       const ok = await enableSensors(SENSOR_OPTS);
       if (!ok) return;
       onMotion(({ x, y, z, rotAlpha, rotBeta, rotGamma }) => {
-        if (!holding || !built || useCameraBow) return;
+        if (!holding || !built) return;
         if (!motionPrimed) {
           lastAccel = { x, y, z };
           motionPrimed = true;
@@ -314,18 +316,23 @@
         lastAccel = { x, y, z };
         const jerk = Math.sqrt(dx * dx + dy * dy + dz * dz);
         const target = motionToAmplitude(jerk, rotAlpha, rotBeta, rotGamma);
-        bowAmp = Math.min(1, bowAmp * 0.86 + target * 0.14);
+        motionBow = Math.min(1, motionBow * 0.82 + target * 0.18);
       });
       sensorsReady = true;
       document.getElementById("bowSrc").textContent = "Motion";
     }
 
+    function bowLevel() {
+      if (!holding) return 0;
+      return Math.min(1, Math.max(motionBow, cameraBow));
+    }
+
     function applyBow() {
       if (!built || !ctx) return;
-      const amp = holding ? bowAmp : 0;
+      const amp = bowLevel();
       const t = ctx.currentTime;
-      toneGain.gain.setTargetAtTime(amp * 0.34, t, 0.025);
-      noiseGain.gain.setTargetAtTime(amp * 0.4, t, 0.025);
+      toneGain.gain.setTargetAtTime(amp * 0.4, t, 0.025);
+      noiseGain.gain.setTargetAtTime(amp * 0.48, t, 0.025);
       osc.frequency.setTargetAtTime(pitchHz, t, 0.04);
       document.getElementById("bOut").textContent = amp.toFixed(2);
       document.getElementById("bowMeter").style.width = `${amp * 100}%`;
@@ -335,9 +342,11 @@
 
     function tick() {
       if (!built) return;
-      if (holding) {
-        bowAmp *= 0.94;
-        if (bowAmp < 0.002) bowAmp = 0;
+      if (!holding) {
+        motionBow *= 0.9;
+        cameraBow *= 0.9;
+        if (motionBow < 0.002) motionBow = 0;
+        if (cameraBow < 0.002) cameraBow = 0;
       }
       applyBow();
       requestAnimationFrame(tick);
@@ -355,18 +364,18 @@
 
     async function armBow(e) {
       primeSensors(SENSOR_OPTS);
+      await startAudio(!built ? buildAudio : undefined);
+      if (!built) return;
+      if (ctx.state === "suspended") await unlockAudio(ctx);
+      void initMotionFallback();
       if (!stream) {
         const camPromise = requestCameraStream();
-        await startAudio(!built ? buildAudio : undefined);
-        if (!built) return;
         if (camPromise) {
           const ok = await attachCamera(camPromise);
-          if (!ok) await initMotionFallback();
+          if (!ok) document.getElementById("bowSrc").textContent = "Motion";
         } else {
-          await initMotionFallback();
+          document.getElementById("bowSrc").textContent = "Motion";
         }
-      } else if (!built) {
-        await startAudio(buildAudio);
       }
       holding = true;
       activePointer = e.pointerId;
@@ -374,7 +383,9 @@
       pad.classList.add("active");
       lastAccel = { x: 0, y: 0, z: 0 };
       motionPrimed = false;
-      bowAmp = 0;
+      motionBow = 0;
+      cameraBow = 0;
+      if (!camRaf && stream) camLoop();
       setPitchFromTouch(e);
     }
 
@@ -406,7 +417,8 @@
       if (e.pointerId !== activePointer) return;
       holding = false;
       activePointer = null;
-      bowAmp = 0;
+      motionBow = 0;
+      cameraBow = 0;
       motionPrimed = false;
       pad.classList.remove("active");
       dot.style.opacity = "0";

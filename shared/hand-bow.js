@@ -63,7 +63,7 @@ export function trackHandInBowZone(img, w, h, prevGray, bowZone = 0.55) {
   }
 
   const mass = count / area;
-  if (mass < 0.018 || weight <= 0) {
+  if (mass < 0.01 || weight <= 0) {
     return { present: false, cx: 0, cy: 0, mass: 0, nx: 0.5, ny: 0.25 };
   }
 
@@ -90,4 +90,22 @@ export function bowFromHandSpeed(lastCx, cx, w, gain = 13) {
   if (lastCx == null) return 0;
   const dx = Math.abs(cx - lastCx) / Math.max(1, w);
   return clamp(dx * gain, 0, 1);
+}
+
+/** Bow drive from overall motion in the bow zone (works without hand lock). */
+export function bowFromZoneMotion(img, w, h, prevGray, bowZone = 0.55) {
+  if (!prevGray?.length) return 0;
+  const data = img.data;
+  const yMax = Math.max(1, Math.floor(h * bowZone));
+  let sum = 0;
+  const n = w * yMax;
+  for (let y = 0; y < yMax; y++) {
+    for (let x = 0; x < w; x++) {
+      const pi = y * w + x;
+      const i = pi * 4;
+      const gray = (data[i] + data[i + 1] + data[i + 2]) / 765;
+      sum += Math.abs(gray - prevGray[pi]);
+    }
+  }
+  return clamp((sum / n) * 36, 0, 1);
 }
