@@ -16,6 +16,7 @@
     <h2>Synchronizing pulses</h2>
     <p>Turn <strong>Audio on</strong> and allow the <strong>mic</strong>. This phone plays a steady click; the mic listens for other pulses nearby and gently adjusts <strong>speed</strong> and <strong>timing</strong> to line up — like fireflies syncing.</p>
     <p>Set a starting <strong>BPM</strong>, tap <strong>Start</strong>, and play in a circle with other phones. Louder speakers help the mic lock on.</p>
+    <p>Turn on <strong>Visual flash</strong> for a full-screen pulse on each beat (stronger on downbeats) — useful when you cannot hear the click.</p>
   </div>
   <div class="firefly-toolbar">
     <div class="control-row">
@@ -29,6 +30,10 @@
         <input type="checkbox" id="listen" checked />
         Listen (mic)
       </label>
+      <label class="slide-toggle">
+        <input type="checkbox" id="visualFlash" checked />
+        Visual flash
+      </label>
     </div>
     <p class="status-bar" id="status">Stopped · Audio on</p>
     <div class="readout-row">
@@ -37,6 +42,7 @@
       <p class="value-chip">Phase <strong id="phaseMs">—</strong> ms</p>
     </div>
   </div>
+  <div class="countdown-flash firefly-beat-flash" id="beatFlash" aria-hidden="true"></div>
   <div class="main-stage firefly-stage" id="stage" aria-hidden="true">
     <div class="firefly-glow" id="glow"></div>
   </div>
@@ -57,6 +63,8 @@
 
     const glow = document.getElementById("glow");
     const stage = document.getElementById("stage");
+    const beatFlash = document.getElementById("beatFlash");
+    const visualFlashEl = document.getElementById("visualFlash");
     let ctx, master, built = false;
     let engine = null;
     let detector = null;
@@ -64,14 +72,20 @@
     let running = false;
     let ignoreOnsetUntil = 0;
 
-    function flash() {
+    function flash(downbeat = false) {
       stage.classList.add("pulse");
       glow.classList.add("on");
+      if (visualFlashEl.checked && beatFlash) {
+        beatFlash.classList.remove("on", "on-down");
+        beatFlash.classList.add(downbeat ? "on-down" : "on");
+        clearTimeout(flash._beatT);
+        flash._beatT = setTimeout(() => beatFlash.classList.remove("on", "on-down"), downbeat ? 140 : 70);
+      }
       clearTimeout(flash._t);
       flash._t = setTimeout(() => {
         stage.classList.remove("pulse");
         glow.classList.remove("on");
-      }, 90);
+      }, downbeat ? 120 : 90);
     }
 
     function buildAudio(c) {
@@ -80,8 +94,8 @@
       engine = createFireflyPulse(ctx, master, {
         bpm: +bpmEl.value,
         level: 0.32,
-        onPulse: (t) => {
-          flash();
+        onPulse: (t, downbeat) => {
+          flash(downbeat);
           ignoreOnsetUntil = t + 0.11;
         },
         onSync: (s) => {

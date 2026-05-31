@@ -34,6 +34,7 @@ export function createFireflyPulse(ctx, dest, opts = {}) {
   let running = false;
   let raf = 0;
   let lastStrength = 0;
+  let beatInBar = 0;
 
   function playClick(t) {
     const osc = ctx.createOscillator();
@@ -48,7 +49,9 @@ export function createFireflyPulse(ctx, dest, opts = {}) {
     env.connect(dest);
     osc.start(t);
     osc.stop(t + 0.08);
-    opts.onPulse?.(t);
+    const downbeat = beatInBar === 0;
+    beatInBar = (beatInBar + 1) % 4;
+    opts.onPulse?.(t, downbeat);
   }
 
   function emitSync(phaseErr = 0) {
@@ -84,6 +87,7 @@ export function createFireflyPulse(ctx, dest, opts = {}) {
     start() {
       if (running) return;
       running = true;
+      beatInBar = 0;
       nextPulse = ctx.currentTime + 0.1;
       tick();
     },

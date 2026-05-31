@@ -191,9 +191,9 @@ Use when designing a new app: pick **one primary sensor** and **one synthesis fa
 - ~~**Conductor**~~ — QR + visual metronome flash
 - ~~**Synth Pad**~~ — aftertouch
 - ~~**Granular Tilt**~~ — hold freeze buffer; upload sample
-- **Harmonizer** — minor key detection; user scale lock
-- **Firefly** — visual flash on downbeat for deaf participants
-- **KS String / Pluck** — optional reverb send per pluck
+- ~~**Harmonizer**~~ — auto major/minor; scale lock + lock root
+- ~~**Firefly**~~ — full-screen visual flash (stronger on downbeats)
+- ~~**KS String / Pluck**~~ — optional reverb send per pluck
 
 ---
 

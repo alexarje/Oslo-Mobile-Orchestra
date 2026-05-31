@@ -24,11 +24,15 @@
     <p class="value-chip">Pitch <strong id="freqOut">220</strong> Hz</p>
     <p class="value-chip">Pluck <strong id="pluckOut">—</strong></p>
     <p class="value-chip">Damp <strong id="dampOut">4000</strong> Hz</p>
+    <label class="slide-toggle value-chip">
+      <input type="checkbox" id="reverbOn" checked />
+      Reverb
+    </label>
   </div>
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
-    import { createKSPool, karplusPluck } from "../../shared/ks.js";
+    import { createKSReverb, createKSPool, karplusPluck } from "../../shared/ks.js";
     import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
@@ -45,6 +49,7 @@
     function buildAudio(c) {
       ctx = c;
       ({ master } = createMasterBus(c, 0.52));
+      reverbBus = createKSReverb(c, master, 0.26);
       built = true;
     }
 
@@ -79,12 +84,15 @@
       const freq = mapX(nx);
       const strength = 0.1 + (1 - ny) * 0.48;
       const dampHz = currentDamp;
+      const useRev = document.getElementById("reverbOn").checked;
       karplusPluck(ctx, master, pool, freq, {
         strength,
         dampHz,
         level: 0.22 + strength * 0.18,
         feedback: Math.max(0.72, 0.8 - dampHz / 12000),
         decaySec: 1.6,
+        reverbBus: useRev ? reverbBus : null,
+        reverbSend: useRev ? 0.34 : 0,
       });
       document.getElementById("freqOut").textContent = freq.toFixed(0);
       document.getElementById("pluckOut").textContent = strength.toFixed(2);

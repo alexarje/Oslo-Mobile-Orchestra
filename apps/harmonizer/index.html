@@ -16,6 +16,7 @@
     <h2>Neighbourhood tonality</h2>
     <p>Turn <strong>Audio on</strong> and allow the <strong>mic</strong>. Tap <strong>Start</strong> — the mic gathers many partials from nearby phones and voices into one <strong>chroma</strong> picture.</p>
     <p>Over time this phone <strong>slides</strong> its pitch toward the group’s strongest notes (a shared root chord). <strong>Hold</strong> the circle to sing the aligned tone; release to listen only.</p>
+    <p><strong>Scale</strong> can stay on Auto (major vs minor from the room), or you can lock Major/Minor. <strong>Lock root</strong> freezes the detected key while you keep listening.</p>
     <p>Works best in a circle at moderate volume; avoid covering the mic with your hand.</p>
   </div>
   <div class="harm-toolbar">
@@ -24,6 +25,16 @@
       <label class="slide-toggle">
         <input type="checkbox" id="chordMode" checked />
         Chord (Ⅰ–Ⅲ–Ⅴ)
+      </label>
+      <label class="harm-scale" for="scaleMode">Scale</label>
+      <select id="scaleMode" class="harm-select">
+        <option value="auto" selected>Auto</option>
+        <option value="major">Major</option>
+        <option value="minor">Minor</option>
+      </select>
+      <label class="slide-toggle">
+        <input type="checkbox" id="rootLock" />
+        Lock root
       </label>
     </div>
     <p class="status-bar" id="status">Stopped · Audio on</p>
@@ -176,16 +187,14 @@
       const hz = consensus.getPlayHz();
       const rootPc = ((consensus.getRootMidi() % 12) + 12) % 12;
 
-      document.getElementById("rootOut").textContent = `${consensus.rootLabel()} · ${midiLabel(consensus.getRootMidi())}`;
+      document.getElementById("rootOut").textContent = `${consensus.keyLabel()} · ${midiLabel(consensus.getRootMidi())}`;
       document.getElementById("hzOut").textContent = hz.toFixed(1);
       document.getElementById("lockOut").textContent = String(Math.round(lock * 100));
       document.getElementById("peaksOut").textContent = consensus.getPeakEma().toFixed(0);
       drawChroma(consensus.getChromaView(), rootPc);
 
       if (holding) {
-        const freqs = document.getElementById("chordMode").checked
-          ? consensus.chordHz(true)
-          : [hz];
+        const freqs = document.getElementById("chordMode").checked ? consensus.chordHz() : [hz];
         setVoiceHz(freqs);
       }
 
@@ -229,8 +238,16 @@
       glow.classList.add("on");
       holdBtn.setPointerCapture(e.pointerId);
       const hz = consensus.getPlayHz();
-      const freqs = document.getElementById("chordMode").checked ? consensus.chordHz(true) : [hz];
+      const freqs = document.getElementById("chordMode").checked ? consensus.chordHz() : [hz];
       setVoiceHz(freqs);
+    });
+
+    document.getElementById("scaleMode").addEventListener("change", (e) => {
+      consensus.setMode(e.target.value);
+    });
+
+    document.getElementById("rootLock").addEventListener("change", (e) => {
+      consensus.setRootLock(e.target.checked);
     });
 
     const endHold = (e) => {

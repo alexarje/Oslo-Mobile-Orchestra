@@ -32,6 +32,25 @@ export function createHarmonyConsensus(opts = {}) {
   let rootMidi = 60;
   let frames = 0;
   let recentPeaks = 0;
+  /** @type {"auto"|"major"|"minor"} */
+  let mode = "auto";
+  let rootLocked = false;
+  let lockedRootPc = 0;
+  let isMajor = true;
+
+  function updateQuality() {
+    if (mode === "major") {
+      isMajor = true;
+      return;
+    }
+    if (mode === "minor") {
+      isMajor = false;
+      return;
+    }
+    const maj = chromaView[(rootPc + 4) % 12];
+    const min = chromaView[(rootPc + 3) % 12];
+    isMajor = maj >= min;
+  }
 
   function ingest(chroma, peakCount = 0) {
     let energy = 0;
@@ -49,16 +68,22 @@ export function createHarmonyConsensus(opts = {}) {
       chromaView[i] = chromaView[i] * (1 - pull) + chromaAcc[i] * pull;
     }
 
-    rootPc = argmax(chromaView);
-    const targetMidi = 60 + rootPc;
-    rootMidi = targetMidi;
-    const targetHz = midiToHz(targetMidi);
+    if (!rootLocked) {
+      rootPc = argmax(chromaView);
+      rootMidi = 60 + rootPc;
+    } else {
+      rootPc = lockedRootPc;
+      rootMidi = 60 + rootPc;
+    }
+    updateQuality();
+    const targetHz = midiToHz(rootMidi);
     playHz = playHz * (1 - pull) + targetHz * pull;
   }
 
-  function chordHz(major = true) {
+  function chordHz(major) {
+    const useMajor = major === undefined ? isMajor : major;
     const r = rootMidi;
-    const third = major ? 4 : 3;
+    const third = useMajor ? 4 : 3;
     return [r, r + third, r + 7].map((m) => midiToHz(m));
   }
 
@@ -73,6 +98,24 @@ export function createHarmonyConsensus(opts = {}) {
     return NOTE[rootPc];
   }
 
+  function keyLabel() {
+    return `${rootLabel()} ${isMajor ? "major" : "minor"}`;
+  }
+
+  function setMode(next) {
+    if (next === "auto" || next === "major" || next === "minor") mode = next;
+    updateQuality();
+  }
+
+  function setRootLock(lock) {
+    if (lock && !rootLocked) lockedRootPc = rootPc;
+    rootLocked = !!lock;
+    if (rootLocked) {
+      rootPc = lockedRootPc;
+      rootMidi = 60 + rootPc;
+    }
+  }
+
   return {
     ingest,
     getPlayHz: () => playHz,
@@ -81,6 +124,12 @@ export function createHarmonyConsensus(opts = {}) {
     chordHz,
     lockAmount,
     rootLabel,
+    keyLabel,
+    isMajor: () => isMajor,
+    getMode: () => mode,
+    setMode,
+    isRootLocked: () => rootLocked,
+    setRootLock,
     getPeakEma: () => recentPeaks,
     getFrames: () => frames,
   };

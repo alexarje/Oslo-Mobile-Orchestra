@@ -2,6 +2,23 @@
  * Karplus–Strong pluck — stable feedback, voice pool, clean teardown.
  */
 
+/** Short stereo impulse for optional per-pluck reverb send. */
+export function createKSReverb(ctx, master, wet = 0.28) {
+  const len = Math.floor(ctx.sampleRate * 1.5);
+  const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.1;
+  }
+  const reverb = ctx.createConvolver();
+  reverb.buffer = buf;
+  const wetGain = ctx.createGain();
+  wetGain.gain.value = wet;
+  reverb.connect(wetGain);
+  wetGain.connect(master);
+  return reverb;
+}
+
 function killVoice(ctx, voice) {
   const t = ctx.currentTime;
   try {
@@ -78,6 +95,13 @@ export function karplusPluck(ctx, dest, pool, freq, opts = {}) {
   fb.connect(delay);
   lpf.connect(out);
   out.connect(dest);
+
+  if (opts.reverbBus && (opts.reverbSend ?? 0) > 0.001) {
+    const send = ctx.createGain();
+    send.gain.value = opts.reverbSend ?? 0.32;
+    lpf.connect(send);
+    send.connect(opts.reverbBus);
+  }
 
   const voice = { exc, delay, lpf, fb, out };
   pool.voices.push(voice);

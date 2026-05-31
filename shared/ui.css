@@ -1272,11 +1272,35 @@ body.hub {
   background: radial-gradient(ellipse at center, #1a2e1a 0%, #020617 75%);
 }
 
+.firefly-app .firefly-beat-flash.on {
+  background: rgba(250, 204, 21, 0.22);
+  opacity: 1;
+}
+
+.firefly-app .firefly-beat-flash.on-down {
+  background: rgba(253, 224, 71, 0.62);
+  opacity: 1;
+}
+
 /* Harmonizer */
 .harmonizer-app .harm-toolbar {
   flex-shrink: 0;
   padding: 0 0.5rem 0.35rem;
   background: #111827;
+}
+
+.harmonizer-app .harm-select {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.harmonizer-app .harm-scale {
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
 .harmonizer-app .harm-toolbar .evo-actions {
