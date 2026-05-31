@@ -12,7 +12,7 @@
 <body class="hub">
   <header class="hub-header">
     <h1>Oslo Mobile Orchestra</h1>
-    <p>Tap an app · touch to play (mic/motion when asked).</p>
+    <p>Each card shows synthesis and sensors. Tap to play.</p>
   </header>
 
   <div class="learn-panel panel" id="learnPanel">
@@ -44,48 +44,15 @@
 
   <script type="module">
     import { bindLearn } from "./shared/app.js";
+    import { HUB_APPS, catalogEntryForHref } from "./shared/hub-catalog.js";
     import { SECTIONS, getPartFromUrl, getSectionFromUrl, wireA11yToggle } from "./shared/workshop.js";
 
     bindLearn();
     wireA11yToggle();
 
-    const APPS = [
-      { href: "apps/conductor/", tag: "Timing", title: "Conductor", section: "rhythm" },
-      { href: "apps/part/", tag: "Seat", title: "Your Part (QR)", section: "rhythm" },
-      { href: "apps/audience/", tag: "Crowd", title: "Audience Swell", section: "drones" },
-      { href: "apps/firefly/", tag: "Sync", title: "Firefly", section: "rhythm" },
-      { href: "apps/flute-blow/", tag: "Mic", title: "Pentatonic Flute", section: "melody" },
-      { href: "apps/mic-theremin/", tag: "Mic", title: "Mic Theremin", section: "melody" },
-      { href: "apps/harmonizer/", tag: "Harm", title: "Harmonizer", section: "drones" },
-      { href: "apps/hum-clap/", tag: "AI", title: "Hum vs Clap", section: "ai" },
-      { href: "apps/piano/", tag: "Keys", title: "Piano", section: "melody" },
-      { href: "apps/drumkit/", tag: "Rhythm", title: "Drumkit", section: "rhythm" },
-      { href: "apps/circular-drum/", tag: "Circ", title: "Drum Sequencer Circular", section: "rhythm" },
-      { href: "apps/drum-sequencer/", tag: "Lin", title: "Drum Sequencer Linear", section: "rhythm" },
-      { href: "apps/delay-throw/", tag: "Delay", title: "Delay Throw", section: "rhythm" },
-      { href: "apps/fm-touch/", tag: "FM", title: "FM Touch Synth", section: "synthesis" },
-      { href: "apps/fm-touch-tilt/", tag: "FM", title: "FM Touch + Tilt", section: "synthesis" },
-      { href: "apps/fm-matrix/", tag: "FM", title: "FM Matrix", section: "synthesis" },
-      { href: "apps/ks-string/", tag: "KS", title: "KS String", section: "synthesis" },
-      { href: "apps/ks-pluck/", tag: "KS", title: "KS Pluck", section: "synthesis" },
-      { href: "apps/sampler/", tag: "Sample", title: "Sampler", section: "texture" },
-      { href: "apps/synth-pad/", tag: "Pad", title: "Synth Pad", section: "melody" },
-      { href: "apps/additive-bells/", tag: "Add", title: "Additive Bells", section: "synthesis" },
-      { href: "apps/wavetable-scan/", tag: "Table", title: "Wavetable Scan", section: "texture" },
-      { href: "apps/filter-ladder/", tag: "Filter", title: "Filter Ladder", section: "synthesis" },
-      { href: "apps/motion-wah/", tag: "Wah", title: "Motion Wah", section: "drones" },
-      { href: "apps/compass-wah/", tag: "Compass", title: "Compass Wah", section: "drones" },
-      { href: "apps/drone-choir/", tag: "Harmony", title: "Drone Choir", section: "drones" },
-      { href: "apps/tilt-harp/", tag: "Harp", title: "Tilt Harp", section: "melody" },
-      { href: "apps/bow-phone/", tag: "Bow", title: "Bow Phone", section: "melody" },
-      { href: "apps/evo-drumkit/", tag: "Evo", title: "Evo Drumkit", section: "ai" },
-      { href: "apps/train-shake/", tag: "ML", title: "Train & Shake", section: "ai" },
-      { href: "apps/granular-tilt/", tag: "Grain", title: "Granular Tilt", section: "texture" },
-      { href: "apps/spectral-freeze/", tag: "FFT", title: "Spectral Freeze", section: "texture" },
-      { href: "apps/video-sonifier/", tag: "Cam", title: "Video Sonifier", section: "texture" },
-      { href: "apps/light-theremin/", tag: "Lux", title: "Light Theremin", section: "melody" },
-      { href: "apps/ring-mod-gong/", tag: "Ring", title: "Ring Mod Gong", section: "synthesis" },
-    ].sort((a, b) => a.title.localeCompare(b.title, "en", { sensitivity: "base" }));
+    const APPS = [...HUB_APPS].sort((a, b) =>
+      a.title.localeCompare(b.title, "en", { sensitivity: "base" })
+    );
 
     const list = document.getElementById("appList");
     const filter = document.getElementById("sectionFilter");
@@ -98,7 +65,8 @@
         const link = document.createElement("a");
         link.href = a.href;
         link.dataset.section = a.section;
-        link.innerHTML = `<span class="tag">${a.tag}</span><span class="title">${a.title}</span>`;
+        const sectionLabel = SECTIONS[a.section]?.name || a.section;
+        link.innerHTML = `<span class="tag">${sectionLabel}</span><span class="title">${a.title}</span><span class="meta"><span class="meta-synth">${a.synth}</span><span class="meta-sep"> · </span><span class="meta-sensors">${a.sensors}</span></span>`;
         li.appendChild(link);
         list.appendChild(li);
       });
@@ -116,7 +84,9 @@
     if (part) {
       const b = document.getElementById("partBanner");
       b.classList.remove("hidden");
-      b.innerHTML = `${part.label} → <a href="apps/${part.app}/">open ${part.app}</a>`;
+      const partHref = `apps/${part.app}/`;
+      const partTitle = catalogEntryForHref(partHref)?.title || part.app;
+      b.innerHTML = `${part.label} → <a href="${partHref}">${partTitle}</a>`;
     }
 
     const urlSec = getSectionFromUrl();

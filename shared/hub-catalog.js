@@ -1,0 +1,261 @@
+/**
+ * Hub instrument list — display names, synthesis, sensors (paths stay stable).
+ */
+export const HUB_APPS = [
+  {
+    href: "apps/conductor/",
+    title: "Downbeat Beacon",
+    section: "rhythm",
+    synth: "Ensemble click",
+    sensors: "Touch · shared URL",
+  },
+  {
+    href: "apps/part/",
+    title: "Seat Ticket",
+    section: "rhythm",
+    synth: "Routing only",
+    sensors: "QR · touch",
+  },
+  {
+    href: "apps/drumkit/",
+    title: "Hand Drum Circle",
+    section: "rhythm",
+    synth: "Drum synthesis",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/drum-sequencer/",
+    title: "Step Lane",
+    section: "rhythm",
+    synth: "Step sequencer",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/circular-drum/",
+    title: "Orbit Groove",
+    section: "rhythm",
+    synth: "Ring sequencer",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/firefly/",
+    title: "Firefly Sync",
+    section: "rhythm",
+    synth: "Pulse click",
+    sensors: "Mic · touch",
+  },
+  {
+    href: "apps/delay-throw/",
+    title: "Echo Toss",
+    section: "rhythm",
+    synth: "Delay feedback",
+    sensors: "Touch · tilt",
+  },
+  {
+    href: "apps/evo-drumkit/",
+    title: "Groove Gene",
+    section: "ai",
+    synth: "Evolving drums",
+    sensors: "Touch · mic",
+  },
+  {
+    href: "apps/audience/",
+    title: "Murmuration",
+    section: "drones",
+    synth: "Swarm tones",
+    sensors: "Touch · motion",
+  },
+  {
+    href: "apps/drone-choir/",
+    title: "Held Voices",
+    section: "drones",
+    synth: "Detuned sines",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/motion-wah/",
+    title: "Tilt Wah",
+    section: "drones",
+    synth: "Bandpass wah",
+    sensors: "Touch · motion",
+  },
+  {
+    href: "apps/compass-wah/",
+    title: "North Filter",
+    section: "drones",
+    synth: "Compass filter",
+    sensors: "Touch · compass · tilt",
+  },
+  {
+    href: "apps/harmonizer/",
+    title: "Neighbourhood Chord",
+    section: "drones",
+    synth: "Chroma drones",
+    sensors: "Mic · touch",
+  },
+  {
+    href: "apps/piano/",
+    title: "Glass Keys",
+    section: "melody",
+    synth: "Keyboard tones",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/synth-pad/",
+    title: "Wedge Lead",
+    section: "melody",
+    synth: "Subtractive pad",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/mic-theremin/",
+    title: "Humming Stone",
+    section: "melody",
+    synth: "Pitch-tracked sine",
+    sensors: "Mic · touch",
+  },
+  {
+    href: "apps/flute-blow/",
+    title: "Breath Flute",
+    section: "melody",
+    synth: "Breath tone",
+    sensors: "Mic · touch",
+  },
+  {
+    href: "apps/light-theremin/",
+    title: "Shadow Tone",
+    section: "melody",
+    synth: "Light theremin",
+    sensors: "Light · touch",
+  },
+  {
+    href: "apps/tilt-harp/",
+    title: "Gravity Harp",
+    section: "melody",
+    synth: "Plucked harp",
+    sensors: "Touch · tilt",
+  },
+  {
+    href: "apps/bow-phone/",
+    title: "Selfie Bow",
+    section: "melody",
+    synth: "Bowed string",
+    sensors: "Touch · camera",
+  },
+  {
+    href: "apps/fm-touch/",
+    title: "FM Fingerpaint",
+    section: "synthesis",
+    synth: "2-op FM",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/fm-touch-tilt/",
+    title: "FM Skybend",
+    section: "synthesis",
+    synth: "FM + motion",
+    sensors: "Touch · tilt",
+  },
+  {
+    href: "apps/fm-matrix/",
+    title: "FM Patchbay",
+    section: "synthesis",
+    synth: "FM matrix",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/ks-string/",
+    title: "Resonant Wire",
+    section: "synthesis",
+    synth: "Karplus–Strong",
+    sensors: "Touch · tilt",
+  },
+  {
+    href: "apps/ks-pluck/",
+    title: "Pocket Pluck",
+    section: "synthesis",
+    synth: "Karplus–Strong",
+    sensors: "Touch · tilt",
+  },
+  {
+    href: "apps/additive-bells/",
+    title: "Harmonic Bells",
+    section: "synthesis",
+    synth: "Additive partials",
+    sensors: "Touch · motion",
+  },
+  {
+    href: "apps/filter-ladder/",
+    title: "Ladder Groan",
+    section: "synthesis",
+    synth: "Ladder lowpass",
+    sensors: "Touch · tilt",
+  },
+  {
+    href: "apps/ring-mod-gong/",
+    title: "Bronze Clang",
+    section: "synthesis",
+    synth: "Ring modulation",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/sampler/",
+    title: "Field Catcher",
+    section: "texture",
+    synth: "Sample playback",
+    sensors: "Mic · touch · tilt",
+  },
+  {
+    href: "apps/granular-tilt/",
+    title: "Dust Drift",
+    section: "texture",
+    synth: "Granular cloud",
+    sensors: "Touch · tilt · mic",
+  },
+  {
+    href: "apps/spectral-freeze/",
+    title: "Prism Hold",
+    section: "texture",
+    synth: "FFT partials",
+    sensors: "Mic · touch",
+  },
+  {
+    href: "apps/wavetable-scan/",
+    title: "Wave Rider",
+    section: "texture",
+    synth: "Wavetable morph",
+    sensors: "Touch",
+  },
+  {
+    href: "apps/video-sonifier/",
+    title: "Motion Cam",
+    section: "texture",
+    synth: "Video sonification",
+    sensors: "Camera",
+  },
+  {
+    href: "apps/hum-clap/",
+    title: "Call & Clap",
+    section: "ai",
+    synth: "k-NN classifier",
+    sensors: "Mic",
+  },
+  {
+    href: "apps/train-shake/",
+    title: "Gesture School",
+    section: "ai",
+    synth: "ML gesture map",
+    sensors: "Motion",
+  },
+];
+
+/** @param {string} href e.g. "apps/piano/" */
+export function catalogEntryForHref(href) {
+  return HUB_APPS.find((a) => a.href === href);
+}
+
+/** Folder slug from href: "piano" */
+export function slugFromHref(href) {
+  const m = href.match(/apps\/([^/]+)\//);
+  return m ? m[1] : "";
+}

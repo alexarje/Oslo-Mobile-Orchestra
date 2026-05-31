@@ -482,8 +482,17 @@ body.hub {
   font-weight: 600;
 }
 
-.app-list .desc {
-  display: none;
+.app-list .meta {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.app-list .meta-sensors {
+  color: #7dd3fc;
 }
 
 .hub-tips {
@@ -1756,6 +1765,10 @@ html.omo-a11y .app-list a {
 
 html.omo-a11y .app-list .title {
   font-size: 1.05rem;
+}
+
+html.omo-a11y .app-list .meta {
+  font-size: 0.78rem;
 }
 
 html.omo-a11y .app-list .tag {

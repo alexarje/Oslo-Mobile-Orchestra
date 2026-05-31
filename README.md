@@ -14,7 +14,7 @@ The apps should (in theory) work on all modern browsers, but we have seen that t
 ## Quick start
 
 1. Open the site in a browser (not inside a communication app or email; then you should use "Open in browser" command).
-2. Choose the app to play.
+2. Choose the app to play — each card lists **synthesis** and **sensors**.
 3. Apps will ask for different permissions, including the microphone, motion, or camera. Permissions may need to be given both within the browser and in the OS.
 4. Turn up the volume to at least 70%. Turn off silent mode on iPhone.
 5. In every app: **Learn** = how to play · **QR** = share this instrument with others· **Audio on** = activate sound if it doesn't start automatically.
@@ -24,18 +24,18 @@ The apps should (in theory) work on all modern browsers, but we have seen that t
 
 | | |
 |---|---|
-| **Rhythm** | [Conductor](apps/conductor/) · [Drumkit](apps/drumkit/) · [Drum Sequencer Linear](apps/drum-sequencer/) · [Drum Sequencer Circular](apps/circular-drum/) · [Firefly](apps/firefly/) · [Delay Throw](apps/delay-throw/) · [Your Part](apps/part/) |
-| **Drones** | [Drone Choir](apps/drone-choir/) · [Motion Wah](apps/motion-wah/) · [Compass Wah](apps/compass-wah/) · [Harmonizer](apps/harmonizer/) · [Audience Swell](apps/audience/) |
-| **Melody** | [Piano](apps/piano/) · [Synth Pad](apps/synth-pad/) · [Mic Theremin](apps/mic-theremin/) · [Pentatonic Flute](apps/flute-blow/) · [Light Theremin](apps/light-theremin/) · [Tilt Harp](apps/tilt-harp/) · [Bow Phone](apps/bow-phone/) |
-| **Synthesis** | [FM Touch](apps/fm-touch/) · [FM Touch + Tilt](apps/fm-touch-tilt/) · [FM Matrix](apps/fm-matrix/) · [KS String](apps/ks-string/) · [KS Pluck](apps/ks-pluck/) · [Additive Bells](apps/additive-bells/) · [Filter Ladder](apps/filter-ladder/) · [Ring Mod Gong](apps/ring-mod-gong/) |
-| **Texture** | [Sampler](apps/sampler/) · [Granular Tilt](apps/granular-tilt/) · [Spectral Freeze](apps/spectral-freeze/) · [Wavetable Scan](apps/wavetable-scan/) · [Video Sonifier](apps/video-sonifier/) |
-| **AI** | [Train & Shake](apps/train-shake/) · [Hum vs Clap](apps/hum-clap/) · [Evo Drumkit](apps/evo-drumkit/) |
+| **Rhythm** | [Downbeat Beacon](apps/conductor/) · [Hand Drum Circle](apps/drumkit/) · [Step Lane](apps/drum-sequencer/) · [Orbit Groove](apps/circular-drum/) · [Firefly Sync](apps/firefly/) · [Echo Toss](apps/delay-throw/) · [Seat Ticket](apps/part/) |
+| **Drones** | [Held Voices](apps/drone-choir/) · [Tilt Wah](apps/motion-wah/) · [North Filter](apps/compass-wah/) · [Neighbourhood Chord](apps/harmonizer/) · [Murmuration](apps/audience/) |
+| **Melody** | [Glass Keys](apps/piano/) · [Wedge Lead](apps/synth-pad/) · [Humming Stone](apps/mic-theremin/) · [Breath Flute](apps/flute-blow/) · [Shadow Tone](apps/light-theremin/) · [Gravity Harp](apps/tilt-harp/) · [Selfie Bow](apps/bow-phone/) |
+| **Synthesis** | [FM Fingerpaint](apps/fm-touch/) · [FM Skybend](apps/fm-touch-tilt/) · [FM Patchbay](apps/fm-matrix/) · [Resonant Wire](apps/ks-string/) · [Pocket Pluck](apps/ks-pluck/) · [Harmonic Bells](apps/additive-bells/) · [Ladder Groan](apps/filter-ladder/) · [Bronze Clang](apps/ring-mod-gong/) |
+| **Texture** | [Field Catcher](apps/sampler/) · [Dust Drift](apps/granular-tilt/) · [Prism Hold](apps/spectral-freeze/) · [Wave Rider](apps/wavetable-scan/) · [Motion Cam](apps/video-sonifier/) |
+| **AI** | [Gesture School](apps/train-shake/) · [Call & Clap](apps/hum-clap/) · [Groove Gene](apps/evo-drumkit/) |
 
 ## Documentation
 
 | Resource | Contents |
 |----------|----------|
-| **[Wiki](https://github.com/alexarje/Oslo-Mobile-Orchestra/wiki)** | Full app catalog, workshop scripts, browsers & sensors, ensemble sync (Firefly, Harmonizer, Conductor), architecture |
+| **[Wiki](https://github.com/alexarje/Oslo-Mobile-Orchestra/wiki)** | Full app catalog, workshop scripts, browsers & sensors, ensemble sync, architecture |
 | [Workshop guide](docs/WORKSHOP-GUIDE.md) | 45-minute facilitator script (in-repo copy) |
 | [Ideas](docs/IDEAS.md) | Future features |
 
