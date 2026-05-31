@@ -33,7 +33,7 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Hold sustain, ±5 st pad, cents |
 | [Gyro Compass](apps/gyro-compass/) | Spatial pan | Heading → stereo |
 | [Tilt Harp](apps/tilt-harp/) | Gliss plucks | Tap strings, tilt = key |
-| [Bow Phone](apps/bow-phone/) | Bowed tone | Drag X/Y pressure + pitch |
+| [Bow Phone](apps/bow-phone/) | Bowed tone | Left-hand pitch pad + selfie-cam hand bow |
 | [Train & Shake](apps/train-shake/) | Gesture ML | k-NN vs tiny net, teaching UI |
 | [Granular Tilt](apps/granular-tilt/) | Grain clouds | Upload, hold freeze |
 | [Video Sonifier](apps/video-sonifier/) | Environment texture | Camera → pentatonic tones · stillness fade |

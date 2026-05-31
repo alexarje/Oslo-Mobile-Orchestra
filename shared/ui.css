@@ -672,9 +672,67 @@ body.hub {
   touch-action: manipulation;
 }
 
-/* Bow phone — motion-driven bow */
-.bow-phone-app .stage-fill.play-grid {
-  touch-action: manipulation;
+/* Bow phone — selfie bow cam + pitch pad */
+.bow-phone-app .bow-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bow-phone-app .bow-cam-wrap {
+  position: relative;
+  flex: 1 1 40%;
+  min-height: 5.5rem;
+  max-height: 46vh;
+  background: #0f172a;
+  overflow: hidden;
+  border-bottom: 1px solid #2d3548;
+}
+
+.bow-phone-app .bow-cam-wrap video,
+.bow-phone-app .bow-cam-wrap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bow-phone-app .bow-cam-wrap video {
+  transform: scaleX(-1);
+}
+
+.bow-phone-app .bow-cam-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.25rem;
+  text-align: center;
+  font-size: 0.62rem;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 2;
+  text-shadow: 0 1px 4px #000;
+}
+
+.bow-phone-app .pitch-pad {
+  flex: 1 1 55%;
+  min-height: 0;
+  touch-action: none;
+  position: relative;
+}
+
+.bow-phone-app .pitch-pad-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.35rem;
+  text-align: center;
+  font-size: 0.62rem;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Tilt harp — slide across strings */
@@ -811,10 +869,16 @@ body.hub {
   }
 }
 
-/* Additive bells — compact strike pad, all partial sliders on screen */
-.additive-bells-app .bells-partials {
+/* Additive bells — scroll partials, strike pad pinned at bottom */
+.additive-bells-app .bells-scroll {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.additive-bells-app .bells-partials {
+  flex: none;
   overflow: visible;
   margin: 0;
   padding: 0;
