@@ -6,7 +6,7 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 
 | App | Music | Technology |
 |-----|--------|------------|
-| [Downbeat Beacon](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/conductor/) | Shared downbeat | 5 s countdown, musician URL with `start` + `bpm`, QR |
+| [Conductor](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/conductor/) | Shared downbeat | 5 s countdown, musician URL with `start` + `bpm`, QR |
 | [Seat Ticket](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/part/) | Seating / roles | `?part=1`…`20` suggests an instrument |
 | [Hand Drum Circle](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/drumkit/) | Hand drums | 8 synthesized pads |
 | [Step Lane](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/drum-sequencer/) | Grid patterns | 4 tracks × 8 steps, swing, presets |

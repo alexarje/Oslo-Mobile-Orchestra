@@ -4,7 +4,7 @@
 export const HUB_APPS = [
   {
     href: "apps/conductor/",
-    title: "Downbeat Beacon",
+    title: "Conductor",
     section: "rhythm",
     synth: "Ensemble click",
     sensors: "Touch · shared URL",
