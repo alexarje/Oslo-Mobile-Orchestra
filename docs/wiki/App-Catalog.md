@@ -32,6 +32,7 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 | [Synth Pad](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/synth-pad/) | Lead pad | Waveforms, filter, aftertouch |
 | [Mic Theremin](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/mic-theremin/) | Sung pitch | Autocorrelation → sine; hold to play |
 | [Pentatonic Flute](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/flute-blow/) | Breath melody | Mic gate; pentatonic holes |
+| [Light Theremin](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/light-theremin/) | Shadow pitch | Ambient light sensor or slider; hold pad |
 | [Tilt Harp](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/tilt-harp/) | Harp gliss | Tap strings; tilt = key |
 | [Bow Phone](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/bow-phone/) | Bowed tone | Pitch pad + selfie hand-bow tracking |
 
@@ -46,6 +47,7 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 | [KS Pluck](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/ks-pluck/) | Tap plucks | KS; wider pitch range; tilt damp |
 | [Additive Bells](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/additive-bells/) | Bell strike | 8 partials; tap or downward motion hit |
 | [Filter Ladder](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/filter-ladder/) | Subtractive | 24 dB ladder LP + tilt |
+| [Ring Mod Gong](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/ring-mod-gong/) | Metallic clang | Ring-modulated sines; touch X/Y |
 
 ## Texture
 
@@ -53,6 +55,7 @@ All paths are under `apps/` on the [live site](https://alexarje.github.io/Oslo-M
 |-----|--------|------------|
 | [Sampler](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/sampler/) | Loops | Mic record; tilt FX |
 | [Granular Tilt](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/granular-tilt/) | Grain clouds | Upload / record; tilt scrub |
+| [Spectral Freeze](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/spectral-freeze/) | Frozen chord | Mic grains; hold scope → FFT partials |
 | [Wavetable Scan](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/wavetable-scan/) | Timbral sweep | Swipe wavetable |
 | [Video Sonifier](https://alexarje.github.io/Oslo-Mobile-Orchestra/apps/video-sonifier/) | Scene sound | Camera motion → pentatonic; stillness fade |
 

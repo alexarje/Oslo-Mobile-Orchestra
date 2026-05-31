@@ -1282,6 +1282,41 @@ body.hub {
   opacity: 1;
 }
 
+/* Light Theremin */
+.light-theremin-app .light-row {
+  padding: 0 0.5rem 0.25rem;
+}
+
+.light-theremin-app .light-row input[type="range"] {
+  flex: 1 1 6rem;
+}
+
+.light-theremin-app .light-lux {
+  font-size: 0.75rem;
+  color: var(--muted);
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.light-theremin-app .light-pad {
+  position: relative;
+}
+
+.light-theremin-app .light-glow {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(253, 224, 71, 0.35) 0%, transparent 70%);
+  opacity: 0.4;
+  transition: opacity 0.08s;
+}
+
+.spectral-freeze-app .app-toolbar {
+  flex-shrink: 0;
+  padding: 0 0.5rem 0.35rem;
+}
+
 /* Harmonizer */
 .harmonizer-app .harm-toolbar {
   flex-shrink: 0;

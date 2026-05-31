@@ -34,7 +34,7 @@ Phones expose more than mic + tilt. Each row is a candidate **app** (or major up
 
 | Idea | Sensor / API | Music role | Synthesis hook |
 |------|----------------|------------|----------------|
-| **Light Theremin** | `AmbientLightSensor` | Cover sensor → darker tone | Pitch or cutoff inverse to lux |
+| ~~**Light Theremin**~~ | `AmbientLightSensor` | Cover sensor → darker tone | [light-theremin](../apps/light-theremin/) |
 | **Shadow Sequencer** | Front camera brightness map | Hand shadow → 8-step mask | Drum grid; frame diff → step triggers |
 | **Color Band** | Camera dominant hue | Point at coloured objects → scale | Quantized melody; hue → scale degree |
 | **Motion Grid** | Camera frame diff (like Video Sonifier) | Movement amount → rhythm density | Granular density + rate from motion energy |
@@ -81,7 +81,7 @@ Different ways to generate sound beyond what the hub already demos. Pair with to
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
 | **Hard Sync Lead** | Oscillator hard sync | Aggressive lead | Y = modulator ratio; X = carrier pitch |
-| **Ring Mod Gong** | Ring mod (two sines) | Metallic inharmonic | Touch → carrier; tilt → modulator |
+| ~~**Ring Mod Gong**~~ | Ring mod (two sines) | Metallic inharmonic | [ring-mod-gong](../apps/ring-mod-gong/) |
 | **AM Radio** | Amplitude modulation | Old-radio sidebands | Mic bias → mod depth; drag → carrier |
 | **Phase Distortion** | Casio-style PD curve | Digital 80s lead | 1D waveshape scan on pad |
 | **SuperSaw Stack** | Detuned saw cluster | Ensemble pad | Spread from gyro; hold to sustain |
@@ -100,7 +100,7 @@ Different ways to generate sound beyond what the hub already demos. Pair with to
 
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
-| **Spectral Freeze** | Hold current FFT frame | Cloud pad | Hold button freezes spectrum |
+| ~~**Spectral Freeze**~~ | Hold current FFT frame | Cloud pad | [spectral-freeze](../apps/spectral-freeze/) |
 | **Grain Rain** | Random grain positions | Texture | Accel shakes → grain rate |
 | **Scrub Tape** | Play buffer forward/back | DJ scrub | Drag X; speed from velocity |
 | **Vocoder Choir** | Mic → band vocoder | Robot choir | Vowel from tilt; pitch from mic |
@@ -153,7 +153,7 @@ Use when designing a new app: pick **one primary sensor** and **one synthesis fa
 |  | Subtractive | FM | KS / waveguide | Granular | Additive | Sample |
 |--|-------------|-----|----------------|----------|----------|--------|
 | **Gyro only** | open | Gyro Whirl | open | Grain Rain | open | open |
-| **Ambient light** | Light Theremin | open | open | open | open | open |
+| **Ambient light** | ~~Light Theremin~~ | open | open | open | open | open |
 | **Magnetometer** | open | open | open | open | Compass Choir | open |
 | **Barometer** | open | open | Wind Bottle | open | open | open |
 | **Pinch / force** | open | open | Edge Strum | open | open | open |
@@ -265,9 +265,9 @@ Use when designing a new app: pick **one primary sensor** and **one synthesis fa
 
 ## Priority (suggested)
 
-1. **Light Theremin** or **Gyro Whirl** — one new sensor, small scope  
-2. **Hard Sync Lead** or **Ring Mod Gong** — one new synthesis, touch-only  
-3. **Spectral Freeze** — extends granular family  
+1. ~~**Light Theremin**~~ — shipped; **Gyro Whirl** still open  
+2. ~~**Ring Mod Gong**~~ — shipped; **Hard Sync Lead** still open  
+3. ~~**Spectral Freeze**~~ — shipped  
 4. **WebRTC room** — when acoustic sync isn’t enough  
 5. **Feature detect page** — fewer workshop surprises  
 

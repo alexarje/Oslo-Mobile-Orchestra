@@ -19,9 +19,9 @@ Turn a room of phones into an ensemble — open a link, tap to play, no app stor
 |---|---|
 | **Rhythm** | [Conductor](apps/conductor/) · [Drumkit](apps/drumkit/) · [Drum Sequencer Linear](apps/drum-sequencer/) · [Drum Sequencer Circular](apps/circular-drum/) · [Firefly](apps/firefly/) · [Delay Throw](apps/delay-throw/) · [Your Part](apps/part/) |
 | **Drones** | [Drone Choir](apps/drone-choir/) · [Motion Wah](apps/motion-wah/) · [Compass Wah](apps/compass-wah/) · [Harmonizer](apps/harmonizer/) · [Audience Swell](apps/audience/) |
-| **Melody** | [Piano](apps/piano/) · [Synth Pad](apps/synth-pad/) · [Mic Theremin](apps/mic-theremin/) · [Pentatonic Flute](apps/flute-blow/) · [Tilt Harp](apps/tilt-harp/) · [Bow Phone](apps/bow-phone/) |
-| **Synthesis** | [FM Touch](apps/fm-touch/) · [FM Touch + Tilt](apps/fm-touch-tilt/) · [FM Matrix](apps/fm-matrix/) · [KS String](apps/ks-string/) · [KS Pluck](apps/ks-pluck/) · [Additive Bells](apps/additive-bells/) · [Filter Ladder](apps/filter-ladder/) |
-| **Texture** | [Sampler](apps/sampler/) · [Granular Tilt](apps/granular-tilt/) · [Wavetable Scan](apps/wavetable-scan/) · [Video Sonifier](apps/video-sonifier/) |
+| **Melody** | [Piano](apps/piano/) · [Synth Pad](apps/synth-pad/) · [Mic Theremin](apps/mic-theremin/) · [Pentatonic Flute](apps/flute-blow/) · [Light Theremin](apps/light-theremin/) · [Tilt Harp](apps/tilt-harp/) · [Bow Phone](apps/bow-phone/) |
+| **Synthesis** | [FM Touch](apps/fm-touch/) · [FM Touch + Tilt](apps/fm-touch-tilt/) · [FM Matrix](apps/fm-matrix/) · [KS String](apps/ks-string/) · [KS Pluck](apps/ks-pluck/) · [Additive Bells](apps/additive-bells/) · [Filter Ladder](apps/filter-ladder/) · [Ring Mod Gong](apps/ring-mod-gong/) |
+| **Texture** | [Sampler](apps/sampler/) · [Granular Tilt](apps/granular-tilt/) · [Spectral Freeze](apps/spectral-freeze/) · [Wavetable Scan](apps/wavetable-scan/) · [Video Sonifier](apps/video-sonifier/) |
 | **AI** | [Train & Shake](apps/train-shake/) · [Hum vs Clap](apps/hum-clap/) · [Evo Drumkit](apps/evo-drumkit/) |
 
 ## Documentation
