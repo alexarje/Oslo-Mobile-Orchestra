@@ -14,8 +14,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Bowed string</h2>
-    <p>Turn <strong>Audio on</strong>. Hold the phone in your <strong>left hand</strong>: touch the <strong>lower pad</strong> for pitch (up = high). With your <strong>right hand</strong>, wave back and forth in the <strong>green zone</strong> above the selfie camera — like a violin bow.</p>
-    <p>Allow <strong>camera</strong> (front) when asked. If the camera is blocked, rocking the phone still drives the bow.</p>
+    <p>Turn <strong>Audio on</strong>, tap <strong>Start camera</strong>, then hold the <strong>lower pad</strong> for pitch. Wave your right hand in the <strong>green zone</strong> — like a violin bow.</p>
+    <p>Allow <strong>camera</strong> (front) when asked. If blocked, rocking the phone still drives the bow.</p>
   </div>
   <div class="breath-row">
     <label>Bow</label>
@@ -28,11 +28,14 @@
     <p class="value-chip">Amp <strong id="bOut">0</strong></p>
     <p class="value-chip">Bow <strong id="bowSrc">—</strong></p>
   </div>
-  <p class="status-bar" id="status"></p>
+  <p class="status-bar" id="status">Audio on · tap Start camera</p>
   <div class="main-stage bow-split">
     <div class="bow-cam-wrap" id="camWrap">
-      <video id="cam" playsinline muted></video>
+      <video id="cam" playsinline webkit-playsinline muted autoplay></video>
       <canvas id="camHud" aria-hidden="true"></canvas>
+      <div class="bow-cam-start" id="camStart">
+        <button type="button" class="btn" id="camBtn">Start camera</button>
+      </div>
       <span class="bow-cam-hint">Right hand · bow in green zone</span>
     </div>
     <div id="pad" class="pitch-pad play-grid" role="application" aria-label="Pitch">
@@ -51,6 +54,8 @@
     const dot = document.getElementById("dot");
     const video = document.getElementById("cam");
     const camHud = document.getElementById("camHud");
+    const camStart = document.getElementById("camStart");
+    const camBtn = document.getElementById("camBtn");
     const hudCtx = camHud.getContext("2d");
     const sample = document.createElement("canvas");
     const sctx = sample.getContext("2d", { willReadFrequently: true });
@@ -114,21 +119,51 @@
 
     registerAudioBoot(buildAudio);
 
+    function requestCameraStream() {
+      if (!navigator.mediaDevices?.getUserMedia) return null;
+      return navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "user" },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+        audio: false,
+      });
+    }
+
     function drawCamHud() {
-      const box = document.getElementById("camWrap").getBoundingClientRect();
+      const box = camWrap.getBoundingClientRect();
       const dpr = devicePixelRatio || 1;
-      camHud.width = Math.max(1, Math.floor(box.width * dpr));
-      camHud.height = Math.max(1, Math.floor(box.height * dpr));
-      const w = camHud.width;
-      const h = camHud.height;
+      const w = Math.max(1, Math.floor(box.width * dpr));
+      const h = Math.max(1, Math.floor(box.height * dpr));
+      if (camHud.width !== w || camHud.height !== h) {
+        camHud.width = w;
+        camHud.height = h;
+      }
+
+      hudCtx.setTransform(1, 0, 0, 1, 0, 0);
       hudCtx.clearRect(0, 0, w, h);
+
+      if (camReady && video.readyState >= 2 && video.videoWidth > 0) {
+        hudCtx.save();
+        hudCtx.translate(w, 0);
+        hudCtx.scale(-1, 1);
+        hudCtx.drawImage(video, 0, 0, w, h);
+        hudCtx.restore();
+      } else {
+        hudCtx.fillStyle = "#0f172a";
+        hudCtx.fillRect(0, 0, w, h);
+      }
+
       const zoneH = h * BOW_ZONE;
-      hudCtx.fillStyle = "rgba(110, 231, 183, 0.12)";
+      hudCtx.fillStyle = "rgba(110, 231, 183, 0.14)";
       hudCtx.fillRect(0, 0, w, zoneH);
-      hudCtx.strokeStyle = "rgba(110, 231, 183, 0.55)";
+      hudCtx.strokeStyle = "rgba(110, 231, 183, 0.6)";
       hudCtx.lineWidth = Math.max(2, 2 * dpr);
       hudCtx.strokeRect(dpr, dpr, w - 2 * dpr, zoneH - 2 * dpr);
     }
+
+    const camWrap = document.getElementById("camWrap");
 
     function measureCameraBow() {
       if (!video.videoWidth) return 0;
@@ -158,12 +193,12 @@
       }
       const motion = diffSum / n;
       const horiz = horizSum / Math.max(1, n - yMax);
-      const target = clamp((horiz - 0.012) * 9 + (motion - 0.018) * 5, 0, 1);
-      return target;
+      return clamp((horiz - 0.012) * 9 + (motion - 0.018) * 5, 0, 1);
     }
 
     function camLoop() {
-      if (!stream || !camReady) return;
+      if (!stream) return;
+      drawCamHud();
       if (holding && useCameraBow && video.readyState >= 2) {
         const target = measureCameraBow();
         bowAmp = Math.min(1, bowAmp * 0.82 + target * 0.18);
@@ -171,31 +206,42 @@
       camRaf = requestAnimationFrame(camLoop);
     }
 
-    async function startCamera() {
-      if (stream) return true;
-      if (!navigator.mediaDevices?.getUserMedia) return false;
+    async function attachCamera(camPromise) {
+      if (!camPromise) return false;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user",
-            width: { ideal: 320 },
-            height: { ideal: 240 },
-          },
-          audio: false,
-        });
+        stream = await camPromise;
       } catch {
         return false;
       }
       video.srcObject = stream;
+      video.muted = true;
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
-      await video.play();
-      camReady = true;
+      try {
+        await video.play();
+      } catch {
+        /* retry once metadata loads */
+      }
+      await new Promise((resolve) => {
+        if (video.videoWidth > 0) {
+          resolve();
+          return;
+        }
+        video.onloadedmetadata = () => resolve();
+        setTimeout(resolve, 1500);
+      });
+      try {
+        await video.play();
+      } catch {
+        /* ignore */
+      }
+      camReady = video.videoWidth > 0;
+      if (!camReady) return false;
       useCameraBow = true;
       prevGray = null;
+      camStart.classList.add("hidden");
       document.getElementById("bowSrc").textContent = "Cam";
-      setStatus("status", "Wave right hand in green zone", "ok");
-      drawCamHud();
+      setStatus("status", "Hold pitch pad · wave hand in green zone", "ok");
       if (!camRaf) camLoop();
       return true;
     }
@@ -211,6 +257,25 @@
       camReady = false;
       useCameraBow = false;
       prevGray = null;
+      camStart.classList.remove("hidden");
+      drawCamHud();
+    }
+
+    async function ensureCameraFromGesture() {
+      if (stream) return true;
+      const camPromise = requestCameraStream();
+      if (!camPromise) {
+        setStatus("status", "Camera not supported", "warn");
+        return false;
+      }
+      await startAudio(!built ? buildAudio : undefined);
+      if (!built) return false;
+      const ok = await attachCamera(camPromise);
+      if (!ok) {
+        setStatus("status", "Camera denied — allow in Settings, or rock phone", "warn");
+        await initMotionFallback();
+      }
+      return ok;
     }
 
     async function initMotionFallback() {
@@ -271,12 +336,18 @@
 
     async function armBow(e) {
       primeSensors(SENSOR_OPTS);
-      await startAudio(!built ? buildAudio : undefined);
-      if (!built) return;
-      const camOk = await startCamera();
-      if (!camOk) {
-        setStatus("status", "Camera blocked — rock phone to bow", "warn");
-        await initMotionFallback();
+      if (!stream) {
+        const camPromise = requestCameraStream();
+        await startAudio(!built ? buildAudio : undefined);
+        if (!built) return;
+        if (camPromise) {
+          const ok = await attachCamera(camPromise);
+          if (!ok) await initMotionFallback();
+        } else {
+          await initMotionFallback();
+        }
+      } else if (!built) {
+        await startAudio(buildAudio);
       }
       holding = true;
       activePointer = e.pointerId;
@@ -287,6 +358,20 @@
       bowAmp = 0;
       setPitchFromTouch(e);
     }
+
+    camBtn.addEventListener("click", () => {
+      void ensureCameraFromGesture();
+    });
+
+    camWrap.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (stream || e.target === camBtn) return;
+        e.preventDefault();
+        void ensureCameraFromGesture();
+      },
+      { passive: false }
+    );
 
     pad.addEventListener("pointerdown", (e) => {
       e.preventDefault();
@@ -319,9 +404,8 @@
     pad.addEventListener("lostpointercapture", stop);
 
     window.addEventListener("resize", drawCamHud);
-    window.addEventListener("pagehide", () => {
-      stopCamera();
-    });
+    window.addEventListener("pagehide", stopCamera);
+    drawCamHud();
   </script>
 </body>
 </html>

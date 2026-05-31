@@ -700,7 +700,31 @@ body.hub {
 }
 
 .bow-phone-app .bow-cam-wrap video {
-  transform: scaleX(-1);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bow-phone-app .bow-cam-wrap canvas {
+  z-index: 1;
+}
+
+.bow-phone-app .bow-cam-start {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.bow-phone-app .bow-cam-start.hidden {
+  display: none;
+}
+
+.bow-phone-app .bow-cam-start .btn {
+  max-width: 14rem;
 }
 
 .bow-phone-app .bow-cam-hint {
