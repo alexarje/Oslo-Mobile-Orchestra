@@ -14,53 +14,64 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Feedback matrix</h2>
-    <p>Turn <strong>Audio on</strong>, allow <strong>motion</strong> on iPhone. <strong>Hold</strong> the pad to feed noise into a web of delay lines. <strong>Spin</strong> the phone — gyro readout should move and the feedback routes change.</p>
+    <p>Tap <strong>Audio on</strong> (top right), then <strong>hold</strong> the pad. Allow <strong>motion</strong> if asked.</p>
+    <p><strong>Spin</strong> the phone or <strong>drag</strong> on the pad — either steers the delay web. Gyro readout shows °/s (on many Android phones tilt is used instead of a hardware gyro).</p>
   </div>
-  <p class="status-bar" id="status">Turn Audio on · hold pad</p>
+  <p class="status-bar" id="status">Tap Audio on · hold pad</p>
   <div class="readout-row">
-    <p class="value-chip">Gyro <strong id="gyroOut">—</strong> °/s</p>
+    <p class="value-chip">Spin <strong id="gyroOut">—</strong> °/s</p>
+    <p class="value-chip">Via <strong id="gyroSrc">—</strong></p>
   </div>
   <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"></div>
+    <div id="pad" class="stage-fill play-grid">
+      <div class="touch-dot" id="dot"></div>
+    </div>
   </div>
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { createFeedbackMatrix } from "../../shared/feedback-matrix.js";
-    import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
+    import {
+      enableSensors,
+      onMotionGyro,
+      primeSensors,
+    } from "../../shared/sensors.js";
 
     bindLearn();
+
     const pad = document.getElementById("pad");
+    const dot = document.getElementById("dot");
     const gyroOut = document.getElementById("gyroOut");
-    const SENSOR_OPTS = { needMotion: true, needOrientation: false };
+    const gyroSrc = document.getElementById("gyroSrc");
+    const SENSOR_OPTS = { needMotion: true, needOrientation: true };
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     let ctx, master, matrix, noise, noiseGain, built = false;
     let sensorsReady = false;
     let holding = false;
     let activeId = null;
     let pingTimer = null;
-    let lastGyro = 0;
+    let lastDragX = 0;
+    let lastDragY = 0;
+    let lastDragT = 0;
 
-    function applyGyro(rotAlpha, rotBeta, rotGamma) {
-      const a = rotAlpha ?? 0;
-      const b = rotBeta ?? 0;
-      const g = rotGamma ?? 0;
-      const mag = Math.sqrt(a * a + b * b + g * g);
-      if (Number.isFinite(mag)) lastGyro = mag;
-      gyroOut.textContent = lastGyro > 0.05 ? lastGyro.toFixed(1) : "0";
+    function applySpin(alpha, beta, gamma, source) {
+      const mag = Math.sqrt(alpha * alpha + beta * beta + gamma * gamma);
+      gyroOut.textContent = mag > 0.2 ? mag.toFixed(0) : "0";
+      gyroSrc.textContent = source;
       if (matrix && ctx) {
-        matrix.setRouting({ alpha: a, beta: b, gamma: g });
+        matrix.setRouting({ alpha, beta, gamma });
       }
     }
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.52));
+      ({ master } = createMasterBus(c, 0.55));
       matrix = createFeedbackMatrix(ctx, master);
-      const len = ctx.sampleRate * 0.15;
+      const len = Math.floor(ctx.sampleRate * 0.2);
       const buf = ctx.createBuffer(1, len, ctx.sampleRate);
       const d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * 0.85;
       noise = ctx.createBufferSource();
       noise.buffer = buf;
       noise.loop = true;
@@ -68,63 +79,91 @@
       noiseGain.gain.value = 0;
       noise.connect(noiseGain);
       noiseGain.connect(matrix.input);
-      noise.start();
+      noise.start(0);
       built = true;
+      setStatus("status", "Hold pad to play", "ok");
     }
 
     async function initSensors() {
       if (sensorsReady) return true;
       const ok = await enableSensors(SENSOR_OPTS);
       if (!ok) {
-        setStatus("status", "Allow motion in Settings — delays still play", "warn");
-        gyroOut.textContent = "off";
+        setStatus("status", "Motion blocked — drag pad to steer", "warn");
+        gyroSrc.textContent = "drag";
         return false;
       }
-      onMotion((data) => {
-        applyGyro(data.rotAlpha, data.rotBeta, data.rotGamma);
-      });
+      onMotionGyro(
+        ({ rotAlpha, rotBeta, rotGamma, gyroSource }) => {
+          applySpin(rotAlpha, rotBeta, rotGamma, gyroSource);
+        },
+        { needOrientation: true }
+      );
       sensorsReady = true;
-      setStatus("status", "Motion on · hold pad to play", "ok");
+      setStatus("status", "Hold pad to play", "ok");
       return true;
     }
 
     function excite() {
       if (!matrix || !ctx) return;
-      matrix.ping(0.5, ctx.currentTime);
-      noiseGain.gain.setTargetAtTime(0.14, ctx.currentTime, 0.02);
+      const t = ctx.currentTime;
+      matrix.ping(0.55, t);
+      noiseGain.gain.setTargetAtTime(0.22, t, 0.025);
     }
 
-    registerAudioBoot(async (c) => {
-      buildAudio(c);
-      primeSensors(SENSOR_OPTS);
-      await initSensors();
-    });
+    registerAudioBoot(buildAudio);
 
-    pad.addEventListener("pointerdown", async (e) => {
+    async function onPadDown(e) {
       e.preventDefault();
       primeSensors(SENSOR_OPTS);
-      await startAudio(async (c) => {
-        if (!built) buildAudio(c);
-        await initSensors();
-      });
+      try {
+        await startAudio(!built ? buildAudio : undefined);
+      } catch (err) {
+        console.error(err);
+        setStatus("status", "Audio failed — reload page", "warn");
+        return;
+      }
       if (!built) return;
+      void initSensors();
       holding = true;
       activeId = e.pointerId;
       pad.setPointerCapture(activeId);
       pad.classList.add("active");
+      dot.style.opacity = "1";
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+      lastDragT = performance.now();
       excite();
-      pingTimer = setInterval(excite, 300);
-    });
+      pingTimer = setInterval(excite, 280);
+    }
 
+    function onPadMove(e) {
+      if (!holding || e.pointerId !== activeId) return;
+      const dt = Math.max(1, performance.now() - lastDragT);
+      const vx = (e.clientX - lastDragX) / dt;
+      const vy = (e.clientY - lastDragY) / dt;
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+      lastDragT = performance.now();
+      const r = pad.getBoundingClientRect();
+      dot.style.left = `${clamp((e.clientX - r.left) / r.width, 0, 1) * 100}%`;
+      dot.style.top = `${clamp((e.clientY - r.top) / r.height, 0, 1) * 100}%`;
+      if (gyroSrc.textContent === "none" || gyroSrc.textContent === "drag") {
+        applySpin(vx * 0.35, vy * 0.35, (vx - vy) * 0.2, "drag");
+      }
+    }
     const stop = (e) => {
       if (e && e.pointerId !== activeId) return;
       holding = false;
       activeId = null;
       pad.classList.remove("active");
+      dot.style.opacity = "0.35";
       clearInterval(pingTimer);
       pingTimer = null;
-      if (ctx && noiseGain) noiseGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+      if (ctx && noiseGain) noiseGain.gain.setTargetAtTime(0, ctx.currentTime, 0.12);
     };
+
+    pad.addEventListener("pointerdown", onPadDown);
+    pad.addEventListener("pointermove", onPadMove);
     pad.addEventListener("pointerup", stop);
     pad.addEventListener("pointercancel", stop);
     pad.addEventListener("lostpointercapture", stop);

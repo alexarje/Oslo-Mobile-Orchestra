@@ -118,3 +118,62 @@ export function normalizeAccel(x, y, z) {
   const mag = Math.sqrt(x * x + y * y + z * z) || 1;
   return { x: x / mag, y: y / mag, z: z / mag, mag };
 }
+
+function angleDiffDeg(a, b) {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+  let d = a - b;
+  while (d > 180) d -= 360;
+  while (d < -180) d += 360;
+  return d;
+}
+
+/**
+ * devicemotion rotationRate is often missing on Android — fall back to orientation spin rates.
+ * @param {(data: {
+ *   x: number, y: number, z: number,
+ *   rotAlpha: number, rotBeta: number, rotGamma: number,
+ *   gyroSource: 'sensor' | 'tilt' | 'none'
+ * }) => void} callback
+ * @param {{ needOrientation?: boolean }} [opts]
+ */
+export function onMotionGyro(callback, { needOrientation = true } = {}) {
+  let oriRates = { alpha: 0, beta: 0, gamma: 0 };
+  let prevOri = null;
+  let prevOriT = 0;
+
+  if (needOrientation) {
+    onOrientation((o) => {
+      const t = performance.now();
+      if (prevOri != null && prevOriT > 0) {
+        const dt = Math.max(0.008, (t - prevOriT) / 1000);
+        oriRates = {
+          alpha: angleDiffDeg(o.alpha, prevOri.alpha) / dt,
+          beta: angleDiffDeg(o.beta, prevOri.beta) / dt,
+          gamma: angleDiffDeg(o.gamma, prevOri.gamma) / dt,
+        };
+      }
+      prevOri = { alpha: o.alpha, beta: o.beta, gamma: o.gamma };
+      prevOriT = t;
+    });
+  }
+
+  onMotion((data) => {
+    let rotAlpha = data.rotAlpha ?? 0;
+    let rotBeta = data.rotBeta ?? 0;
+    let rotGamma = data.rotGamma ?? 0;
+    let gyroSource = "sensor";
+    if (Math.hypot(rotAlpha, rotBeta, rotGamma) < 0.5) {
+      rotAlpha = oriRates.alpha;
+      rotBeta = oriRates.beta;
+      rotGamma = oriRates.gamma;
+      gyroSource = Math.hypot(rotAlpha, rotBeta, rotGamma) > 0.5 ? "tilt" : "none";
+    }
+    callback({
+      ...data,
+      rotAlpha,
+      rotBeta,
+      rotGamma,
+      gyroSource,
+    });
+  });
+}

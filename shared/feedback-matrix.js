@@ -12,7 +12,7 @@ export function createFeedbackMatrix(ctx, dest) {
   const merger = ctx.createGain();
   merger.gain.value = 1;
   const mix = ctx.createGain();
-  mix.gain.value = 0.48;
+  mix.gain.value = 0.58;
   mix.connect(dest);
   merger.connect(mix);
 
