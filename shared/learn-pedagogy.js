@@ -285,19 +285,9 @@ export const LEARN_PEDAGOGY = {
     "Spatial playing on one surface — same as picking near the bridge on a guitar.",
   ],
 
-  "haptic-click": [
-    "A step pattern plays clicks; the phone vibrates in sync where supported.",
-    "Rhythm felt in the hand, not only heard — useful for deaf/hard-of-hearing inclusion in workshops.",
-  ],
-
   "altitude-wind": [
     "Barometer pressure (rare on phones) or a manual slider maps to filtered noise — “thinner air” = brighter hiss.",
     "Environmental sensor as timbre; works as concept even when only the slider is available.",
-  ],
-
-  "geo-drone": [
-    "GPS speed or heading pans and delays stereo image as you walk.",
-    "Space and movement through the venue become part of the mix.",
   ],
 
   "am-radio": [
