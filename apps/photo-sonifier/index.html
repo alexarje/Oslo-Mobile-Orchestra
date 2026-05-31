@@ -81,7 +81,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Camera → grains</h2>
-    <p>Turn <strong>Audio on</strong> (top right), then <strong>Start camera</strong> and allow the camera. Even scenes sound smooth; busy scenes get grainier.</p>
+    <p>Turn <strong>Audio on</strong> (top right), then <strong>Start camera</strong>. Even scenes play a soft chord; detailed scenes add pentatonic sparkles (not noise).</p>
     <p>Camera is used <strong>only while open</strong>. Nothing is recorded, uploaded, or saved. <strong>Workshop mode</strong> uses the rear camera at low resolution.</p>
   </div>
 
@@ -98,9 +98,9 @@
 
   <p class="status-bar" id="status"></p>
   <div class="readout-row">
-    <p class="value-chip">Brightness <strong id="brightOut">—</strong></p>
+    <p class="value-chip">Key <strong id="keyOut">—</strong></p>
     <p class="value-chip">Detail <strong id="detailOut">—</strong></p>
-    <p class="value-chip">Grains <strong id="rateOut">—</strong>/s</p>
+    <p class="value-chip">Notes <strong id="rateOut">—</strong>/s</p>
   </div>
   <div class="control-row">
     <button type="button" class="btn-secondary btn btn-sm" id="stopBtn" hidden>Stop camera</button>
@@ -115,16 +115,18 @@
 
   <script type="module">
     import { bindLearn, setStatus, startAudio, registerAudioBoot } from "../../shared/app.js";
-    import { createMasterBus } from "../../shared/audio.js";
+    import { createMasterBus, midiToFreq } from "../../shared/audio.js";
 
     bindLearn();
 
     const GRID_W = 16;
     const GRID_H = 12;
     const ANALYZE_MS = 80;
-    const MIN_GRAINS = 1;
-    const MAX_GRAINS = 46;
+    const MIN_NOTES = 1;
+    const MAX_NOTES = 20;
     const TEXTURE_SMOOTH = 0.82;
+    const PENTA = [0, 2, 4, 7, 9];
+    const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     const consentGate = document.getElementById("consentGate");
@@ -139,13 +141,14 @@
     const sctx = sample.getContext("2d", { willReadFrequently: true });
 
     let stream = null;
-    let ctx, master, buffer, dryGain, reverb, reverbWet;
+    let ctx, master, dryGain, reverb, reverbWet, padVoices;
     let running = false;
     let analyzeTimer = null;
     let grainTimer = null;
     let meanBrightness = 0;
     let smoothTexture = 0;
-    let grainsPerSec = MIN_GRAINS;
+    let rootMidi = 50;
+    let grainsPerSec = MIN_NOTES;
     const cellBrightness = new Float32Array(GRID_W * GRID_H);
     const cellWeight = new Float32Array(GRID_W * GRID_H);
 
@@ -159,13 +162,42 @@
       return b;
     }
 
-    function buildGrainBuffer(c) {
-      const len = Math.floor(c.sampleRate * 0.4);
-      buffer = c.createBuffer(1, len, c.sampleRate);
-      const d = buffer.getChannelData(0);
-      for (let i = 0; i < len; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.sin((i / len) * Math.PI) * 0.9;
+    function rootFromBrightness() {
+      return 48 + Math.floor(meanBrightness * 16);
+    }
+
+    function labelMidi(midi) {
+      return `${NOTE_NAMES[((Math.round(midi) % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
+    }
+
+    function midiForCell(col, row) {
+      const degree = (col + row * 2) % PENTA.length;
+      const oct = Math.min(2, (row / GRID_H) * 2 | 0);
+      return rootMidi + PENTA[degree] + oct * 12;
+    }
+
+    function buildPad(c) {
+      padVoices = { gain: c.createGain(), oscs: [] };
+      padVoices.gain.gain.value = 0;
+      padVoices.gain.connect(master);
+      for (let i = 0; i < 3; i++) {
+        const o = c.createOscillator();
+        o.type = "sine";
+        o.connect(padVoices.gain);
+        o.start();
+        padVoices.oscs.push(o);
       }
+    }
+
+    function updatePad() {
+      if (!padVoices || !ctx) return;
+      const t = ctx.currentTime;
+      const even = 1 - smoothTexture;
+      const chord = [PENTA[0], PENTA[3], PENTA[4]];
+      padVoices.oscs.forEach((o, i) => {
+        o.frequency.setTargetAtTime(midiToFreq(rootMidi + chord[i]), t, 0.25);
+      });
+      padVoices.gain.gain.setTargetAtTime(even * 0.1, t, 0.2);
     }
 
     function measureTexture(cells) {
@@ -200,31 +232,51 @@
       return clamp(Math.sqrt(variance) * 3.4 + edgeMean * 2.2, 0, 1);
     }
 
-    function spawnGrain(col, row, level) {
-      if (!ctx || !buffer || ctx.state !== "running") return;
+    function spawnTone(col, row, level) {
+      if (!ctx || ctx.state !== "running") return;
       const tex = smoothTexture;
       const even = 1 - tex;
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
       const nx = GRID_W > 1 ? col / (GRID_W - 1) : 0.5;
       const ny = GRID_H > 1 ? row / (GRID_H - 1) : 0.5;
-      const rateSpread = 0.25 + tex * 1.35;
-      src.playbackRate.value = 0.45 + ny * rateSpread;
-      const dur = 0.014 + even * 0.1 + Math.random() * (0.012 + tex * 0.038);
+      const midi = midiForCell(col, row);
+      const t = ctx.currentTime;
+      const dur = 0.12 + even * 0.45 + Math.random() * (0.06 + tex * 0.12);
+
+      const osc = ctx.createOscillator();
+      osc.type = even > 0.55 ? "sine" : "triangle";
+      osc.frequency.value = midiToFreq(midi);
+
+      const vib = ctx.createOscillator();
+      const vibG = ctx.createGain();
+      vib.type = "sine";
+      vib.frequency.value = 5 + col * 0.15;
+      vibG.gain.value = 4 + tex * 5;
+      vib.connect(vibG);
+      vibG.connect(osc.detune);
+
+      const filt = ctx.createBiquadFilter();
+      filt.type = "lowpass";
+      filt.frequency.value = 500 + level * 1800 + ny * 1200;
+      filt.Q.value = 0.9;
+
       const gn = ctx.createGain();
       const pan = ctx.createStereoPanner();
       pan.pan.value = nx * 2 - 1;
+      osc.connect(filt);
+      filt.connect(gn);
+      gn.connect(pan);
       pan.connect(dryGain);
       pan.connect(reverb);
-      gn.connect(pan);
-      src.connect(gn);
-      const t = ctx.currentTime;
-      const amp = 0.08 + even * 0.06 + level * (0.14 + tex * 0.22);
-      const attack = 0.003 + even * 0.006;
-      src.start(t, Math.random() * Math.max(0.01, buffer.duration - dur), dur);
+
+      const amp = 0.05 + even * 0.07 + level * (0.1 + tex * 0.14);
       gn.gain.setValueAtTime(0, t);
-      gn.gain.linearRampToValueAtTime(amp, t + attack);
-      gn.gain.linearRampToValueAtTime(0, t + dur);
+      gn.gain.linearRampToValueAtTime(amp, t + 0.02);
+      gn.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+      osc.start(t);
+      vib.start(t);
+      osc.stop(t + dur + 0.02);
+      vib.stop(t + dur + 0.02);
     }
 
     function pickWeightedCell() {
@@ -247,8 +299,8 @@
       const idx = pickWeightedCell();
       const col = idx % GRID_W;
       const row = (idx / GRID_W) | 0;
-      spawnGrain(col, row, cellBrightness[idx]);
-      const interval = 1000 / Math.max(MIN_GRAINS, grainsPerSec);
+      spawnTone(col, row, cellBrightness[idx]);
+      const interval = 1000 / Math.max(MIN_NOTES, grainsPerSec);
       const even = 1 - smoothTexture;
       const jitterLo = 0.9 + even * 0.08;
       const jitterHi = 1.05 + smoothTexture * 0.55;
@@ -274,10 +326,12 @@
         const b = cellBrightness[i];
         cellWeight[i] = 0.05 + even * 0.2 + (1 - even) * (0.06 + b * b);
       }
-      grainsPerSec = MIN_GRAINS + smoothTexture * (MAX_GRAINS - MIN_GRAINS);
-      document.getElementById("brightOut").textContent = `${(meanBrightness * 100).toFixed(0)}%`;
+      rootMidi = rootFromBrightness();
+      grainsPerSec = MIN_NOTES + smoothTexture * (MAX_NOTES - MIN_NOTES);
+      document.getElementById("keyOut").textContent = labelMidi(rootMidi);
       document.getElementById("detailOut").textContent = `${(smoothTexture * 100).toFixed(0)}%`;
       document.getElementById("rateOut").textContent = grainsPerSec.toFixed(0);
+      updatePad();
       drawPreview(img);
     }
 
@@ -373,7 +427,7 @@
       reverbWet.gain.value = 0.32;
       reverb.connect(reverbWet);
       reverbWet.connect(master);
-      buildGrainBuffer(c);
+      buildPad(c);
     }
 
     registerAudioBoot(bootAudio);

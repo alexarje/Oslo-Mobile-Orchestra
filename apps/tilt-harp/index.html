@@ -75,18 +75,34 @@
       return rootMidi + scale[i % scale.length] + Math.floor(i / scale.length) * 12;
     }
 
-    function pluck(midi) {
+    function pluck(midi, stringIndex = 0) {
       const t = ctx.currentTime;
+      const dur = 0.65;
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = "triangle";
       o.frequency.value = midiToFreq(midi);
+
+      const vib = ctx.createOscillator();
+      const vibGain = ctx.createGain();
+      vib.type = "sine";
+      vib.frequency.value = 5 + (stringIndex % 4) * 0.35 + Math.random() * 0.4;
+      const depth = 6 + (stringIndex / STRING_COUNT) * 8;
+      vib.connect(vibGain);
+      vibGain.connect(o.detune);
+      vibGain.gain.setValueAtTime(0, t);
+      vibGain.gain.linearRampToValueAtTime(depth, t + 0.08);
+      vibGain.gain.setValueAtTime(depth, t + dur * 0.75);
+      vibGain.gain.linearRampToValueAtTime(0, t + dur);
+
       g.gain.setValueAtTime(0.35, t);
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
       o.connect(g);
       g.connect(master);
       o.start(t);
-      o.stop(t + 0.65);
+      vib.start(t);
+      o.stop(t + dur);
+      vib.stop(t + dur);
     }
 
     function stringIndexFromX(clientX) {
@@ -104,7 +120,7 @@
       if (!built || !ctx) return;
       if (!force && i === lastPlucked) return;
       lastPlucked = i;
-      pluck(midiForString(i));
+      pluck(midiForString(i), i);
       highlightString(i);
     }
 

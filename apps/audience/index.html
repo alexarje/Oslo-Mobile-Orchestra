@@ -7,25 +7,31 @@
   <title>Audience Swell — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
   <style>
-    #swellBtn {
-      width: min(85vw, 280px);
-      height: min(85vw, 280px);
-      border-radius: 50%;
-      font-size: 1.1rem;
-      margin: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 1rem;
-      touch-action: none;
-    }
     .audience-stage {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       background: radial-gradient(circle at center, #1e293b 0%, #0d0f14 70%);
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #swellBtn {
+      width: min(85vw, 280px);
+      height: min(85vw, 280px);
+      border-radius: 50%;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1rem;
+      pointer-events: none;
+    }
+    .audience-stage.holding #swellBtn {
+      transform: scale(1.02);
+      filter: brightness(1.08);
     }
   </style>
 </head>
@@ -36,10 +42,10 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Audience swell</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>hold</strong> the big button — you can move your finger inside the circle. Release to fade out.</p>
+    <p>Turn <strong>Audio on</strong>, then <strong>hold</strong> the circle — drag your finger inside for more vibrato. Release anywhere to fade out.</p>
   </div>
-  <div class="audience-stage">
-    <button type="button" class="btn" id="swellBtn">Hold<br />to swell</button>
+  <div class="audience-stage" id="stage" role="button" aria-label="Hold to swell">
+    <div class="btn" id="swellBtn">Hold<br />to swell</div>
   </div>
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";
@@ -48,10 +54,19 @@
     import { createMasterBus } from "../../shared/audio.js";
 
     const SWELL_LEVEL = 0.62;
+    const BASE_PITCH_CENTS = 11;
+    const BASE_AMP_DEPTH = 0.09;
 
-    let ctx, master, osc, swellGain, built = false;
+    const stage = document.getElementById("stage");
+    const btn = document.getElementById("swellBtn");
+
+    let ctx, master, osc, swellGain, pitchDepth, ampDepth, pitchLfo, ampLfo;
+    let built = false;
     let holding = false;
     let activePointer = null;
+    let lastMoveX = 0;
+    let lastMoveY = 0;
+    let moveEnergy = 0;
 
     function build(c) {
       ctx = c;
@@ -66,19 +81,19 @@
       toneOffset.offset.value = 1;
       toneOffset.connect(toneGain.gain);
 
-      const pitchLfo = ctx.createOscillator();
+      pitchLfo = ctx.createOscillator();
       pitchLfo.type = "sine";
-      pitchLfo.frequency.value = 0.12 + Math.random() * 0.1;
-      const pitchDepth = ctx.createGain();
-      pitchDepth.gain.value = 5 + Math.random() * 4;
+      pitchLfo.frequency.value = 5.2 + Math.random() * 1.5;
+      pitchDepth = ctx.createGain();
+      pitchDepth.gain.value = BASE_PITCH_CENTS;
       pitchLfo.connect(pitchDepth);
       pitchDepth.connect(osc.detune);
 
-      const ampLfo = ctx.createOscillator();
+      ampLfo = ctx.createOscillator();
       ampLfo.type = "sine";
-      ampLfo.frequency.value = 0.2 + Math.random() * 0.15;
-      const ampDepth = ctx.createGain();
-      ampDepth.gain.value = 0.05;
+      ampLfo.frequency.value = 0.28 + Math.random() * 0.12;
+      ampDepth = ctx.createGain();
+      ampDepth.gain.value = BASE_AMP_DEPTH;
       ampLfo.connect(ampDepth);
       ampDepth.connect(toneGain.gain);
 
@@ -95,83 +110,123 @@
       built = true;
     }
 
-    function pointerInsideBtn(e) {
-      const r = btn.getBoundingClientRect();
-      return (
-        e.clientX >= r.left &&
-        e.clientX <= r.right &&
-        e.clientY >= r.top &&
-        e.clientY <= r.bottom
-      );
+    function stageCenter() {
+      const r = stage.getBoundingClientRect();
+      return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, r };
+    }
+
+    function pointerInStage(e) {
+      const { cx, cy, r } = stageCenter();
+      const rx = r.width / 2;
+      const ry = r.height / 2;
+      const dx = (e.clientX - cx) / rx;
+      const dy = (e.clientY - cy) / ry;
+      return Math.hypot(dx, dy) <= 1.05;
     }
 
     function swellOn() {
-      if (!built || !ctx) return;
+      if (!built || !ctx || !holding) return;
       const t = ctx.currentTime;
       swellGain.gain.cancelScheduledValues(t);
-      swellGain.gain.setTargetAtTime(SWELL_LEVEL, t, 0.15);
-      osc.frequency.cancelScheduledValues(t);
-      osc.frequency.setTargetAtTime(180 + Math.random() * 80, t, 0.2);
+      swellGain.gain.setTargetAtTime(SWELL_LEVEL, t, 0.12);
     }
 
     function swellOff() {
       if (!built || !ctx) return;
       const t = ctx.currentTime;
       swellGain.gain.cancelScheduledValues(t);
-      swellGain.gain.setTargetAtTime(0, t, 0.2);
+      swellGain.gain.setTargetAtTime(0, t, 0.25);
+      pitchDepth.gain.setTargetAtTime(BASE_PITCH_CENTS, t, 0.1);
+      ampDepth.gain.setTargetAtTime(BASE_AMP_DEPTH, t, 0.1);
+    }
+
+    function updateMoveVibrato(e) {
+      if (!built || !ctx || !holding) return;
+      const { cx, cy, r } = stageCenter();
+      const nx = (e.clientX - cx) / (r.width / 2);
+      const ny = (e.clientY - cy) / (r.height / 2);
+      const dist = Math.min(1, Math.hypot(nx, ny));
+
+      const dx = e.clientX - lastMoveX;
+      const dy = e.clientY - lastMoveY;
+      lastMoveX = e.clientX;
+      lastMoveY = e.clientY;
+      moveEnergy = moveEnergy * 0.82 + Math.min(1, Math.hypot(dx, dy) / 14) * 0.18;
+
+      const t = ctx.currentTime;
+      pitchDepth.gain.setTargetAtTime(BASE_PITCH_CENTS + dist * 14 + moveEnergy * 18, t, 0.04);
+      ampDepth.gain.setTargetAtTime(BASE_AMP_DEPTH + dist * 0.1 + moveEnergy * 0.12, t, 0.04);
+      pitchLfo.frequency.setTargetAtTime(5 + dist * 2 + moveEnergy * 3, t, 0.06);
     }
 
     function startHold(e) {
       holding = true;
       activePointer = e.pointerId;
+      lastMoveX = e.clientX;
+      lastMoveY = e.clientY;
+      moveEnergy = 0;
+      stage.classList.add("holding");
       btn.classList.add("active");
       try {
-        btn.setPointerCapture(e.pointerId);
+        stage.setPointerCapture(e.pointerId);
       } catch {
         /* noop */
       }
+      if (built) {
+        const t = ctx.currentTime;
+        osc.frequency.cancelScheduledValues(t);
+        osc.frequency.setTargetAtTime(180 + Math.random() * 80, t, 0.2);
+      }
       swellOn();
+      updateMoveVibrato(e);
     }
 
     function endHold(e) {
       if (activePointer != null && e.pointerId !== activePointer) return;
       holding = false;
       activePointer = null;
+      stage.classList.remove("holding");
       btn.classList.remove("active");
       swellOff();
     }
 
-    const btn = document.getElementById("swellBtn");
-
-    btn.addEventListener("pointerdown", async (e) => {
-      e.preventDefault();
-      await startAudio(!built ? build : undefined);
-      startHold(e);
-    });
-
-    btn.addEventListener("pointermove", (e) => {
+    function onDocPointerUp(e) {
       if (!holding || e.pointerId !== activePointer) return;
-      e.preventDefault();
-      if (pointerInsideBtn(e)) {
-        swellOn();
-      }
-    });
-
-    btn.addEventListener("pointerup", (e) => {
-      e.preventDefault();
-      if (btn.hasPointerCapture(e.pointerId)) {
-        try {
-          btn.releasePointerCapture(e.pointerId);
-        } catch {
-          /* noop */
-        }
-      }
       endHold(e);
-    });
+    }
 
-    btn.addEventListener("lostpointercapture", (e) => {
-      if (holding && e.pointerId === activePointer) endHold(e);
-    });
+    stage.addEventListener(
+      "pointerdown",
+      async (e) => {
+        e.preventDefault();
+        if (holding) return;
+        await startAudio(!built ? build : undefined);
+        startHold(e);
+        document.addEventListener("pointerup", onDocPointerUp, true);
+      },
+      { passive: false }
+    );
+
+    stage.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!holding || e.pointerId !== activePointer) return;
+        e.preventDefault();
+        swellOn();
+        updateMoveVibrato(e);
+      },
+      { passive: false }
+    );
+
+    stage.addEventListener(
+      "pointerup",
+      (e) => {
+        e.preventDefault();
+        document.removeEventListener("pointerup", onDocPointerUp, true);
+        endHold(e);
+      },
+      { passive: false }
+    );
   </script>
 </body>
 </html>
