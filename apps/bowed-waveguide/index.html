@@ -6,34 +6,113 @@
   <meta name="theme-color" content="#0d0f14" />
   <title>Drag Bow — OMO</title>
   <link rel="stylesheet" href="../../shared/ui.css" />
-  
 </head>
 <body class="app-shell">
   <header class="app-header">
     <a class="back-link" href="../../">←</a>
     <h1>Drag Bow</h1>
   </header>
-  <div class="learn-panel panel" id="learnPanel"><h2>Bowed waveguide</h2><p>Drag speed = bow energy on a sustained string.</p></div>
+  <div class="learn-panel panel" id="learnPanel">
+    <h2>Bowed string</h2>
+    <p>Turn <strong>Audio on</strong>, then <strong>hold</strong> and <strong>drag</strong> across the pad. <strong>Vertical</strong> = pitch · <strong>horizontal speed</strong> = bow pressure (smooth, sustained tone).</p>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Pitch <strong id="hzOut">220</strong> Hz</p>
+    <p class="value-chip">Bow <strong id="bowOut">0</strong>%</p>
+  </div>
   <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+    <div id="pad" class="stage-fill play-grid">
+      <div class="touch-dot" id="dot"></div>
+    </div>
   </div>
   <script type="module">
+    import { bindLearn, registerAudioBoot, startAudio } from "../../shared/app.js";
+    import { createMasterBus } from "../../shared/audio.js";
+    import { createBowedString } from "../../shared/bowed-string.js";
 
-import { bindLearn, startAudio } from "../../shared/app.js";
-import { createMasterBus } from "../../shared/audio.js";
-bindLearn();
-const pad=document.getElementById("pad");
-const dot=document.getElementById("dot");
-const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
-let ctx,master,built=false,holding=false,activeId=null;
+    bindLearn();
 
-import { createKSPool, karplusPluck } from "../../shared/ks.js";
-let pool,lastX=0,lastT=0;
-function build(c){ctx=c;({master}=createMasterBus(c,0.5));pool=createKSPool(2);built=true;}
-pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio(!built?build:undefined);holding=true;activeId=e.pointerId;pad.setPointerCapture(activeId);lastX=e.clientX;lastT=performance.now();pad.classList.add("active");});
-pad.addEventListener("pointermove",e=>{if(!holding||e.pointerId!==activeId)return;const dt=Math.max(1,performance.now()-lastT);const v=Math.abs(e.clientX-lastX)/dt;lastX=e.clientX;lastT=performance.now();const r=pad.getBoundingClientRect();if(v>0.2)karplusPluck(ctx,master,pool,100*Math.pow(4,clamp((e.clientY-r.top)/r.height,0,1)),{strength:clamp(v*0.3,0.2,0.9),level:0.25});});
-const off=e=>{if(e.pointerId!==activeId)return;holding=false;pad.classList.remove("active");};
-pad.addEventListener("pointerup",off);pad.addEventListener("pointercancel",off);
+    const pad = document.getElementById("pad");
+    const dot = document.getElementById("dot");
+    const hzOut = document.getElementById("hzOut");
+    const bowOut = document.getElementById("bowOut");
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    const mapY = (ny) => 82 * Math.pow(440 / 82, 1 - ny);
+
+    let ctx, master, string, built = false;
+    let holding = false;
+    let activeId = null;
+    let lastX = 0;
+    let lastT = 0;
+    let smoothBow = 0;
+
+    function buildAudio(c) {
+      ctx = c;
+      ({ master } = createMasterBus(c, 0.5));
+      string = createBowedString(ctx, master, 220);
+      built = true;
+    }
+
+    registerAudioBoot(buildAudio);
+
+    function updateFromEvent(ev) {
+      const r = pad.getBoundingClientRect();
+      const nx = clamp((ev.clientX - r.left) / Math.max(1, r.width), 0, 1);
+      const ny = clamp((ev.clientY - r.top) / Math.max(1, r.height), 0, 1);
+      const hz = mapY(ny);
+
+      const dt = Math.max(1, performance.now() - lastT);
+      const vx = (ev.clientX - lastX) / dt;
+      lastX = ev.clientX;
+      lastT = performance.now();
+
+      const speed = Math.abs(vx);
+      const targetBow = clamp(speed * 0.022, 0, 1);
+      smoothBow = smoothBow * 0.82 + targetBow * 0.18;
+
+      string.setPitch(hz);
+      string.setBow(smoothBow);
+
+      dot.style.left = `${nx * 100}%`;
+      dot.style.top = `${ny * 100}%`;
+      dot.style.opacity = "1";
+      hzOut.textContent = hz.toFixed(0);
+      bowOut.textContent = String(Math.round(smoothBow * 100));
+    }
+
+    pad.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      await startAudio(!built ? buildAudio : undefined);
+      if (!built) return;
+      holding = true;
+      activeId = e.pointerId;
+      pad.setPointerCapture(activeId);
+      pad.classList.add("active");
+      lastX = e.clientX;
+      lastT = performance.now();
+      smoothBow = 0.12;
+      updateFromEvent(e);
+    });
+
+    pad.addEventListener("pointermove", (e) => {
+      if (!holding || e.pointerId !== activeId) return;
+      e.preventDefault();
+      updateFromEvent(e);
+    });
+
+    const stop = (e) => {
+      if (e && e.pointerId !== activeId) return;
+      holding = false;
+      activeId = null;
+      pad.classList.remove("active");
+      dot.style.opacity = "0.35";
+      bowOut.textContent = "0";
+      if (string) string.release();
+    };
+
+    pad.addEventListener("pointerup", stop);
+    pad.addEventListener("pointercancel", stop);
+    pad.addEventListener("lostpointercapture", stop);
   </script>
 </body>
 </html>

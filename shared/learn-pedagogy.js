@@ -326,8 +326,8 @@ export const LEARN_PEDAGOGY = {
   ],
 
   "bowed-waveguide": [
-    "Continuous drag excites a delay-line string model — energy flows while finger moves.",
-    "Sustained string metaphor without a separate bow sample.",
+    "One Karplus–Strong loop runs continuously; band-limited noise is the bow, not repeated plucks.",
+    "Drag speed controls bow pressure; pitch is vertical position — smooth feedback keeps the tone singing.",
   ],
 
   "pluck-bowl": [
