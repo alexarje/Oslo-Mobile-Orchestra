@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Evolutionary learning</h2>
-    <p>Turn <strong>Audio on</strong>. Play the eight pads, then <strong>Record groove</strong> — tap a one-bar pattern (about 4 seconds).</p>
+    <p>Turn <strong>Audio on</strong>. <strong>Record groove</strong> gives a <strong>4-bar count-in</strong>, then record a one-bar pattern on the pads.</p>
     <p>Press <strong>Evolve</strong>: a population of random patterns competes; each generation keeps the fittest and breeds new ones via <strong>crossover</strong> and <strong>mutation</strong>.</p>
     <p><strong>Play best</strong> loops the winner. <strong>👍</strong> nudges the next generation toward the pattern you just heard.</p>
   </div>
@@ -35,8 +35,9 @@
     <p class="status-bar evo-stats" id="stats">Gen 0 · Match — · Record a groove to teach</p>
     <canvas id="patternViz" class="evo-pattern-viz" width="320" height="48" aria-label="Best pattern"></canvas>
   </div>
-  <div class="main-stage">
+  <div class="main-stage evo-stage-wrap">
     <div class="drums-grid" id="pads-grid"></div>
+    <div id="recordCountdown" class="evo-countdown hidden" aria-live="polite"></div>
   </div>
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
@@ -63,6 +64,7 @@
     let generation = 0;
     let userBonus = 0;
     let recording = false;
+    let countingDown = false;
     let recordStart = 0;
     const recordHits = [];
     let playing = false;
@@ -152,8 +154,49 @@
     });
 
     const recordBtn = document.getElementById("recordBtn");
+    const countEl = document.getElementById("recordCountdown");
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    function playCountClick() {
+      if (!ctx || !master) return;
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(660, t);
+      osc.frequency.exponentialRampToValueAtTime(440, t + 0.04);
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + 0.09);
+    }
+
+    async function runBarCountdown(bpm) {
+      const barMs = (60 / bpm) * 4 * 1000;
+      countingDown = true;
+      recordBtn.disabled = true;
+      countEl.classList.remove("hidden");
+      for (let bar = 4; bar >= 1; bar--) {
+        countEl.textContent = String(bar);
+        setStatus("stats", `Count-in · bar ${bar}`, "ok");
+        playCountClick();
+        await sleep(barMs);
+      }
+      countEl.textContent = "Go!";
+      setStatus("stats", "Go! · tap your groove", "ok");
+      playCountClick();
+      await sleep(280);
+      countEl.classList.add("hidden");
+      countingDown = false;
+      recordBtn.disabled = false;
+    }
+
     recordBtn.addEventListener("click", async () => {
       await ensureAudio();
+      if (countingDown) return;
       if (recording) {
         recording = false;
         recordBtn.classList.remove("active");
@@ -170,8 +213,10 @@
         setStatus("stats", `Recorded ${recordHits.length} hits · evolved gen 1`, "ok");
         return;
       }
-      recording = true;
       recordHits.length = 0;
+      recordBtn.textContent = "Count-in…";
+      await runBarCountdown(+document.getElementById("bpm").value);
+      recording = true;
       recordStart = ctx.currentTime;
       recordBtn.classList.add("active");
       recordBtn.textContent = "Stop recording";
