@@ -1836,6 +1836,18 @@ body.hub {
   width: 100%;
 }
 
+.sound-saber-app .saber-beam {
+  background: radial-gradient(ellipse 40% 80% at 50% 85%, rgba(110, 231, 183, 0.12), transparent 70%);
+}
+
+.sound-saber-app .meter-fill-warm {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.sound-saber-app .touch-zone.active {
+  background: radial-gradient(ellipse 50% 90% at 50% 80%, rgba(110, 231, 183, 0.18), rgba(110, 231, 183, 0.04));
+}
+
 .touch-zone.active {
   background: rgba(110, 231, 183, 0.08);
   border-color: var(--accent-dim);

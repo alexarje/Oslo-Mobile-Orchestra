@@ -80,6 +80,13 @@ export const HUB_APPS = [
     sensors: "Touch · motion",
   },
   {
+    href: "apps/sound-saber/",
+    title: "Sabre Pulse",
+    section: "drones",
+    synth: "Pulse · delay · ring",
+    sensors: "Touch · motion",
+  },
+  {
     href: "apps/compass-wah/",
     title: "North Filter",
     section: "drones",
