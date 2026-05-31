@@ -37,14 +37,14 @@
     </label>
   </div>
   <script type="module">
-    import { bindLearn, startAudio } from "../../shared/app.js";
+    import { bindLearn, registerAudioBoot, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { createKSReverb, createKSPool, karplusPluck } from "../../shared/ks.js";
     import { enableSensors, onOrientation } from "../../shared/sensors.js";
 
     bindLearn();
     const pad = document.getElementById("pad");
-    let ctx, master, built = false;
+    let ctx, master, reverbBus, built = false;
     let tiltReady = false;
     let currentDamp = 4000;
     let activeId = null;
@@ -67,11 +67,14 @@
     });
 
     function buildAudio(c) {
+      if (built) return;
       ctx = c;
       ({ master } = createMasterBus(c, 0.52));
       reverbBus = createKSReverb(c, master, 0.26);
       built = true;
     }
+
+    registerAudioBoot(buildAudio);
 
     async function enableTilt() {
       if (tiltReady) return;
@@ -120,8 +123,9 @@
 
     pad.addEventListener("pointerdown", async (ev) => {
       ev.preventDefault();
-      await startAudio(!built ? (c) => { buildAudio(c); void enableTilt(); } : undefined);
+      await startAudio(!built ? buildAudio : undefined);
       if (!built) return;
+      void enableTilt();
       activeId = ev.pointerId;
       pad.setPointerCapture(activeId);
       pad.classList.add("active");
