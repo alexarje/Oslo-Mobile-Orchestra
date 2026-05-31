@@ -1403,14 +1403,16 @@ body.hub {
   opacity: 0.85;
 }
 
-/* Harmonizer */
-.harmonizer-app .harm-toolbar {
+/* Harmonizer + Swarm Bloom (shared chroma UI) */
+.harmonizer-app .harm-toolbar,
+.swarm-bloom-app .swarm-toolbar {
   flex-shrink: 0;
   padding: 0 0.5rem 0.35rem;
   background: #111827;
 }
 
-.harmonizer-app .harm-select {
+.harmonizer-app .harm-select,
+.swarm-bloom-app .harm-select {
   font-size: 0.75rem;
   padding: 0.2rem 0.35rem;
   border-radius: 6px;
@@ -1419,12 +1421,14 @@ body.hub {
   color: #e2e8f0;
 }
 
-.harmonizer-app .harm-scale {
+.harmonizer-app .harm-scale,
+.swarm-bloom-app .harm-scale {
   font-size: 0.75rem;
   color: #94a3b8;
 }
 
-.harmonizer-app .harm-toolbar .evo-actions {
+.harmonizer-app .harm-toolbar .evo-actions,
+.swarm-bloom-app .swarm-toolbar .evo-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
@@ -1442,7 +1446,8 @@ body.hub {
   gap: 0.75rem;
 }
 
-.harmonizer-app .harm-chroma-wrap {
+.harmonizer-app .harm-chroma-wrap,
+.swarm-bloom-app .harm-chroma-wrap {
   width: 100%;
   flex: 0 0 auto;
   min-height: 56px;
@@ -1452,7 +1457,8 @@ body.hub {
   border: 1px solid #334155;
 }
 
-.harmonizer-app .harm-chroma-viz {
+.harmonizer-app .harm-chroma-viz,
+.swarm-bloom-app .harm-chroma-viz {
   width: 100%;
   height: 56px;
   display: block;
@@ -1497,6 +1503,48 @@ body.hub {
   opacity: 1;
   background: radial-gradient(circle, rgba(110, 231, 183, 0.45), transparent 72%);
   box-shadow: 0 0 40px rgba(110, 231, 183, 0.25);
+}
+
+.swarm-bloom-app .swarm-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.swarm-bloom-app .swarm-glow-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #1a1030 0%, #0d0f14 65%);
+  transition: filter 0.08s ease;
+}
+
+.swarm-bloom-app .swarm-glow {
+  width: min(70vw, 220px);
+  height: min(70vw, 220px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.35) 0%, transparent 70%);
+  opacity: 0.35;
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.swarm-bloom-app .swarm-glow.on {
+  opacity: 0.95;
+  transform: scale(1.06);
+}
+
+.swarm-bloom-app .swarm-glow-stage.pulse {
+  filter: brightness(1.12);
+}
+
+.swarm-bloom-app .swarm-beat-flash.on {
+  background: rgba(167, 139, 250, 0.22);
+}
+
+.swarm-bloom-app .swarm-beat-flash.on-strong {
+  background: rgba(196, 181, 253, 0.38);
 }
 
 .harmonizer-app .harm-hold-label {

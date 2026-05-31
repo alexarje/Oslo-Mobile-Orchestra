@@ -63,7 +63,7 @@ Phones expose more than mic + tilt. Each row is a candidate **app** (or major up
 | Shipped / partial | Sensing |
 |-----------------|---------|
 | [Motion Wah](../apps/motion-wah/), [Compass Wah](../apps/compass-wah/) | Tilt, heading |
-| [Firefly](../apps/firefly/), [Harmonizer](../apps/harmonizer/) | Mic onsets, chroma |
+| [Firefly](../apps/firefly/), [Harmonizer](../apps/harmonizer/), [Swarm Bloom](../apps/swarm-bloom/) | Mic onsets, chroma, evo soundscape |
 | [Train & Shake](../apps/train-shake/), [Hum vs Clap](../apps/hum-clap/) | Accel features → ML |
 | [Bow Phone](../apps/bow-phone/) | Camera + hand motion |
 | [Video Sonifier](../apps/video-sonifier/) | Camera motion → pitch |

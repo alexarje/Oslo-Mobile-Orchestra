@@ -335,6 +335,13 @@ export const HUB_APPS = [
   { href: "apps/one-shot-orchestra/", title: "Zone Hits", section: "rhythm", synth: "Multi-zone", sensors: "Touch zones" },
   { href: "apps/live-loop-slicer/", title: "Slice Bar", section: "rhythm", synth: "Loop slices", sensors: "Tilt · touch" },
   { href: "apps/gesture-regression/", title: "Tilt Learn", section: "ai", synth: "ML → filter", sensors: "Motion · touch" },
+  {
+    href: "apps/swarm-bloom/",
+    title: "Swarm Bloom",
+    section: "drones",
+    synth: "Evo drones + rhythm",
+    sensors: "Mic · ensemble",
+  },
 ];
 
 /** @param {string} href e.g. "apps/piano/" */
