@@ -1334,6 +1334,20 @@ body.hub {
   flex-direction: column;
 }
 
+.markov-melody-app .markov-keyboard-scroll {
+  flex: 1;
+  min-height: 140px;
+}
+
+.markov-melody-app .harm-select {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
 .markov-melody-app .markov-toolbar {
   flex-wrap: wrap;
   gap: 0.35rem;
