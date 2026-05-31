@@ -38,7 +38,7 @@
       isAudioActive,
       registerAudioBoot,
     } from "../../shared/app.js";
-    import { createMasterBus, getMicStream, primeMicStream, unlockAudio } from "../../shared/audio.js";
+    import { createMasterBus, getMicStream, primeMicStream, connectMicAnalyser, unlockAudio } from "../../shared/audio.js";
 
     bindLearn();
     const tapZone = document.getElementById("tapZone");
@@ -235,11 +235,53 @@
       document.getElementById("modeOut").textContent = "off";
     }
 
+    function startGrainCapture(stream) {
+      const src = ctx.createMediaStreamSource(stream);
+      const cap = ctx.createGain();
+      cap.gain.value = 1.4;
+      src.connect(cap);
+      const recProc = ctx.createScriptProcessor(4096, 1, 1);
+      const silent = ctx.createGain();
+      silent.gain.value = 0;
+      let chunks = [];
+      let total = 0;
+      const maxLen = Math.floor(ctx.sampleRate * 0.4);
+      recProc.onaudioprocess = (e) => {
+        if (total >= maxLen) return;
+        const ch = e.inputBuffer.getChannelData(0);
+        const copy = new Float32Array(ch.length);
+        copy.set(ch);
+        chunks.push(copy);
+        total += copy.length;
+        if (total >= maxLen) {
+          const buf = ctx.createBuffer(1, total, ctx.sampleRate);
+          const out = buf.getChannelData(0);
+          let off = 0;
+          for (const chunk of chunks) {
+            out.set(chunk, off);
+            off += chunk.length;
+          }
+          captureBuf = buf;
+          recProc.onaudioprocess = null;
+          try {
+            recProc.disconnect();
+            cap.disconnect();
+            src.disconnect();
+          } catch {
+            /* noop */
+          }
+        }
+      };
+      cap.connect(recProc);
+      recProc.connect(silent);
+      silent.connect(ctx.destination);
+    }
+
     async function boot(c) {
       ctx = c;
       if (built) {
         if (ctx.state === "suspended") await unlockAudio(ctx);
-        if (isAudioActive() && cloudOn && !frozen) scheduleGrains();
+        if (cloudOn && !frozen) scheduleGrains();
         return;
       }
       ({ master } = createMasterBus(ctx, 0.58));
@@ -247,54 +289,15 @@
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.65;
       freqData = new Uint8Array(analyser.frequencyBinCount);
-      master.connect(analyser);
       captureBuf = defaultCaptureBuffer(ctx);
       try {
         micStream = await getMicStream();
-        const src = ctx.createMediaStreamSource(micStream);
-        const cap = ctx.createGain();
-        cap.gain.value = 1.4;
-        src.connect(cap);
-        const recProc = ctx.createScriptProcessor(4096, 1, 1);
-        const silent = ctx.createGain();
-        silent.gain.value = 0;
-        let chunks = [];
-        let total = 0;
-        const maxLen = Math.floor(ctx.sampleRate * 0.4);
-        recProc.onaudioprocess = (e) => {
-          if (total >= maxLen) return;
-          const ch = e.inputBuffer.getChannelData(0);
-          const copy = new Float32Array(ch.length);
-          copy.set(ch);
-          chunks.push(copy);
-          total += copy.length;
-          if (total >= maxLen) {
-            const buf = ctx.createBuffer(1, total, ctx.sampleRate);
-            const out = buf.getChannelData(0);
-            let off = 0;
-            for (const chunk of chunks) {
-              out.set(chunk, off);
-              off += chunk.length;
-            }
-            captureBuf = buf;
-            recProc.onaudioprocess = null;
-            try {
-              recProc.disconnect();
-              cap.disconnect();
-              src.disconnect();
-            } catch {
-              /* noop */
-            }
-          }
-        };
-        cap.connect(recProc);
-        recProc.connect(silent);
-        silent.connect(ctx.destination);
+        connectMicAnalyser(ctx, micStream, analyser, { inputGain: 1.5 });
+        startGrainCapture(micStream);
       } catch {
         setStatus("status", "Mic blocked — using noise buffer", "warn");
       }
       built = true;
-      if (isAudioActive()) startCloud();
     }
 
     registerAudioBoot(boot, { mic: true });
@@ -302,6 +305,8 @@
     async function ensurePlaying() {
       primeMicStream();
       await startAudio(boot);
+      if (!built) return;
+      if (!cloudOn) startCloud();
     }
 
     playBtn.addEventListener("click", () => {
