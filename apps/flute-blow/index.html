@@ -46,6 +46,8 @@
     let ctx, master, analyser, micStream;
     let toneGain, toneOsc, vibOsc, vibGain, noiseGain, noiseSrc;
     let blowThreshold = 0.02;
+    let wasBlowing = false;
+    let breathEnv = 0;
     let currentMidi = 60;
     let noteIndex = 0;
     let ready = false;
@@ -138,8 +140,8 @@
         await new Promise((r) => requestAnimationFrame(r));
       }
       const floor = samples.reduce((a, b) => a + b, 0) / samples.length;
-      blowThreshold = Math.max(0.012, floor * 2.8 + 0.006);
-      document.getElementById("breathWrap").style.setProperty("--thresh", `${Math.min(85, (blowThreshold / 0.12) * 100)}%`);
+      blowThreshold = Math.max(0.008, floor * 2.1 + 0.004);
+      document.getElementById("breathWrap").style.setProperty("--thresh", `${Math.min(85, (blowThreshold / 0.1) * 100)}%`);
     }
 
     function setVibrato(on, breath, when) {
@@ -164,9 +166,16 @@
       vibOsc.start();
       const f = ctx.createBiquadFilter();
       f.type = "lowpass";
-      f.frequency.value = 2800;
+      f.Q.value = 0.9;
+      f.frequency.value = 4200;
+      const bright = ctx.createBiquadFilter();
+      bright.type = "peaking";
+      bright.frequency.value = 1800;
+      bright.Q.value = 1.2;
+      bright.gain.value = 4;
       toneOsc.connect(f);
-      f.connect(toneGain);
+      f.connect(bright);
+      bright.connect(toneGain);
       toneGain.connect(master);
       toneOsc.start();
       noiseGain = ctx.createGain();
@@ -189,19 +198,23 @@
     function tick() {
       if (!ready) return;
       const rms = getRms();
-      document.getElementById("breathMeter").style.width = `${Math.min(100, (rms / 0.12) * 100)}%`;
-      const blowing = rms > blowThreshold;
-      const playing = blowing;
-      document.getElementById("breathMeter").classList.toggle("blowing", playing);
+      document.getElementById("breathMeter").style.width = `${Math.min(100, (rms / 0.1) * 100)}%`;
+      const onThresh = wasBlowing ? blowThreshold * 0.72 : blowThreshold;
+      const blowing = rms > onThresh;
+      wasBlowing = blowing;
+      document.getElementById("breathMeter").classList.toggle("blowing", blowing);
       const t = ctx.currentTime;
-      if (playing) {
-        const s = Math.min(1, (rms - blowThreshold) / (0.12 - blowThreshold));
-        toneGain.gain.setTargetAtTime(0.14 + s * 0.52, t, 0.02);
-        noiseGain.gain.setTargetAtTime(s * 0.09, t, 0.02);
+      const headroom = Math.max(0.025, 0.09 - blowThreshold);
+      const s = blowing ? Math.min(1, (rms - blowThreshold) / headroom) : 0;
+      const targetEnv = blowing ? 0.35 + s * 0.65 : 0;
+      breathEnv += (targetEnv - breathEnv) * (targetEnv > breathEnv ? 0.42 : 0.12);
+      if (breathEnv > 0.02) {
+        toneGain.gain.setTargetAtTime(breathEnv * 0.95, t, 0.012);
+        noiseGain.gain.setTargetAtTime(breathEnv * s * 0.22, t, 0.015);
         setPitch(t);
         setVibrato(true, s, t);
       } else {
-        toneGain.gain.setTargetAtTime(0, t, 0.06);
+        toneGain.gain.setTargetAtTime(0, t, 0.05);
         noiseGain.gain.setTargetAtTime(0, t, 0.04);
         setVibrato(false, 0, t);
       }
@@ -215,7 +228,7 @@
         throw new Error("no mic");
       }
       ctx = c;
-      ({ master } = createMasterBus(ctx, 0.68));
+      ({ master } = createMasterBus(ctx, 0.88));
       try {
         micStream = await getMicStream();
       } catch {
