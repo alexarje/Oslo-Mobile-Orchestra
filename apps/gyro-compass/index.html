@@ -15,7 +15,7 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Pan + pitch</h2>
     <p>Turn <strong>Audio on</strong>, tap the compass, and allow <strong>motion</strong> on iPhone.</p>
-    <p>Hold the phone <strong>flat</strong> and rotate for stereo pan. <strong>Tilt</strong> forward/back for pitch, or drag on the circle.</p>
+    <p>Hold the phone <strong>flat</strong> and rotate — the <strong>needle</strong> shows heading on the compass. <strong>Tilt</strong> forward/back for pitch, or drag vertically on the circle.</p>
   </div>
   <p class="status-bar" id="status">Tap compass · Audio on</p>
   <div class="readout-row">
@@ -126,47 +126,168 @@
       return true;
     }
 
+    /** Screen angle (rad): 0 = up, clockwise positive — matches compass needle. */
+    function headingRad(deg) {
+      return ((deg - 90) * Math.PI) / 180;
+    }
+
     function draw() {
       const box = canvas.parentElement.getBoundingClientRect();
       const dpr = devicePixelRatio || 1;
-      canvas.width = box.width * dpr;
-      canvas.height = box.height * dpr;
+      canvas.width = Math.max(1, box.width * dpr);
+      canvas.height = Math.max(1, box.height * dpr);
       const w = canvas.width;
       const h = canvas.height;
       const cx = w / 2;
       const cy = h / 2;
-      const r = Math.min(w, h) * 0.35;
+      const r = Math.min(w, h) * 0.36;
+      const bVal = safeNum(beta, 90);
+      const flat = Math.abs(bVal - 90) < 22;
+      const heading = ((alpha % 360) + 360) % 360;
+
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.fillStyle = "#0f172a";
       g.fillRect(0, 0, w, h);
 
+      // Pitch lane (vertical, behind compass)
       const midi = currentMidi();
       const pitchT = (midi - MIDI_MIN) / (MIDI_MAX - MIDI_MIN);
-      const pitchY = cy + r * 0.55 - pitchT * r * 1.1;
-      g.fillStyle = "rgba(110, 231, 183, 0.15)";
-      g.beginPath();
-      g.arc(cx, pitchY, 10 * dpr, 0, Math.PI * 2);
-      g.fill();
-
+      const laneTop = cy - r * 0.62;
+      const laneBot = cy + r * 0.62;
       g.strokeStyle = "#334155";
+      g.lineWidth = 1.5 * dpr;
+      g.beginPath();
+      g.moveTo(cx, laneTop);
+      g.lineTo(cx, laneBot);
+      g.stroke();
+      const pitchY = laneBot - pitchT * (laneBot - laneTop);
+      g.fillStyle = touchMidi != null ? "rgba(110, 231, 183, 0.35)" : "rgba(110, 231, 183, 0.18)";
+      g.beginPath();
+      g.arc(cx, pitchY, 9 * dpr, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = "#94a3b8";
+      g.font = `${9 * dpr}px system-ui,sans-serif`;
+      g.textAlign = "center";
+      g.fillText("pitch ↑", cx, laneTop - 5 * dpr);
+
+      // Compass bezel
+      g.strokeStyle = flat ? "rgba(110, 231, 183, 0.45)" : "rgba(251, 191, 36, 0.5)";
+      g.lineWidth = 2.5 * dpr;
+      g.beginPath();
+      g.arc(cx, cy, r + 4 * dpr, 0, Math.PI * 2);
+      g.stroke();
+
+      g.fillStyle = "#1e293b";
       g.beginPath();
       g.arc(cx, cy, r, 0, Math.PI * 2);
-      g.stroke();
-      const a = ((alpha - 90) * Math.PI) / 180;
-      g.strokeStyle = "#6ee7b7";
-      g.lineWidth = 3 * dpr;
-      g.beginPath();
-      g.moveTo(cx, cy);
-      g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      g.fill();
+      g.strokeStyle = "#334155";
+      g.lineWidth = 1.5 * dpr;
       g.stroke();
 
-      g.strokeStyle = "#64748b";
-      g.setLineDash([4 * dpr, 4 * dpr]);
+      // Tick marks + degree labels (rose fixed: N at top of screen)
+      const cardinals = [
+        { deg: 0, label: "N", major: true },
+        { deg: 45, label: "NE", major: false },
+        { deg: 90, label: "E", major: true },
+        { deg: 135, label: "SE", major: false },
+        { deg: 180, label: "S", major: true },
+        { deg: 225, label: "SW", major: false },
+        { deg: 270, label: "W", major: true },
+        { deg: 315, label: "NW", major: false },
+      ];
+      for (let d = 0; d < 360; d += 10) {
+        const rad = headingRad(d);
+        const major = d % 30 === 0;
+        const inner = r - (major ? 14 : 8) * dpr;
+        const outer = r - 2 * dpr;
+        g.strokeStyle = major ? "#64748b" : "#475569";
+        g.lineWidth = (major ? 2 : 1) * dpr;
+        g.beginPath();
+        g.moveTo(cx + Math.cos(rad) * inner, cy + Math.sin(rad) * inner);
+        g.lineTo(cx + Math.cos(rad) * outer, cy + Math.sin(rad) * outer);
+        g.stroke();
+      }
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      for (const { deg, label, major } of cardinals) {
+        const rad = headingRad(deg);
+        const lr = r - 22 * dpr;
+        const lx = cx + Math.cos(rad) * lr;
+        const ly = cy + Math.sin(rad) * lr;
+        g.font = `${(major ? 11 : 8) * dpr}px system-ui,sans-serif`;
+        g.fillStyle = label === "N" ? "#f87171" : major ? "#e2e8f0" : "#94a3b8";
+        if (major) g.fillText(label, lx, ly);
+      }
+
+      // Pan arc (stereo hint): left/right wedges dimmed by |pan|
+      const pan = Math.sin((heading * Math.PI) / 180);
+      g.fillStyle = pan < 0 ? "rgba(56, 189, 248, 0.12)" : "rgba(56, 189, 248, 0.03)";
       g.beginPath();
-      g.moveTo(cx, cy - r * 0.55);
-      g.lineTo(cx, cy + r * 0.55);
+      g.moveTo(cx, cy);
+      g.arc(cx, cy, r * 0.55, headingRad(180), headingRad(270));
+      g.closePath();
+      g.fill();
+      g.fillStyle = pan > 0 ? "rgba(56, 189, 248, 0.12)" : "rgba(56, 189, 248, 0.03)";
+      g.beginPath();
+      g.moveTo(cx, cy);
+      g.arc(cx, cy, r * 0.55, headingRad(270), headingRad(360));
+      g.closePath();
+      g.fill();
+
+      // Heading needle (phone top / facing direction)
+      const a = headingRad(heading);
+      g.strokeStyle = "#6ee7b7";
+      g.fillStyle = "#6ee7b7";
+      g.lineWidth = 3 * dpr;
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(a) * (r - 18 * dpr), cy + Math.sin(a) * (r - 18 * dpr));
       g.stroke();
-      g.setLineDash([]);
+      // Needle tip arrow
+      const tipX = cx + Math.cos(a) * (r - 10 * dpr);
+      const tipY = cy + Math.sin(a) * (r - 10 * dpr);
+      const wing = 10 * dpr;
+      const aw = a + Math.PI / 2;
+      g.beginPath();
+      g.moveTo(tipX, tipY);
+      g.lineTo(tipX - Math.cos(a) * wing + Math.cos(aw) * 5 * dpr, tipY - Math.sin(a) * wing + Math.sin(aw) * 5 * dpr);
+      g.lineTo(tipX - Math.cos(a) * wing - Math.cos(aw) * 5 * dpr, tipY - Math.sin(a) * wing - Math.sin(aw) * 5 * dpr);
+      g.closePath();
+      g.fill();
+
+      // Center hub + heading readout
+      g.fillStyle = "#0f172a";
+      g.strokeStyle = "#6ee7b7";
+      g.lineWidth = 2 * dpr;
+      g.beginPath();
+      g.arc(cx, cy, 16 * dpr, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.fillStyle = "#f1f5f9";
+      g.font = `bold ${11 * dpr}px system-ui,sans-serif`;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(`${heading.toFixed(0)}°`, cx, cy);
+
+      // Tilt / flatness bubble (bottom)
+      const tiltT = clamp((bVal - 25) / 110, 0, 1);
+      const bubbleX = cx - r * 0.72;
+      const bubbleY = cy + r * 0.15 + (1 - tiltT) * r * 0.35;
+      g.strokeStyle = "#475569";
+      g.lineWidth = 1.5 * dpr;
+      g.beginPath();
+      g.arc(bubbleX, cy + r * 0.35, r * 0.22, Math.PI * 0.15, Math.PI * 0.85);
+      g.stroke();
+      g.fillStyle = flat ? "#6ee7b7" : "#fbbf24";
+      g.beginPath();
+      g.arc(bubbleX, bubbleY, 6 * dpr, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = "#94a3b8";
+      g.font = `${8 * dpr}px system-ui,sans-serif`;
+      g.textAlign = "center";
+      g.fillText(flat ? "flat" : "tilt", bubbleX, cy + r * 0.35 + r * 0.28);
     }
 
     async function boot(e) {
@@ -199,9 +320,8 @@
     canvas.addEventListener("pointerup", endTouch);
     canvas.addEventListener("pointercancel", endTouch);
 
-    new ResizeObserver(() => {
-      if (built) draw();
-    }).observe(canvas.parentElement);
+    new ResizeObserver(draw).observe(canvas.parentElement);
+    draw();
   </script>
 </body>
 </html>
