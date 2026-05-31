@@ -22,7 +22,7 @@ Hub → **Synth Pad**. Everyone finds one note. Count 1–2–3–4, release on 
 
 ### Sensors (10 min)
 
-**Motion Wah** or **Compass Weirdness** — tilt = timbre or volume. Conductor gestures; group follows without reading screens.
+**Motion Wah** or **Compass Wah** — tilt = timbre or volume. Conductor gestures; group follows without reading screens.
 
 ### AI (10 min)
 
@@ -49,7 +49,7 @@ One sustained **Drone Choir** tone. Discuss: musical vs “tech demo”?
 | Count | App |
 |-------|-----|
 | 8 | Drone Choir (split chord tones) |
-| 6 | Tilt Wah or Compass Weirdness |
+| 6 | Motion Wah or Compass Wah |
 | 4 | Drum Sequencer Linear or Drumkit |
 | 1 | Conductor |
 | 1 | Firefly or Harmonizer (experiment) |

@@ -774,6 +774,19 @@ body.hub {
   background: rgba(127, 29, 29, 0.35);
 }
 
+.scrub-tape-app .scrub-buf-tag {
+  font-size: 0.75rem;
+  color: var(--muted);
+  flex: 1 1 auto;
+  text-align: right;
+}
+
+.scrub-tape-app .btn-rec.recording {
+  border-color: #f87171;
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.35);
+}
+
 .granular-tilt-app .stage-fill.play-grid {
   touch-action: manipulation;
 }

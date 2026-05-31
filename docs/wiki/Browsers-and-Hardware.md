@@ -15,7 +15,7 @@ Chrome/Firefox/Edge on iOS use WebKit — behaviour is similar to Safari.
 |------------|---------|
 | Microphone | Flute, Theremin, Sampler, ML apps, Firefly, Harmonizer, Evo (count-in only) |
 | Camera | Bow Phone, Video Sonifier |
-| Motion & orientation | Tilt apps, Compass Weirdness, bells, granular, etc. |
+| Motion & orientation | Tilt apps, Compass Wah, bells, granular, etc. |
 
 On **iOS 13+**, motion/orientation often needs an explicit allow after a user gesture.
 

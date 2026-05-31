@@ -300,11 +300,6 @@ export const LEARN_PEDAGOGY = {
     "Space and movement through the venue become part of the mix.",
   ],
 
-  "hard-sync-lead": [
-    "Hard sync resets a slave oscillator when the master cycles, producing harsh, bright harmonics.",
-    "Classic aggressive lead timbre from analog synth tradition.",
-  ],
-
   "am-radio": [
     "Amplitude modulation: a slow oscillator multiplies level, creating sidebands around the carrier — radio-like.",
     "Mic may replace the modulator — voice or room sound heterodynes with the tone.",

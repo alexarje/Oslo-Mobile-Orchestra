@@ -12,7 +12,7 @@ A **phone orchestra** for workshops and classrooms: many browsers, one URL, no s
 - **Evo Drumkit** — record a groove; a genetic algorithm breeds matching patterns.
 - **Drum Sequencer Circular** — 16-step rings (kick → hats).
 - **Bow Phone** — selfie camera hand-bow + pitch pad.
-- **Compass Weirdness** — hold anywhere on screen; heading sweeps filter, tilt controls volume.
+- **Compass Wah** — hold anywhere on screen; heading sweeps filter, tilt controls volume.
 - **Additive Bells** — always-on downward-hit striking.
 - **Video Sonifier** — camera motion → pentatonic texture.
 
