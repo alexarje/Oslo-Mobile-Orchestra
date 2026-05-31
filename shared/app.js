@@ -3,6 +3,7 @@
  */
 import { getAudioContext, primeMicStream, unlockAudio } from "./audio.js";
 import { renderQrCanvas } from "./qr.js";
+import { injectLearnPedagogy } from "./learn-pedagogy.js";
 import { loadA11yPreference } from "./workshop.js";
 
 loadA11yPreference();
@@ -173,6 +174,7 @@ export function bindLearn(learnBtnId = "learnBtn", panelId = "learnPanel") {
     if (open) closeQrPanel();
   });
   btn?.setAttribute("aria-controls", panelId);
+  injectLearnPedagogy(panelId);
 }
 
 /** Optional full setup (mic, graph) when user turns audio on from the header toggle. */

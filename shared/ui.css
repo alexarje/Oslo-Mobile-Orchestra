@@ -261,7 +261,7 @@ a {
   right: 0;
   margin: 0;
   padding: 0.5rem 0.65rem;
-  max-height: 32vh;
+  max-height: 42vh;
   overflow-y: auto;
   z-index: 30;
   border-radius: 0 0 10px 10px;
@@ -293,6 +293,26 @@ a {
 
 .learn-panel.panel p {
   margin: 0.25rem 0;
+}
+
+.learn-pedagogy {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #2d3548;
+}
+
+.learn-pedagogy h3 {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent-dim, #6ee7b7);
+  margin: 0 0 0.3rem;
+}
+
+.learn-pedagogy p {
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .app-toolbar {

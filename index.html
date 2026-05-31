@@ -45,10 +45,12 @@
 
   <script type="module">
     import { bindLearn } from "./shared/app.js";
+    import { injectLearnPedagogy } from "./shared/learn-pedagogy.js";
     import { HUB_APPS, catalogEntryForHref } from "./shared/hub-catalog.js";
     import { SECTIONS, getPartFromUrl, getSectionFromUrl, wireA11yToggle } from "./shared/workshop.js";
 
     bindLearn();
+    injectLearnPedagogy("learnPanel", "hub");
     wireA11yToggle();
 
     const APPS = [...HUB_APPS].sort((a, b) =>

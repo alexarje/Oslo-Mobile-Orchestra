@@ -1,0 +1,421 @@
+/**
+ * Pedagogical “How it works” copy for Learn panels (by app folder slug).
+ * Injected automatically by bindLearn() — keep how-to-play text in each app HTML.
+ */
+
+/** @type {Record<string, string | string[]>} */
+export const LEARN_PEDAGOGY = {
+  hub: [
+    "Each card is a small browser instrument: a sound engine plus one or more phone sensors (touch, motion, mic, camera).",
+    "In workshops, distribute different apps across the group so timbre and gesture vary, then listen for how the ensemble blends.",
+  ],
+
+  conductor: [
+    "A shared pulse keeps many players aligned in time. The phone plays a short click on each beat; everyone who opens the same link hears the same tempo.",
+    "Pedagogically this trains ensemble listening: lock to the group pulse instead of your internal clock.",
+  ],
+
+  part: [
+    "This page routes players to a seat or part number via QR — it is logistics, not synthesis.",
+    "Use it so large groups land on the right instrument without typing URLs.",
+  ],
+
+  drumkit: [
+    "Each pad triggers a synthesized drum: oscillators and noise bursts shaped by envelopes to mimic kick, snare, and hats.",
+    "Teaches discrete rhythm — short attacks, clear onsets — and how timbre identifies drum type even at low volume.",
+  ],
+
+  "drum-sequencer": [
+    "A step sequencer stores on/off hits on a grid; a clock steps through columns and triggers drums when a step is lit.",
+    "Players program patterns, then hear how repetition and syncopation create groove.",
+  ],
+
+  "circular-drum": [
+    "Steps are placed on a ring; the playhead travels around the circle like a rotary sequencer.",
+    "Same idea as linear steps, but the cyclic layout highlights phase and polyrhythm when rings run at different lengths.",
+  ],
+
+  firefly: [
+    "Each phone listens for sharp sounds (claps, taps) and flashes a pulse; the group tries to align pulses without a central metronome.",
+    "Models biological synchrony: local reaction to neighbours, emergent shared tempo.",
+  ],
+
+  "delay-throw": [
+    "A tap records energy into a delay line; feedback sends the sound back, so each gesture leaves a fading trail.",
+    "Tilt or drag controls delay time and feedback — longer delay = more space between echoes; more feedback = denser texture.",
+  ],
+
+  "evo-drumkit": [
+    "Patterns can mutate over time: small random changes to steps or sounds, guided by rules and sometimes mic input.",
+    "Introduces evolution as a compositional idea — variation within constraints, not pure random noise.",
+  ],
+
+  audience: [
+    "Many simple voices follow motion or touch rules and drift slightly out of phase, like a flock.",
+    "Good for exploring texture and collective density: more movement often means more activity in the swarm.",
+  ],
+
+  "drone-choir": [
+    "Several sine oscillators are detuned slightly so beating and roughness appear; holding a note sustains a chord tone.",
+    "Teaches just intonation vs equal temperament by ear, and how ensemble drones need stable pitch and balance.",
+  ],
+
+  "sound-saber": [
+    "Based on the fourMs Sound Saber: a bright pulse feeds two feedback delays and ring modulation, then a bandpass filter.",
+    "Swing speed maps to loudness; tilt and direction shape filter and modulation — motion becomes timbre, not only volume.",
+  ],
+
+  "compass-wah": [
+    "One filtered tone is controlled by how you move the phone. Modes swap the mapping: compass heading, tilt, shake, flat-table gate, or panned choir.",
+    "Shows that the same synthesizer can feel different when sensor features change — mapping design is part of instrument identity.",
+  ],
+
+  harmonizer: [
+    "The mic estimates chord colour (chroma) from the room; the app holds related pitches as a drone choir.",
+    "Players hear how harmony in the environment steers the electronics — acoustic context becomes part of the patch.",
+  ],
+
+  piano: [
+    "Each key triggers a short, bright tone (sine or mallet-like envelope) at a fixed pitch.",
+    "Supports melody, voice-leading, and ensemble pitch reference; works well when other parts are drone or rhythm.",
+  ],
+
+  "synth-pad": [
+    "Subtractive synthesis: rich oscillator (saw/square) through a filter; touch position changes cutoff and level.",
+    "Classic “analog” lead/pad language — brightness and warmth from filter motion.",
+  ],
+
+  "mic-theremin": [
+    "Pitch is estimated from your humming or whistling; the phone tracks fundamental frequency and drives a sine tone.",
+    "Links vocal intonation to electronic pitch — useful for ear training and for one melodic line without a keyboard.",
+  ],
+
+  "flute-blow": [
+    "Breath noise into the mic opens a gate; finger holes on screen choose pitch like a simple flute.",
+    "Combines excitation (breath) with resonance (pitch selection) — you must control both to phrase musically.",
+  ],
+
+  "light-theremin": [
+    "Ambient light level (when available) or brightness proxy controls pitch — cover the sensor for darker tone.",
+    "Analogous to optical theremins: one continuous dimension maps to frequency; encourages slow, deliberate motion.",
+  ],
+
+  "tilt-harp": [
+    "Plucked or struck string models (Karplus–Strong or similar) with pitch from touch and damping from tilt.",
+    "Tilt as “string length” or damping teaches that gesture after the attack still shapes the sound.",
+  ],
+
+  "bow-phone": [
+    "Camera motion or hand position sustains a bowed-string-like tone: continuous excitation instead of one pluck.",
+    "Bridges visual/motor control and sustained tone — closer to violin phrasing than percussion.",
+  ],
+
+  "fm-touch": [
+    "Frequency modulation (FM): one oscillator modulates another’s frequency, creating sidebands and metallic or bell-like spectra.",
+    "Finger or tilt chooses carrier and modulator rates — small ratio changes produce large timbral shifts.",
+  ],
+
+  "fm-matrix": [
+    "Several FM pairs are mixed; the grid sets levels or indices like a modular patch.",
+    "Players explore complex spectra by combining simple two-operator blocks.",
+  ],
+
+  "ks-string": [
+    "Karplus–Strong synthesis: a short delay loop with filtering mimics a vibrating string. A noise burst sets it ringing.",
+    "Pluck position and strength change pitch and brightness; tilt often controls decay (damping).",
+  ],
+
+  "additive-bells": [
+    "A tone is built from many sine partials at harmonic ratios; motion or hit strength shapes the mix.",
+    "Demonstrates Fourier idea: timbre = which partials are loud; bells have inharmonic partials in real life, simplified here.",
+  ],
+
+  "filter-ladder": [
+    "A ladder-style lowpass filter (Moog-like) removes highs; resonance emphasizes the cutoff edge.",
+    "Classic subtractive bass/leads — sweep the cutoff to feel formant-like vowels or wah effects.",
+  ],
+
+  "ring-mod-gong": [
+    "Ring modulation multiplies two signals, producing sum and difference frequencies — often inharmonic, gong-like.",
+    "Touch maps carrier and modulator; inharmonic relationships avoid obvious pitch center.",
+  ],
+
+  sampler: [
+    "Sound is recorded into a buffer, then played back at variable rate or position; tilt may shift playback.",
+    "Links everyday sound (field recording) to musical time-stretching and collage.",
+  ],
+
+  "granular-tilt": [
+    "Many tiny slices of sound (grains) overlap; density and position create clouds or textures.",
+    "Mic or buffer supplies material; tilt scatters grains — time is shredded and reassembled.",
+  ],
+
+  "spectral-freeze": [
+    "Analysis splits sound into partials or bands; freezing holds the spectrum while you reshape or sustain.",
+    "Bridges spectral thinking — timbre as a set of frequencies, not only a single waveform.",
+  ],
+
+  "wavetable-scan": [
+    "A single cycle waveform is stored; scanning through tables or morphing shapes changes harmonics smoothly.",
+    "Between pure sine and complex buzz; good for evolving pads and digital timbres.",
+  ],
+
+  "video-sonifier": [
+    "Camera frames are compared for motion or brightness; changes map to pitch, density, or level.",
+    "Vision becomes control — stillness vs activity in the room directly shapes the electronics.",
+  ],
+
+  "hum-clap": [
+    "Short mic features are classified (hum vs clap) with a small learner; each class triggers a different response.",
+    "Introduces supervised learning on the phone: train examples, then test in performance.",
+  ],
+
+  "train-shake": [
+    "You record gesture examples; the app maps new motion to parameters (filter, pitch, etc.).",
+    "Embodied ML: your movement vocabulary becomes the interface.",
+  ],
+
+  "markov-melody": [
+    "Each new note depends on the previous one or two (Markov chain); the keyboard trains probabilities, then auto-plays.",
+    "Stochastic melody — structure without a fixed score; compare human vs machine choices.",
+  ],
+
+  "euclidean-rings": [
+    "Euclidean rhythm distributes k hits evenly among n steps; rotating rings place polymetric grids.",
+    "Mathematical rhythm — same formula underlies many world musics and techno patterns.",
+  ],
+
+  "lsystem-groove": [
+    "An L-system rewrites a symbol string; symbols map to drum hits, growing patterns over generations.",
+    "Algorithmic composition: simple rules, complex output — fractal-like rhythmic growth.",
+  ],
+
+  "chaos-attractor": [
+    "A chaotic map (e.g. Lorenz-style) drives filter or pitch; tiny changes grow into large swings.",
+    "Deterministic but unpredictable — sensitivity to initial conditions as a performance parameter.",
+  ],
+
+  "bit-crush-pad": [
+    "Sample rate and bit depth are lowered digitally, adding grain and aliasing — “retro” degradation.",
+    "Network or motion may push crush amount — teaches digital audio limits as aesthetic.",
+  ],
+
+  "feedback-matrix": [
+    "Several delay lines cross-feed; gyro or touch routes energy between paths, risking runaway or rich drones.",
+    "Delay as instrument — stability vs feedback howl is part of the performance.",
+  ],
+
+  "shepard-glide": [
+    "Overlapping glissandi in octave layers create an endless rising (or falling) pitch illusion.",
+    "Psychoacoustic paradox — good for discussing pitch circularity and ensemble tuning.",
+  ],
+
+  "gravity-bounce": [
+    "Accelerometer “drop” or shake triggers a plucked or impact model — gravity as excitation.",
+    "Impulsive vs sustained: one sharp input, resonant decay.",
+  ],
+
+  "pocket-metronome": [
+    "Walking or tapping creates peaks in acceleration; those peaks duck or pulse the mix.",
+    "Body rhythm drives electronics — sidechain-like breathing in the ensemble.",
+  ],
+
+  "tilt-doppler": [
+    "Fast tilt change shifts pitch briefly, mimicking Doppler shift when source or listener moves.",
+    "Links physical motion to pitch metaphor — expressive sweeps without a pitch wheel.",
+  ],
+
+  "room-reverb-send": [
+    "Mic level in the room increases send to a reverb (convolution or algorithmic); louder room = wetter sound.",
+    "Acoustic feedback loop: the space you are in changes the processed signal.",
+  ],
+
+  "whisper-gate": [
+    "Only quiet input passes a gate; loud sounds are suppressed — intimate, close-mic texture.",
+    "Dynamics as filter: who can be heard depends on how softly they play or speak.",
+  ],
+
+  "clap-architect": [
+    "Onset times of claps are detected and placed on a grid; spacing defines tempo and pattern.",
+    "Rhythm from the body — the architecture of claps becomes a score.",
+  ],
+
+  "pitch-hive": [
+    "Multiple pitch peaks from humming build a chord of sines — collective intonation forms harmony.",
+    "Group must listen to each other’s pitch; beats and roughness appear when fundamentals disagree.",
+  ],
+
+  "feedback-flute": [
+    "Mic and speaker form a feedback loop around a resonant filter — careful control produces whistle tones.",
+    "Teaches stability margins in live electronics; small changes flip between silence and squeal.",
+  ],
+
+  "shadow-sequencer": [
+    "Camera brightness in zones becomes an 8-step pattern; hand shadows toggle steps.",
+    "Optical sequencing — visible gesture is the score.",
+  ],
+
+  "torch-pulse": [
+    "Flash or screen light pulses on beats while camera or mic may also drive clicks.",
+    "Multisensory rhythm — sound and light sync for ensemble cues.",
+  ],
+
+  "pinch-bass": [
+    "Two-finger pinch distance maps to filter cutoff and sub level — gesture scales timbre.",
+    "Continuous control on a capacitive screen, bass-focused range.",
+  ],
+
+  "pressure-pad": [
+    "Force-sensitive touch (where supported) maps pressure to level and brightness.",
+    "Expressive nuance unavailable from on/off taps alone.",
+  ],
+
+  "edge-strum": [
+    "Touch position near the edge emphasizes higher harmonics in a string model; centre is more fundamental.",
+    "Spatial playing on one surface — same as picking near the bridge on a guitar.",
+  ],
+
+  "haptic-click": [
+    "A step pattern plays clicks; the phone vibrates in sync where supported.",
+    "Rhythm felt in the hand, not only heard — useful for deaf/hard-of-hearing inclusion in workshops.",
+  ],
+
+  "battery-drone": [
+    "Battery level (when exposed) thins or detunes the drone — resource scarcity as expression.",
+    "Meta-commentary on device limits; also practical warning before phones die mid-piece.",
+  ],
+
+  "altitude-wind": [
+    "Barometer pressure (rare on phones) or a manual slider maps to filtered noise — “thinner air” = brighter hiss.",
+    "Environmental sensor as timbre; works as concept even when only the slider is available.",
+  ],
+
+  "geo-drone": [
+    "GPS speed or heading pans and delays stereo image as you walk.",
+    "Space and movement through the venue become part of the mix.",
+  ],
+
+  "hard-sync-lead": [
+    "Hard sync resets a slave oscillator when the master cycles, producing harsh, bright harmonics.",
+    "Classic aggressive lead timbre from analog synth tradition.",
+  ],
+
+  "am-radio": [
+    "Amplitude modulation: a slow oscillator multiplies level, creating sidebands around the carrier — radio-like.",
+    "Mic may replace the modulator — voice or room sound heterodynes with the tone.",
+  ],
+
+  "phase-distortion": [
+    "Phase of a sine readout is shaped before conversion to audio — Casio-style digital colour.",
+    "Different from subtractive filters: harmonic content from phase warping.",
+  ],
+
+  "supersaw-stack": [
+    "Several detuned sawtooth oscillators stack for a wide chorus; gyro widens detune further.",
+    "Spin timbre uses sine + vibrato for a smoother, rotating stereo image.",
+  ],
+
+  "pwm-bass": [
+    "Pulse width of a square wave changes harmonic balance; tilt maps duty cycle.",
+    "Hollow vs nasal bass — duty cycle is the timbre control before filtering.",
+  ],
+
+  "dual-ks-harp": [
+    "Two Karplus–Strong strings interact; multi-touch excites both — simple coupled resonators.",
+    "Polyphony and beating between two plucked paths.",
+  ],
+
+  "bowed-waveguide": [
+    "Continuous drag excites a delay-line string model — energy flows while finger moves.",
+    "Sustained string metaphor without a separate bow sample.",
+  ],
+
+  "pluck-bowl": [
+    "A resonant model with splashy partials; strike position colours the burst.",
+    "Percussive resonance — short attack, long decay, bowl-like spectrum.",
+  ],
+
+  "wind-bottle": [
+    "Noise through a resonant peak with feedback suggests blowing across a bottle.",
+    "No mic needed — tilt controls “breath” and pitch of the resonance.",
+  ],
+
+  "grain-rain": [
+    "Acceleration shakes trigger dense grains — physical shaking = shower of sound particles.",
+    "Texture from impulsive excitation many times per second.",
+  ],
+
+  "scrub-tape": [
+    "Drag scrubs through a recorded buffer forward and backward — tape-head metaphor.",
+    "Time manipulation as performance: hear the past under your finger.",
+  ],
+
+  "vocoder-choir": [
+    "A carrier tone is filtered by bands shaped from mic input — speech formants on a synth.",
+    "Robot voice effect; choir when carrier is rich and modulation is smooth.",
+  ],
+
+  "ir-cathedral": [
+    "Convolution reverb uses a measured impulse response; tilt may change wet/dry or tone.",
+    "Real acoustic spaces imprinted on any input — architecture as filter.",
+  ],
+
+  "one-shot-orchestra": [
+    "Screen zones trigger different pre-shaped hits — orchestral gesture as spatial game.",
+    "Orchestration by region: each player chooses when and where to attack.",
+  ],
+
+  "live-loop-slicer": [
+    "A loop is divided into slices; tilt or touch jumps playback position.",
+    "Granular DJ technique on the phone — re-order time in a fixed buffer.",
+  ],
+
+  "gesture-regression": [
+    "Recorded tilt examples train a mapping to synthesis parameters; performance reuses the learned curve.",
+    "Regression links continuous motion to continuous sound — custom interface per player.",
+  ],
+
+  "swarm-bloom": [
+    "Combines pulsed sync, harmonic listening, and evolving textures — ensemble layers from several OMO ideas.",
+    "For large groups: some parts pulse, some hold harmony, some evolve — discuss roles before playing.",
+  ],
+
+  // Legacy URLs (redirect apps) — same pedagogy as canonical instrument
+  "motion-wah": "See Motion Filter → Tilt mode: bandpass frequency and resonance follow gravity tilt.",
+  "shake-filter": "See Motion Filter → Shake mode: jerk on the accelerometer opens the filter.",
+  "flat-edge": "See Motion Filter → Flat mode: tone only when the phone lies flat.",
+  "heading-choir": "See Motion Filter → Choir mode: stereo pan follows compass heading.",
+  "ks-pluck": "See Resonant Wire → Pocket range: wider pitch span, same Karplus–Strong model.",
+  "fm-touch-tilt": "See FM Fingerpaint → Tilt mod: modulator rate from phone angle.",
+  "motion-grid": "See Motion Cam: frame differencing drives density.",
+  "color-band": "See Motion Cam: dominant hue selects scale degree.",
+  "gyro-whirl": "See Blade Chorus → Spin timbre: gyro-driven vibrato on a sine tone.",
+};
+
+export function slugFromAppPath(pathname = location.pathname) {
+  const m = pathname.match(/apps\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Append pedagogical block to a Learn panel (idempotent).
+ * @param {string} [panelId]
+ * @param {string} [slugOverride] e.g. "hub" on index.html
+ */
+export function injectLearnPedagogy(panelId = "learnPanel", slugOverride) {
+  const panel = document.getElementById(panelId);
+  if (!panel || panel.querySelector(".learn-pedagogy")) return;
+
+  const slug = slugOverride ?? slugFromAppPath();
+  if (!slug) return;
+
+  const entry = LEARN_PEDAGOGY[slug];
+  if (!entry) return;
+
+  const paras = Array.isArray(entry) ? entry : [entry];
+  const wrap = document.createElement("div");
+  wrap.className = "learn-pedagogy";
+  wrap.innerHTML =
+    "<h3>How it works</h3>" + paras.map((p) => `<p>${p}</p>`).join("");
+  panel.appendChild(wrap);
+}
