@@ -118,7 +118,7 @@ Different ways to generate sound beyond what the hub already demos. Pair with to
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
 | ~~**Markov Melody**~~ | Learn 2nd-order from taps | [Chain Melody](../apps/markov-melody/) | Touch · keyboard |
-| ~~**Euclidean Rings**~~ | Euclidean rhythms on circles | [Pulse Lattice](../apps/euclidean-rings/) | Touch |
+| ~~**Euclidean Rings**~~ | Euclidean rhythms on circles | [Euclidean Pulse](../apps/euclidean-rings/) | Touch |
 | ~~**L-System Groove**~~ | Rewrite rules → drum map | [Fractal Lane](../apps/lsystem-groove/) | Touch |
 | ~~**Chaos Attractor**~~ | Lorenz / logistic → params | [Strange Attractor](../apps/chaos-attractor/) | Touch · motion |
 

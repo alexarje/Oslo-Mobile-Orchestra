@@ -249,7 +249,7 @@ export const HUB_APPS = [
   },
   {
     href: "apps/euclidean-rings/",
-    title: "Pulse Lattice",
+    title: "Euclidean Pulse",
     section: "rhythm",
     synth: "Euclidean rings",
     sensors: "Touch",
