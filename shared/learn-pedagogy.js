@@ -325,11 +325,6 @@ export const LEARN_PEDAGOGY = {
     "Spin timbre uses sine + vibrato for a smoother, rotating stereo image.",
   ],
 
-  "pwm-bass": [
-    "Pulse width of a square wave changes harmonic balance; tilt maps duty cycle.",
-    "Hollow vs nasal bass — duty cycle is the timbre control before filtering.",
-  ],
-
   "dual-ks-harp": [
     "Two Karplus–Strong strings interact; multi-touch excites both — simple coupled resonators.",
     "Polyphony and beating between two plucked paths.",

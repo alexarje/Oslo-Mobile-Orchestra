@@ -2,39 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0d0f14" />
-  <title>Pulse Bass — OMO</title>
-  <link rel="stylesheet" href="../../shared/ui.css" />
-  
+  <meta http-equiv="refresh" content="0; url=../../" />
+  <script>location.replace("../../");</script>
+  <title>Removed — OMO</title>
 </head>
-<body class="app-shell">
-  <header class="app-header">
-    <a class="back-link" href="../../">←</a>
-    <h1>Pulse Bass</h1>
-  </header>
-  <div class="learn-panel panel" id="learnPanel"><h2>PWM bass</h2><p>Hold for bass — tilt changes pulse width.</p></div>
-  <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
-  </div>
-  <script type="module">
-
-import { bindLearn, startAudio } from "../../shared/app.js";
-import { createMasterBus } from "../../shared/audio.js";
-bindLearn();
-const pad=document.getElementById("pad");
-const dot=document.getElementById("dot");
-const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
-let ctx,master,built=false,holding=false,activeId=null;
-
-import { enableSensors, onOrientation } from "../../shared/sensors.js";
-let osc,amp;
-function build(c){ctx=c;({master}=createMasterBus(c,0.55));osc=ctx.createOscillator();osc.type="square";amp=ctx.createGain();amp.gain.value=0;osc.connect(amp);amp.connect(master);osc.start();built=true;
-enableSensors({needMotion:false,needOrientation:true}).then(ok=>{if(!ok)return;onOrientation(o=>{if(!holding)return;const pw=clamp(0.1+Math.abs(o.beta||0)/90,0.05,0.95);try{osc.setPeriodicWave?.(makePulse(ctx,pw));}catch{}});});}
-function makePulse(ctx,duty){const n=64,r=new Float32Array(n),i=new Float32Array(n);for(let k=1;k<n;k++){const h=Math.sin(Math.PI*k*duty)/(k*Math.PI);r[k]=h;i[k]=0;}return ctx.createPeriodicWave(r,i);}
-function setPad(nx,on){osc.frequency.setTargetAtTime(50*Math.pow(3,nx),ctx.currentTime,0.03);amp.gain.setTargetAtTime(on?0.35:0,ctx.currentTime,on?0.02:0.06);}
-pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio(!built?build:undefined);holding=true;pad.classList.add("active");const r=pad.getBoundingClientRect();setPad(clamp((e.clientX-r.left)/r.width,0,1),true);});
-pad.addEventListener("pointerup",()=>{holding=false;pad.classList.remove("active");setPad(0.5,false);});
-  </script>
+<body>
+  <p>Pulse Bass was removed from the orchestra. <a href="../../">Back to hub</a>.</p>
 </body>
 </html>
