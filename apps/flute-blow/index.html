@@ -14,8 +14,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Breath + finger holes</h2>
-    <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>blow</strong> past the yellow line.</p>
-    <p><strong>Tap a hole</strong> to cover or uncover it. Uncover from the <strong>bottom</strong> hole upward for higher notes (C → D → E → G → A → C). Bottom hole is nearest the screen edge.</p>
+    <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>hold</strong> one or more holes while <strong>blowing</strong> past the yellow line.</p>
+    <p>Release a hole to open it. More open holes from the <strong>bottom</strong> upward = higher notes (C → D → E → G → A → C). Bottom hole is nearest the screen edge.</p>
   </div>
   <p class="status-bar" id="status"></p>
   <div class="breath-row">
@@ -44,7 +44,7 @@
 
     const fluteTube = document.getElementById("fluteTube");
     let ctx, master, analyser, micStream;
-    let toneGain, toneOsc, noiseGain, noiseSrc;
+    let toneGain, toneOsc, vibOsc, vibGain, noiseGain, noiseSrc;
     let blowThreshold = 0.02;
     let currentMidi = 60;
     let noteIndex = 0;
@@ -52,7 +52,8 @@
     let booting = false;
     let timeData = new Float32Array(2048);
     /** true = hole covered (finger down). */
-    const holesCovered = [true, true, true, true, true];
+    const holesCovered = [false, false, false, false, false];
+    const heldHoles = new Set();
     const holeBtns = [];
 
     function indexToMidi(i) {
@@ -96,25 +97,45 @@
       if (ctx) setPitch(ctx.currentTime);
     }
 
-    function onHoleTap(i, e) {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleHole(i);
-      primeMicStream();
-      void enableAudio();
+    function isHoldingHoles() {
+      return heldHoles.size > 0;
     }
 
-    function toggleHole(i) {
-      holesCovered[i] = !holesCovered[i];
+    function onHoleDown(i, e) {
+      e.preventDefault();
+      e.stopPropagation();
+      primeMicStream();
+      void enableAudio();
+      holesCovered[i] = true;
+      heldHoles.add(i);
+      holeBtns[i].setPointerCapture(e.pointerId);
+      applyFingering();
+    }
+
+    function onHoleUp(i, e) {
+      if (e?.pointerId != null) {
+        try {
+          if (holeBtns[i].hasPointerCapture(e.pointerId)) {
+            holeBtns[i].releasePointerCapture(e.pointerId);
+          }
+        } catch {
+          /* noop */
+        }
+      }
+      holesCovered[i] = false;
+      heldHoles.delete(i);
       applyFingering();
     }
 
     for (let i = 0; i < HOLE_COUNT; i++) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "flute-hole covered";
+      btn.className = "flute-hole open";
       btn.dataset.hole = String(i + 1);
-      btn.addEventListener("pointerdown", (e) => onHoleTap(i, e));
+      btn.addEventListener("pointerdown", (e) => onHoleDown(i, e));
+      btn.addEventListener("pointerup", (e) => onHoleUp(i, e));
+      btn.addEventListener("pointercancel", (e) => onHoleUp(i, e));
+      btn.addEventListener("lostpointercapture", () => onHoleUp(i));
       fluteTube.appendChild(btn);
       holeBtns.push(btn);
     }
@@ -140,19 +161,26 @@
       document.getElementById("breathWrap").style.setProperty("--thresh", `${Math.min(85, (blowThreshold / 0.12) * 100)}%`);
     }
 
+    function setVibrato(on, breath, when) {
+      if (!vibGain) return;
+      const depth = on ? 7 + breath * 16 : 0;
+      vibGain.gain.setTargetAtTime(depth, when, on ? 0.06 : 0.05);
+    }
+
     function createVoice() {
       toneGain = ctx.createGain();
       toneGain.gain.value = 0;
       toneOsc = ctx.createOscillator();
       toneOsc.type = "triangle";
       toneOsc.frequency.value = midiToFreq(currentMidi);
-      const vib = ctx.createOscillator();
-      const vibG = ctx.createGain();
-      vib.frequency.value = 5.5;
-      vibG.gain.value = 5;
-      vib.connect(vibG);
-      vibG.connect(toneOsc.detune);
-      vib.start();
+      vibOsc = ctx.createOscillator();
+      vibGain = ctx.createGain();
+      vibOsc.type = "sine";
+      vibOsc.frequency.value = 5.5 + Math.random() * 1.2;
+      vibGain.gain.value = 0;
+      vibOsc.connect(vibGain);
+      vibGain.connect(toneOsc.detune);
+      vibOsc.start();
       const f = ctx.createBiquadFilter();
       f.type = "lowpass";
       f.frequency.value = 2800;
@@ -182,16 +210,20 @@
       const rms = getRms();
       document.getElementById("breathMeter").style.width = `${Math.min(100, (rms / 0.12) * 100)}%`;
       const blowing = rms > blowThreshold;
-      document.getElementById("breathMeter").classList.toggle("blowing", blowing);
+      const fingering = isHoldingHoles();
+      const playing = blowing && fingering;
+      document.getElementById("breathMeter").classList.toggle("blowing", playing);
       const t = ctx.currentTime;
-      if (blowing) {
+      if (playing) {
         const s = Math.min(1, (rms - blowThreshold) / (0.12 - blowThreshold));
         toneGain.gain.setTargetAtTime(0.14 + s * 0.52, t, 0.02);
         noiseGain.gain.setTargetAtTime(s * 0.09, t, 0.02);
         setPitch(t);
+        setVibrato(true, s, t);
       } else {
         toneGain.gain.setTargetAtTime(0, t, 0.06);
         noiseGain.gain.setTargetAtTime(0, t, 0.04);
+        setVibrato(false, 0, t);
       }
       requestAnimationFrame(tick);
     }
@@ -218,7 +250,7 @@
       setStatus("status", "Calibrating… stay quiet", "");
       await calibrate();
       ready = true;
-      setStatus("status", "Blow · tap holes for pitch", "ok");
+      setStatus("status", "Hold holes + blow for tone", "ok");
       tick();
     }
 
