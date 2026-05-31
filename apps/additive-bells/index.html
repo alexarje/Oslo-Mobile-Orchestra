@@ -14,8 +14,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Additive synthesis</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>tap the pad</strong> to strike. Set partial sliders and <strong>root</strong> first.</p>
-    <p>Optional: <strong>Hit downward</strong> — hold the phone upright and tap the bottom on a surface (allow motion on iPhone).</p>
+    <p>Turn <strong>Audio on</strong>. <strong>Tap the pad</strong> or <strong>hit downward</strong> (phone upright, tap the bottom on a surface). Set partial sliders and <strong>root</strong> first.</p>
+    <p>Allow <strong>motion</strong> on iPhone when asked.</p>
   </div>
   <p class="status-bar" id="status">Audio on · tap pad to play</p>
   <div class="main-stage bells-layout">
@@ -24,12 +24,6 @@
         <label for="root">Root</label>
         <input type="range" id="root" min="48" max="72" value="60" />
         <span id="rootLbl">C4</span>
-      </div>
-      <div class="control-row">
-        <label class="slide-toggle">
-          <input type="checkbox" id="motionHit" />
-          Hit downward to strike
-        </label>
       </div>
       <div id="partials" class="bells-partials"></div>
     </div>
@@ -54,7 +48,6 @@
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     const pad = document.getElementById("pad");
-    const motionHit = document.getElementById("motionHit");
     const partialsEl = document.getElementById("partials");
     let ctx, master, reverb, reverbWet, built = false;
     let sensorsReady = false;
@@ -94,7 +87,8 @@
       reverb.connect(reverbWet);
       reverbWet.connect(master);
       built = true;
-      setStatus("status", "Tap pad to strike", "ok");
+      primeSensors(SENSOR_OPTS);
+      void initMotion();
     }
 
     registerAudioBoot(buildAudio);
@@ -159,7 +153,7 @@
     }
 
     function onMotionSample(data) {
-      if (!built || !motionHit.checked) return;
+      if (!built) return;
       const ay = linearY(data);
       if (!motionPrimed) {
         lastDownY = ay;
@@ -175,35 +169,26 @@
       strike(nx, downJerk);
     }
 
-    async function setMotionHit(on) {
-      motionPrimed = false;
-      lastDownY = 0;
-      if (!on) {
-        stopSensors();
-        sensorsReady = false;
-        if (built) setStatus("status", "Tap pad to strike", "ok");
-        return;
-      }
-      if (!built) {
-        setStatus("status", "Turn Audio on first", "warn");
-        motionHit.checked = false;
-        return;
-      }
-      primeSensors(SENSOR_OPTS);
+    async function initMotion() {
+      if (sensorsReady || !built) return;
       const ok = await enableSensors(SENSOR_OPTS);
       if (!ok) {
         setStatus("status", "Motion blocked — tap pad only", "warn");
-        motionHit.checked = false;
         return;
       }
+      motionPrimed = false;
+      lastDownY = 0;
       onMotion(onMotionSample);
       sensorsReady = true;
       setStatus("status", "Tap pad or hit downward", "ok");
     }
 
     async function ensureReady() {
+      primeSensors(SENSOR_OPTS);
       await startAudio(!built ? buildAudio : undefined);
-      return built;
+      if (!built) return false;
+      await initMotion();
+      return true;
     }
 
     document.getElementById("root").oninput = (e) => {
@@ -211,10 +196,6 @@
       const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
       document.getElementById("rootLbl").textContent = `${names[m % 12]}${Math.floor(m / 12) - 1}`;
     };
-
-    motionHit.addEventListener("change", () => {
-      void setMotionHit(motionHit.checked);
-    });
 
     pad.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
