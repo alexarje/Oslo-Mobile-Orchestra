@@ -32,7 +32,6 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Motion Wah](apps/motion-wah/) | Filter sweeps | Hold + tilt ↕ (wah) ↔ (resonance) |
 | [Compass Wah](apps/compass-wah/) | Orientation filter | Alpha → lowpass |
 | [Drone Choir](apps/drone-choir/) | Harmonic mass | Hold sustain, ±5 st pad, cents |
-| [Gyro Compass](apps/gyro-compass/) | Spatial pan | Heading → stereo |
 | [Tilt Harp](apps/tilt-harp/) | Gliss plucks | Tap strings, tilt = key |
 | [Bow Phone](apps/bow-phone/) | Bowed tone | Left-hand pitch pad + selfie-cam hand bow |
 | [Evo Drumkit](apps/evo-drumkit/) | Learned grooves | Record pattern · genetic algorithm breeds matches |
@@ -58,9 +57,6 @@ Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache
 
 ### 4. “Rhythm section”
 - Split **Drumkit** / **Drum Sequencer** / **Delay Throw**; Conductor `start` + `bpm` in the musician link.
-
-### 5. “Spatial circle”
-- 20× **Gyro Compass** — each phone pans by compass heading in the room.
 
 ## Browsers (iOS & Android)
 

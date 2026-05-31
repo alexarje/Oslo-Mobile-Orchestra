@@ -12,7 +12,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 | ~~**Mic Theremin**~~ | Solo melody | [mic-theremin](../apps/mic-theremin/) — autocorrelation pitch |
 | ~~**Hum vs Clap**~~ | Call-and-response | [hum-clap](../apps/hum-clap/) — k-NN on mic features |
 | ~~**Tilt Harp**~~ | Plucked glissandi | [tilt-harp](../apps/tilt-harp/) |
-| ~~**Gyro Compass**~~ | Panning in the room | [gyro-compass](../apps/gyro-compass/) |
+| ~~**Gyro Compass**~~ | Panning in the room | removed |
 | ~~**Delay Throw**~~ | Rhythmic layers | [delay-throw](../apps/delay-throw/) |
 | ~~**Bow Phone**~~ | Sustained strings | [bow-phone](../apps/bow-phone/) |
 | ~~**NFC / QR Part**~~ | Instant seating | [part](../apps/part/) + hub `?part=` |
@@ -64,7 +64,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 | Sensor | Idea | Status |
 |--------|------|--------|
 | Accelerometer | Shake → distortion | Partial in Train & Shake |
-| Gyroscope | Vibrato / pan | Gyro Compass, Motion Wah |
+| Gyroscope | Vibrato / pan | Compass Wah, Motion Wah |
 | Orientation | Compass wah / tilt | Compass Wah, Granular Tilt |
 | Light (ambient) | Volume cap | Open |
 | Proximity | Cover → mute | Open |
