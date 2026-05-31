@@ -310,7 +310,7 @@ export const HUB_APPS = [
   { href: "apps/geo-drone/", title: "Walk Pan", section: "drones", synth: "Stereo delay", sensors: "GPS · touch" },
   { href: "apps/hard-sync-lead/", title: "Sync Scream", section: "synthesis", synth: "Hard sync lead", sensors: "Touch" },
   { href: "apps/am-radio/", title: "AM Dial", section: "synthesis", synth: "AM sidebands", sensors: "Mic · touch" },
-  { href: "apps/phase-distortion/", title: "PD Lead", section: "synthesis", synth: "Phase distortion", sensors: "Touch" },
+  { href: "apps/phase-distortion/", title: "PD Lead", section: "synthesis", synth: "Phase distortion", sensors: "Multi-touch" },
   { href: "apps/supersaw-stack/", title: "Blade Chorus", section: "synthesis", synth: "Saws or spin timbre", sensors: "Gyro · touch" },
   { href: "apps/pwm-bass/", title: "Pulse Bass", section: "synthesis", synth: "Variable pulse", sensors: "Tilt · touch" },
   { href: "apps/dual-ks-harp/", title: "Twin Wire", section: "synthesis", synth: "Dual KS", sensors: "Multi-touch" },

@@ -322,7 +322,7 @@ export const LEARN_PEDAGOGY = {
 
   "phase-distortion": [
     "Phase of a sine readout is shaped before conversion to audio — Casio-style digital colour.",
-    "Different from subtractive filters: harmonic content from phase warping.",
+    "Two fingers split pitch and distortion so you can hold a note while morphing timbre; smoothed curves reduce clicks.",
   ],
 
   "supersaw-stack": [
