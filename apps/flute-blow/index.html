@@ -94,7 +94,21 @@
         btn.setAttribute("aria-pressed", holesCovered[i] ? "true" : "false");
         btn.setAttribute("aria-label", `Hole ${i + 1} (bottom=1) ${holesCovered[i] ? "covered" : "open"}`);
       });
-      if (ctx) setPitch(ctx.currentTime);
+    }
+
+    function muteVoice(when) {
+      if (!ctx || !toneGain) return;
+      toneGain.gain.cancelScheduledValues(when);
+      toneGain.gain.setTargetAtTime(0, when, 0.02);
+      noiseGain.gain.cancelScheduledValues(when);
+      noiseGain.gain.setTargetAtTime(0, when, 0.02);
+      setVibrato(false, 0, when);
+    }
+
+    function syncPitchIfPlaying() {
+      if (!ctx || !isHoldingHoles()) return;
+      const blowing = getRms() > blowThreshold;
+      if (blowing) setPitch(ctx.currentTime);
     }
 
     function isHoldingHoles() {
@@ -110,6 +124,7 @@
       heldHoles.add(i);
       holeBtns[i].setPointerCapture(e.pointerId);
       applyFingering();
+      syncPitchIfPlaying();
     }
 
     function onHoleUp(i, e) {
@@ -125,6 +140,11 @@
       holesCovered[i] = false;
       heldHoles.delete(i);
       applyFingering();
+      if (!isHoldingHoles() && ctx) {
+        muteVoice(ctx.currentTime);
+      } else {
+        syncPitchIfPlaying();
+      }
     }
 
     for (let i = 0; i < HOLE_COUNT; i++) {
