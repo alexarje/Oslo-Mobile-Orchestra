@@ -14,14 +14,16 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Pan + pitch</h2>
-    <p>Turn <strong>Audio on</strong>, tap the compass, and allow <strong>orientation</strong> on iPhone.</p>
-    <p>Hold the phone <strong>flat</strong> and rotate — the <strong>needle</strong> shows heading. <strong>Tilt</strong> or drag vertically for pitch.</p>
+    <p>Turn <strong>Audio on</strong>, tap the compass, allow <strong>orientation</strong> and <strong>motion</strong> on iPhone.</p>
+    <p><strong>Rotate</strong> flat for pan · <strong>tilt</strong> or drag for pitch · <strong>move</strong> the phone for louder tone and vibrato.</p>
   </div>
   <p class="status-bar" id="status">Tap compass · Audio on</p>
   <div class="readout-row">
     <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
     <p class="value-chip">Pan <strong id="panOut">—</strong></p>
     <p class="value-chip">Pitch <strong id="pitchOut">—</strong></p>
+    <p class="value-chip">Amp <strong id="ampOut">—</strong></p>
+    <p class="value-chip">Vib <strong id="vibOut">—</strong></p>
   </div>
   <div class="main-stage">
     <canvas id="compass" class="canvas-fill" aria-label="Compass"></canvas>
@@ -30,7 +32,8 @@
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
     import { drawCompassRose, sizeCompassCanvas } from "../../shared/compass-rose.js";
-    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
+    import { createMotionExpression } from "../../shared/motion-express.js";
+    import { enableSensors, onMotion, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     const canvas = document.getElementById("compass");
@@ -38,11 +41,14 @@
     const NOTE_NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
     const MIDI_MIN = 48;
     const MIDI_MAX = 76;
-    const SENSOR_OPTS = { needMotion: false, needOrientation: true };
+    const SENSOR_OPTS = { needMotion: true, needOrientation: true };
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
     const safeNum = (v, fb) => (typeof v === "number" && Number.isFinite(v) ? v : fb);
 
-    let ctx, panner, osc, built = false;
+    const motionExpr = createMotionExpression({ baseAmp: 0.2 });
+    let motion = { amp: 0.2, vibCents: 0, vibHz: 5 };
+
+    let ctx, panner, osc, toneGain, vibOsc, vibGain, built = false;
     let sensorsReady = false;
     let alpha = 0;
     let beta = 90;
@@ -90,16 +96,21 @@
       });
     }
 
-    function applyMotion() {
+    function applyVoice() {
       if (!built || !ctx) return;
       const t = ctx.currentTime;
       const midi = currentMidi();
       const pan = Math.sin((alpha * Math.PI) / 180);
       panner.pan.setTargetAtTime(pan, t, 0.05);
       osc.frequency.setTargetAtTime(midiToFreq(midi), t, 0.05);
+      toneGain.gain.setTargetAtTime(0.12 + motion.amp * 0.42, t, 0.06);
+      vibGain.gain.setTargetAtTime(motion.vibCents, t, 0.07);
+      vibOsc.frequency.setTargetAtTime(motion.vibHz, t, 0.08);
       document.getElementById("headOut").textContent = alpha.toFixed(0);
       document.getElementById("panOut").textContent = pan.toFixed(2);
       document.getElementById("pitchOut").textContent = labelFromMidi(midi);
+      document.getElementById("ampOut").textContent = `${(motion.amp * 100).toFixed(0)}%`;
+      document.getElementById("vibOut").textContent = motion.vibCents.toFixed(1);
       draw();
     }
 
@@ -107,14 +118,25 @@
       ctx = c;
       ({ master } = createMasterBus(c, 0.48));
       panner = c.createStereoPanner();
+      toneGain = c.createGain();
+      toneGain.gain.value = 0.2;
       osc = c.createOscillator();
       osc.type = "sine";
       osc.frequency.value = midiToFreq(60);
-      osc.connect(panner);
+      vibOsc = c.createOscillator();
+      vibGain = c.createGain();
+      vibOsc.type = "sine";
+      vibOsc.frequency.value = 5;
+      vibGain.gain.value = 0;
+      vibOsc.connect(vibGain);
+      vibGain.connect(osc.detune);
+      osc.connect(toneGain);
+      toneGain.connect(panner);
       panner.connect(master);
       osc.start();
+      vibOsc.start();
       built = true;
-      applyMotion();
+      applyVoice();
     }
 
     registerAudioBoot(buildAudio);
@@ -123,7 +145,7 @@
       if (sensorsReady) return true;
       const ok = await enableSensors(SENSOR_OPTS);
       if (!ok) {
-        setStatus("status", "Allow orientation access in Settings", "warn");
+        setStatus("status", "Allow orientation + motion in Settings", "warn");
         draw();
         return false;
       }
@@ -135,12 +157,16 @@
           const gam = safeNum(o.gamma, 0);
           if (gam !== 0) beta = clamp(90 - gam, 20, 160);
         }
-        if (activePointer == null) applyMotion();
+        if (activePointer == null) applyVoice();
         else draw();
       });
+      onMotion((data) => {
+        motion = motionExpr.update(data);
+        applyVoice();
+      });
       sensorsReady = true;
-      setStatus("status", "Flat · rotate for pan · tilt for pitch", "ok");
-      applyMotion();
+      setStatus("status", "Rotate · tilt · move for vibrato", "ok");
+      applyVoice();
       return true;
     }
 
@@ -152,7 +178,7 @@
         activePointer = e.pointerId;
         canvas.setPointerCapture(e.pointerId);
         touchMidi = midiFromTouchY(e.clientY);
-        applyMotion();
+        applyVoice();
       }
     }
 
@@ -163,13 +189,13 @@
     canvas.addEventListener("pointermove", (e) => {
       if (e.pointerId !== activePointer) return;
       touchMidi = midiFromTouchY(e.clientY);
-      applyMotion();
+      applyVoice();
     });
     const endTouch = (e) => {
       if (e.pointerId !== activePointer) return;
       activePointer = null;
       touchMidi = null;
-      applyMotion();
+      applyVoice();
     };
     canvas.addEventListener("pointerup", endTouch);
     canvas.addEventListener("pointercancel", endTouch);

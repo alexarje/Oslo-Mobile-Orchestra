@@ -14,13 +14,15 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Compass filter</h2>
-    <p>Turn <strong>Audio on</strong>, tap the compass, and allow <strong>orientation</strong> on iPhone.</p>
-    <p>Rotate the phone flat — the <strong>needle</strong> shows heading and sweeps a resonant lowpass (wah).</p>
+    <p>Turn <strong>Audio on</strong>, tap the compass, allow <strong>orientation</strong> and <strong>motion</strong> on iPhone.</p>
+    <p><strong>Rotate</strong> flat for wah filter · <strong>shake or sway</strong> the phone for volume and vibrato.</p>
   </div>
   <p class="status-bar" id="status">Tap compass · Audio on</p>
   <div class="readout-row">
     <p class="value-chip">Heading <strong id="headOut">—</strong>°</p>
     <p class="value-chip">Cutoff <strong id="cutOut">—</strong> Hz</p>
+    <p class="value-chip">Amp <strong id="ampOut">—</strong></p>
+    <p class="value-chip">Vib <strong id="vibOut">—</strong></p>
   </div>
   <div class="main-stage">
     <canvas id="compass" class="canvas-fill" aria-label="Compass"></canvas>
@@ -29,13 +31,18 @@
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { drawCompassRose, sizeCompassCanvas } from "../../shared/compass-rose.js";
-    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
+    import { createMotionExpression } from "../../shared/motion-express.js";
+    import { enableSensors, onMotion, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     const canvas = document.getElementById("compass");
     const g = canvas.getContext("2d");
+    const SENSOR_OPTS = { needMotion: true, needOrientation: true };
 
-    let ctx, master, osc, filt, gate, built = false;
+    const motionExpr = createMotionExpression({ baseAmp: 0.28 });
+    let motion = { amp: 0.28, vibCents: 0, vibHz: 5 };
+
+    let ctx, master, osc, filt, gate, vibOsc, vibGain, built = false;
     let sensorsReady = false;
     let alpha = 0;
     let beta = 90;
@@ -53,13 +60,19 @@
       drawCompassRose(g, w, h, dpr, { heading: alpha, beta });
     }
 
-    function applyOrientation() {
+    function applyVoice() {
       if (!built || !ctx) return;
+      const t = ctx.currentTime;
       const heading = ((alpha % 360) + 360) % 360;
       const cut = 200 + (heading / 360) * 6000;
-      filt.frequency.setTargetAtTime(cut, ctx.currentTime, 0.04);
+      filt.frequency.setTargetAtTime(cut, t, 0.04);
+      gate.gain.setTargetAtTime(0.08 + motion.amp * 0.38, t, 0.06);
+      vibGain.gain.setTargetAtTime(motion.vibCents, t, 0.07);
+      vibOsc.frequency.setTargetAtTime(motion.vibHz, t, 0.08);
       document.getElementById("headOut").textContent = heading.toFixed(0);
       document.getElementById("cutOut").textContent = cut.toFixed(0);
+      document.getElementById("ampOut").textContent = `${(motion.amp * 100).toFixed(0)}%`;
+      document.getElementById("vibOut").textContent = motion.vibCents.toFixed(1);
       draw();
     }
 
@@ -67,28 +80,36 @@
       ctx = c;
       ({ master } = createMasterBus(c, 0.5));
       gate = ctx.createGain();
-      gate.gain.value = 0.4;
+      gate.gain.value = 0.28;
       filt = ctx.createBiquadFilter();
       filt.type = "lowpass";
       filt.Q.value = 10;
       osc = ctx.createOscillator();
       osc.type = "sawtooth";
       osc.frequency.value = 110;
+      vibOsc = c.createOscillator();
+      vibGain = c.createGain();
+      vibOsc.type = "sine";
+      vibOsc.frequency.value = 5;
+      vibGain.gain.value = 0;
+      vibOsc.connect(vibGain);
+      vibGain.connect(osc.detune);
       osc.connect(filt);
       filt.connect(gate);
       gate.connect(master);
       osc.start();
+      vibOsc.start();
       built = true;
-      applyOrientation();
+      applyVoice();
     }
 
     registerAudioBoot(buildAudio);
 
     async function initSensors() {
       if (sensorsReady) return true;
-      const ok = await enableSensors({ needMotion: false, needOrientation: true });
+      const ok = await enableSensors(SENSOR_OPTS);
       if (!ok) {
-        setStatus("status", "Allow orientation access in Settings", "warn");
+        setStatus("status", "Allow orientation + motion in Settings", "warn");
         draw();
         return false;
       }
@@ -96,15 +117,19 @@
         alpha = headingFromOrientation(o);
         const b = o.beta;
         if (typeof b === "number" && Number.isFinite(b) && b !== 0) beta = b;
-        applyOrientation();
+        applyVoice();
+      });
+      onMotion((data) => {
+        motion = motionExpr.update(data);
+        applyVoice();
       });
       sensorsReady = true;
-      setStatus("status", "Rotate flat · heading drives wah", "ok");
+      setStatus("status", "Rotate for wah · move for amp & vibrato", "ok");
       return true;
     }
 
     async function boot() {
-      primeSensors({ needMotion: false, needOrientation: true });
+      primeSensors(SENSOR_OPTS);
       await startAudio(!built ? buildAudio : undefined);
       await initSensors();
     }
