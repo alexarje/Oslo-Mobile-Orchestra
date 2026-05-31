@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Euclidean rings</h2>
-    <p>Turn <strong>Audio on</strong>, press ▶. Each ring is a Euclidean rhythm (evenly spaced hits). Drag the <strong>Phase</strong> slider to rotate all rings — polyrhythms against each other.</p>
+    <p>Turn <strong>Audio on</strong>, press ▶. Each ring is a Euclidean rhythm (evenly spaced hits). Tap <strong>Phase − / +</strong> to rotate all rings — polyrhythms against each other.</p>
   </div>
   <div class="seq-toolbar">
     <div class="control-row">
@@ -24,9 +24,10 @@
       <button type="button" class="btn btn-play" id="playBtn">▶</button>
     </div>
     <div class="control-row">
-      <label for="phase">Phase</label>
-      <input type="range" id="phase" min="0" max="15" value="0" />
+      <label>Phase</label>
+      <button type="button" class="btn btn-secondary btn-sm" id="phaseDown" aria-label="Phase back">−</button>
       <span id="phaseVal">0</span>
+      <button type="button" class="btn btn-secondary btn-sm" id="phaseUp" aria-label="Phase forward">+</button>
     </div>
   </div>
   <p class="status-bar" id="status">Euclidean 16-step rings</p>
@@ -55,10 +56,15 @@
     let phase = 0;
     let pattern = [];
 
-    function rebuildPattern() {
-      phase = +document.getElementById("phase").value;
+    function setPhase(next) {
+      phase = ((next % STEPS) + STEPS) % STEPS;
       document.getElementById("phaseVal").textContent = String(phase);
       pattern = RINGS.map((r) => euclideanRhythm(r.pulses, STEPS, phase));
+      redraw();
+    }
+
+    function rebuildPattern() {
+      setPhase(phase);
     }
 
     function sizeCanvas() {
@@ -110,10 +116,8 @@
       requestAnimationFrame(scheduler);
     }
 
-    document.getElementById("phase").oninput = () => {
-      rebuildPattern();
-      redraw();
-    };
+    document.getElementById("phaseDown").onclick = () => setPhase(phase - 1);
+    document.getElementById("phaseUp").onclick = () => setPhase(phase + 1);
 
     document.getElementById("bpm").oninput = (e) => {
       document.getElementById("bpmVal").textContent = e.target.value;
