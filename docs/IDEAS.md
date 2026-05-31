@@ -26,7 +26,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 
 - ~~**Drone Choir**~~ — hold-to-sustain; cents ruler on pad
 - ~~**Motion Wah**~~ — continuous mode toggle
-- ~~**Pulse Grid**~~ — removed from hub (use Drum Sequencer instead)
+- ~~**Pulse Grid**~~ — removed from hub (use Drum Sequencer Linear instead)
 - ~~**Train & Shake** sway + export/import~~ — [train-shake](../apps/train-shake/)
 - ~~**Conductor**~~ — QR + visual metronome flash at downbeat
 - ~~**Synth Pad** aftertouch~~ — [synth-pad](../apps/synth-pad/)
@@ -68,7 +68,7 @@ Backlog of apps, features, and workshop concepts. Same stack as today: vanilla J
 | Orientation | Compass wah / tilt | Compass Wah, Granular Tilt |
 | Light (ambient) | Volume cap | Open |
 | Proximity | Cover → mute | Open |
-| Haptics | Drum Sequencer steps | Android `vibrate` (optional) |
+| Haptics | Drum Sequencer Linear steps | Android `vibrate` (optional) |
 | Touch pressure | iOS force | Synth Pad |
 
 ---

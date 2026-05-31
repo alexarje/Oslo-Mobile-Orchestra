@@ -19,8 +19,8 @@ Web-based instruments for musicians using only their phones (Android + iPhone). 
 | [Hum vs Clap](apps/hum-clap/) | Call-and-response | k-NN on mic features |
 | [Piano](apps/piano/) | Melody / harmony | Keyboard + reverb |
 | [Drumkit](apps/drumkit/) | Rhythm hits | 8 drum pads |
-| [Drum Sequencer](apps/drum-sequencer/) | Patterns | 4×8 steps, swing |
-| [Circular Drum](apps/circular-drum/) | Ring patterns | 4×16 steps on concentric rings |
+| [Drum Sequencer Linear](apps/drum-sequencer/) | Patterns | 4×8 steps, swing |
+| [Drum Sequencer Circular](apps/circular-drum/) | Ring patterns | 4×16 steps on concentric rings |
 | [Firefly](apps/firefly/) | Sync pulses | Mic entrainment — phones align click rate & phase |
 | [Delay Throw](apps/delay-throw/) | Echo layers | Tap sample + tilt delay |
 | [Sampler](apps/sampler/) | Loop textures | Mic loop + tilt FX |
@@ -48,7 +48,7 @@ Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache
 ### 1. “Spectrum” (10 min)
 - 8× **Drone Choir** (different chord tones)
 - 6× **Motion Wah** or **Compass Wah**
-- 4× **Drum Sequencer** or **Drumkit**
+- 4× **Drum Sequencer Linear** or **Drumkit**
 - 1× **Conductor** — QR + countdown
 
 ### 2. “Human ML” (15 min)
@@ -58,7 +58,7 @@ Install from the hub (**Add to Home Screen**) for PWA full-screen; offline cache
 - **Synth Pad** → **Wavetable Scan** → **Filter Ladder** → **Additive Bells**
 
 ### 4. “Rhythm section”
-- Split **Drumkit** / **Drum Sequencer** / **Delay Throw**; Conductor `start` + `bpm` in the musician link.
+- Split **Drumkit** / **Drum Sequencer Linear** / **Delay Throw**; Conductor `start` + `bpm` in the musician link.
 
 ## Browsers (iOS & Android)
 
