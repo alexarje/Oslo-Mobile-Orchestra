@@ -2,36 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0d0f14" />
-  <title>Power Thin — OMO</title>
-  <link rel="stylesheet" href="../../shared/ui.css" />
-  
+  <meta http-equiv="refresh" content="0; url=../../" />
+  <script>location.replace("../../");</script>
+  <title>Removed — OMO</title>
 </head>
-<body class="app-shell">
-  <header class="app-header">
-    <a class="back-link" href="../../">←</a>
-    <h1>Power Thin</h1>
-  </header>
-  <div class="learn-panel panel" id="learnPanel"><h2>Battery drone</h2><p>Low battery subtly thins and detunes the ensemble tone. Hold to play.</p></div>
-  <div class="main-stage">
-    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
-  </div>
-  <script type="module">
-
-import { bindLearn, startAudio } from "../../shared/app.js";
-import { createMasterBus } from "../../shared/audio.js";
-bindLearn();
-const pad=document.getElementById("pad");
-const dot=document.getElementById("dot");
-const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
-let ctx,master,built=false,holding=false,activeId=null;
-
-let osc,amp,osc2;
-async function batt(){try{const b=await navigator.getBattery();return b.level;}catch{return 1;}}
-function build(c){ctx=c;({master}=createMasterBus(c,0.4));osc=ctx.createOscillator();osc2=ctx.createOscillator();amp=ctx.createGain();amp.gain.value=0;osc.connect(amp);osc2.connect(amp);amp.connect(master);osc.start();osc2.start();built=true;}
-pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio(!built?build:undefined);holding=true;pad.classList.add("active");const lv=await batt();const det=(1-lv)*25;osc.frequency.value=110;osc2.frequency.value=110*(1+det*0.002);amp.gain.setTargetAtTime(0.08+lv*0.2,ctx.currentTime,0.04);});
-pad.addEventListener("pointerup",()=>{holding=false;pad.classList.remove("active");amp.gain.setTargetAtTime(0,ctx.currentTime,0.1);});
-  </script>
+<body>
+  <p>Power Thin was removed from the orchestra. <a href="../../">Back to hub</a>.</p>
 </body>
 </html>

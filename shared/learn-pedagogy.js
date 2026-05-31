@@ -295,11 +295,6 @@ export const LEARN_PEDAGOGY = {
     "Rhythm felt in the hand, not only heard — useful for deaf/hard-of-hearing inclusion in workshops.",
   ],
 
-  "battery-drone": [
-    "Battery level (when exposed) thins or detunes the drone — resource scarcity as expression.",
-    "Meta-commentary on device limits; also practical warning before phones die mid-piece.",
-  ],
-
   "altitude-wind": [
     "Barometer pressure (rare on phones) or a manual slider maps to filtered noise — “thinner air” = brighter hiss.",
     "Environmental sensor as timbre; works as concept even when only the slider is available.",

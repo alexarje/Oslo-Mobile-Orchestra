@@ -305,7 +305,6 @@ export const HUB_APPS = [
   { href: "apps/pinch-bass/", title: "Pinch Sub", section: "synthesis", synth: "Subtractive bass", sensors: "Pinch · XY" },
   { href: "apps/edge-strum/", title: "Rim Pluck", section: "synthesis", synth: "KS harmonics", sensors: "Touch position" },
   { href: "apps/haptic-click/", title: "Vibe Lane", section: "rhythm", synth: "Sequencer + vibe", sensors: "Touch · vibrate" },
-  { href: "apps/battery-drone/", title: "Power Thin", section: "drones", synth: "Detune drift", sensors: "Battery · touch" },
   { href: "apps/altitude-wind/", title: "Baro Wind", section: "drones", synth: "Filtered noise", sensors: "Barometer · touch" },
   { href: "apps/geo-drone/", title: "Walk Pan", section: "drones", synth: "Stereo delay", sensors: "GPS · touch" },
   { href: "apps/hard-sync-lead/", title: "Sync Scream", section: "synthesis", synth: "Hard sync lead", sensors: "Touch" },
