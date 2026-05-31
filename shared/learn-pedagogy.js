@@ -281,8 +281,8 @@ export const LEARN_PEDAGOGY = {
   ],
 
   "pinch-bass": [
-    "Two-finger pinch distance maps to filter cutoff and sub level — gesture scales timbre.",
-    "Continuous control on a capacitive screen, bass-focused range.",
+    "Two-finger pinch: the centre of the pair sets pitch (X) and filter cutoff (Y); spread controls level and resonance.",
+    "Continuous bass control — move the gesture around the pad without lifting to sweep timbre and sub weight.",
   ],
 
   "edge-strum": [
