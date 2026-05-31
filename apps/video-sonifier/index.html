@@ -129,7 +129,10 @@
     const MAX_NOTES = 20;
     const TEXTURE_SMOOTH = 0.82;
     const STILL_SMOOTH = 0.88;
+    const ROOT_SMOOTH = 0.12;
+    const AMP_RAMP = 0.22;
     const SENSOR_OPTS = { needMotion: true, needOrientation: false };
+    const GAIN_FLOOR = 0.0001;
     const PENTA = [0, 2, 4, 7, 9];
     const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -152,6 +155,8 @@
     let motionPrimed = false;
     let lastAccel = { x: 0, y: 0, z: 0 };
     let smoothStillness = 0;
+    let smoothRootMidi = 50;
+    let ampRaf = 0;
     let analyzeTimer = null;
     let grainTimer = null;
     let meanBrightness = 0;
@@ -172,7 +177,7 @@
     }
 
     function rootFromBrightness() {
-      return 48 + Math.floor(meanBrightness * 16);
+      return 48 + meanBrightness * 16;
     }
 
     function labelMidi(midi) {
@@ -182,14 +187,22 @@
     function midiForCell(col, row) {
       const degree = (col + row * 2) % PENTA.length;
       const oct = Math.min(2, (row / GRID_H) * 2 | 0);
-      return rootMidi + PENTA[degree] + oct * 12;
+      return smoothRootMidi + PENTA[degree] + oct * 12;
+    }
+
+    function applyAmplitudeNow() {
+      if (!ampGain || !ctx) return;
+      const level = 0.04 + smoothStillness * 0.96;
+      ampGain.gain.setTargetAtTime(level, ctx.currentTime, AMP_RAMP);
+      document.getElementById("stillOut").textContent = `${(smoothStillness * 100).toFixed(0)}%`;
     }
 
     function applyAmplitude() {
-      if (!ampGain || !ctx) return;
-      const level = 0.04 + smoothStillness * 0.96;
-      ampGain.gain.setTargetAtTime(level, ctx.currentTime, 0.14);
-      document.getElementById("stillOut").textContent = `${(smoothStillness * 100).toFixed(0)}%`;
+      if (ampRaf) return;
+      ampRaf = requestAnimationFrame(() => {
+        ampRaf = 0;
+        applyAmplitudeNow();
+      });
     }
 
     async function initMotion() {
@@ -235,9 +248,9 @@
       const even = 1 - smoothTexture;
       const chord = [PENTA[0], PENTA[3], PENTA[4]];
       padVoices.oscs.forEach((o, i) => {
-        o.frequency.setTargetAtTime(midiToFreq(rootMidi + chord[i]), t, 0.25);
+        o.frequency.setTargetAtTime(midiToFreq(smoothRootMidi + chord[i]), t, 0.45);
       });
-      padVoices.gain.gain.setTargetAtTime(even * 0.1, t, 0.2);
+      padVoices.gain.gain.setTargetAtTime(Math.max(GAIN_FLOOR, even * 0.09), t, 0.35);
     }
 
     function measureTexture(cells) {
@@ -282,41 +295,57 @@
       const t = ctx.currentTime;
       const dur = 0.12 + even * 0.45 + Math.random() * (0.06 + tex * 0.12);
 
+      const peak = Math.max(
+        GAIN_FLOOR,
+        (0.04 + even * 0.06 + level * (0.08 + tex * 0.12)) * (0.2 + smoothStillness * 0.8)
+      );
+      const attack = 0.045;
+      const release = 0.07;
+      const end = t + dur;
+
       const osc = ctx.createOscillator();
       osc.type = even > 0.55 ? "sine" : "triangle";
-      osc.frequency.value = midiToFreq(midi);
+      const freq = midiToFreq(midi);
+      osc.frequency.setValueAtTime(freq * 0.998, t);
+      osc.frequency.exponentialRampToValueAtTime(freq, t + attack);
 
       const vib = ctx.createOscillator();
       const vibG = ctx.createGain();
       vib.type = "sine";
       vib.frequency.value = 5 + col * 0.15;
-      vibG.gain.value = 4 + tex * 5;
+      vibG.gain.value = 3 + tex * 4;
       vib.connect(vibG);
       vibG.connect(osc.detune);
 
       const filt = ctx.createBiquadFilter();
       filt.type = "lowpass";
-      filt.frequency.value = 500 + level * 1800 + ny * 1200;
-      filt.Q.value = 0.9;
+      filt.Q.value = 0.7;
+      const fTarget = 450 + level * 1600 + ny * 1100;
+      filt.frequency.setValueAtTime(180, t);
+      filt.frequency.exponentialRampToValueAtTime(Math.max(80, fTarget), t + attack * 1.5);
 
       const gn = ctx.createGain();
+      const send = ctx.createGain();
+      send.gain.value = 0.22;
       const pan = ctx.createStereoPanner();
       pan.pan.value = nx * 2 - 1;
       osc.connect(filt);
       filt.connect(gn);
       gn.connect(pan);
       pan.connect(dryGain);
-      pan.connect(reverb);
+      pan.connect(send);
+      send.connect(reverb);
 
-      const amp = (0.05 + even * 0.07 + level * (0.1 + tex * 0.14)) * (0.15 + smoothStillness * 0.85);
-      gn.gain.setValueAtTime(0, t);
-      gn.gain.linearRampToValueAtTime(amp, t + 0.02);
-      gn.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      gn.gain.setValueAtTime(GAIN_FLOOR, t);
+      gn.gain.exponentialRampToValueAtTime(peak, t + attack);
+      gn.gain.setValueAtTime(peak, end - release);
+      gn.gain.exponentialRampToValueAtTime(GAIN_FLOOR, end);
 
       osc.start(t);
       vib.start(t);
-      osc.stop(t + dur + 0.02);
-      vib.stop(t + dur + 0.02);
+      const stopAt = end + release + 0.02;
+      osc.stop(stopAt);
+      vib.stop(stopAt);
     }
 
     function pickWeightedCell() {
@@ -366,7 +395,9 @@
         const b = cellBrightness[i];
         cellWeight[i] = 0.05 + even * 0.2 + (1 - even) * (0.06 + b * b);
       }
-      rootMidi = rootFromBrightness();
+      const targetRoot = rootFromBrightness();
+      smoothRootMidi += (targetRoot - smoothRootMidi) * ROOT_SMOOTH;
+      rootMidi = Math.round(smoothRootMidi);
       grainsPerSec = MIN_NOTES + smoothTexture * (MAX_NOTES - MIN_NOTES);
       document.getElementById("keyOut").textContent = labelMidi(rootMidi);
       document.getElementById("detailOut").textContent = `${(smoothTexture * 100).toFixed(0)}%`;
@@ -441,6 +472,11 @@
 
     function stopAll() {
       running = false;
+      if (ampRaf) cancelAnimationFrame(ampRaf);
+      ampRaf = 0;
+      if (ampGain && ctx) {
+        ampGain.gain.setTargetAtTime(GAIN_FLOOR, ctx.currentTime, 0.08);
+      }
       clearTimeout(analyzeTimer);
       clearTimeout(grainTimer);
       if (stream) {
@@ -497,7 +533,8 @@
       running = true;
       motionPrimed = false;
       smoothStillness = 0;
-      applyAmplitude();
+      smoothRootMidi = rootFromBrightness();
+      applyAmplitudeNow();
       await initMotion();
       scheduleGrain();
       const loop = () => {
