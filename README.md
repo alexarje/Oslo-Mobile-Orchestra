@@ -1,17 +1,24 @@
 # Oslo Mobile Orchestra
 
-Turn a room of phones into an ensemble — open a link, tap to play, no app store. Works on **iPhone (Safari)** and **Android (Chrome)**.
+A collection of patches used with [Oslo Mobile Orchestra (OMO)](https://www.uio.no/ritmo/english/research/labs/fourms/research/projects/omo/) at the Department of Musicology, University of Oslo.
+
+OMO used to work with a collection of patches developed in PureData and deployed via MobMuPlat. This collection is using browser-based apps that use the WebAudio API. They should work on both iOS and Android phones, although there may be variations in sensors available and browser capabilities. 
 
 **Play now:** [alexarje.github.io/Oslo-Mobile-Orchestra](https://alexarje.github.io/Oslo-Mobile-Orchestra/)
 
+## Browsers
+
+The apps should (in theory) work on all modern browsers, but we have seen that they generally work best with Safari on iPhone and Chrome on Android.
+
+
 ## Quick start
 
-1. Open the site on each phone (not inside Instagram or email — use **Open in browser**).
-2. Choose an instrument from the hub (filter by **Rhythm**, **Drones**, **Melody**, etc.).
-3. In every app: **Learn** = how to play · **QR** = share this instrument · **Audio on** = unlock sound.
-4. Allow **microphone**, **motion**, or **camera** when prompted. Turn off silent mode on iPhone.
-
-**Install (optional):** Add to Home Screen for full-screen; core pages work offline.
+1. Open the site in a browser (not inside a communication app or email; then you should use "Open in browser" command).
+2. Choose the app to play.
+3. Apps will ask for different permissions, including the microphone, motion, or camera. Permissions may need to be given both within the browser and in the OS.
+4. Turn up the volume to at least 70%. Turn off silent mode on iPhone.
+5. In every app: **Learn** = how to play · **QR** = share this instrument with others· **Audio on** = activate sound if it doesn't start automatically.
+6. Select "Add to Home Screen" for a more native-like experience.
 
 ## Instruments
 
