@@ -1037,6 +1037,49 @@ body.hub {
 .drum-seq-row:nth-child(3) .drum-seq-cell.on { background: linear-gradient(135deg, #a16207, #854d0e); }
 .drum-seq-row:nth-child(4) .drum-seq-cell.on { background: linear-gradient(135deg, #15803d, #166534); }
 
+/* Circular drum sequencer */
+.circular-drum-app .seq-toolbar {
+  flex-shrink: 0;
+  background: #111827;
+}
+
+.circular-drum-app .seq-toolbar .control-row {
+  padding: 0.2rem 0.5rem;
+}
+
+.circular-drum-app .seq-toolbar .control-row input[type="range"] {
+  flex: 1 1 5rem;
+  max-width: 8rem;
+}
+
+.circular-drum-app .main-stage.circular-drum-stage {
+  flex: 1;
+  min-height: 0;
+  padding: 0.25rem 0.5rem calc(0.35rem + var(--safe-b));
+}
+
+.circular-drum-app #seq {
+  touch-action: none;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: #0f172a;
+}
+
+.circular-drum-app .circ-drum-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.15rem 0.65rem 0;
+  font-size: 1.1rem;
+}
+
+.circular-drum-app .circ-legend-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
 .pluck-ripple {
   position: absolute;
   width: 48px;
