@@ -105,9 +105,20 @@
       return heldCount > 0;
     }
 
+    function readBreath() {
+      const rms = getRms();
+      const onThresh = wasBlowing ? blowThreshold * 0.5 : blowThreshold * 0.82;
+      const blowing = rms > onThresh;
+      wasBlowing = blowing;
+      const headroom = Math.max(0.012, 0.065 - onThresh);
+      const s = blowing ? Math.min(1, Math.max(0.2, (rms - onThresh) / headroom)) : 0;
+      return { rms, blowing, s, onThresh };
+    }
+
     function syncPitchIfPlaying() {
       if (!ctx || !toneOsc) return;
-      if (getRms() > blowThreshold && anyHoleHeld()) setPitch(ctx.currentTime);
+      const { blowing } = readBreath();
+      if (blowing && anyHoleHeld()) setPitch(ctx.currentTime);
     }
 
     function onHoleDown(i, e) {
@@ -170,8 +181,11 @@
         await new Promise((r) => requestAnimationFrame(r));
       }
       const floor = samples.reduce((a, b) => a + b, 0) / samples.length;
-      blowThreshold = Math.max(0.008, floor * 2.1 + 0.004);
-      document.getElementById("breathWrap").style.setProperty("--thresh", `${Math.min(85, (blowThreshold / 0.1) * 100)}%`);
+      blowThreshold = Math.max(0.005, floor * 1.35 + 0.0025);
+      document.getElementById("breathWrap").style.setProperty(
+        "--thresh",
+        `${Math.min(88, ((blowThreshold * 0.82) / 0.075) * 100)}%`
+      );
     }
 
     function setVibrato(on, breath, when) {
@@ -227,26 +241,22 @@
 
     function tick() {
       if (!ready) return;
-      const rms = getRms();
-      document.getElementById("breathMeter").style.width = `${Math.min(100, (rms / 0.1) * 100)}%`;
-      const onThresh = wasBlowing ? blowThreshold * 0.72 : blowThreshold;
-      const blowing = rms > onThresh;
-      wasBlowing = blowing;
+      const { rms, blowing, s } = readBreath();
+      document.getElementById("breathMeter").style.width = `${Math.min(100, (rms / 0.075) * 100)}%`;
       document.getElementById("breathMeter").classList.toggle("blowing", blowing);
       const t = ctx.currentTime;
-      const headroom = Math.max(0.025, 0.09 - blowThreshold);
-      const s = blowing ? Math.min(1, (rms - blowThreshold) / headroom) : 0;
       const holding = anyHoleHeld();
-      const targetEnv = blowing && holding ? 0.35 + s * 0.65 : 0;
-      breathEnv += (targetEnv - breathEnv) * (targetEnv > breathEnv ? 0.42 : holding ? 0.12 : 0.35);
+      const shouldPlay = blowing && holding;
+      const targetEnv = shouldPlay ? Math.max(0.5, 0.42 + s * 0.58) : 0;
+      breathEnv += (targetEnv - breathEnv) * (targetEnv > breathEnv ? 0.55 : shouldPlay ? 0.1 : 0.32);
       document.getElementById("breathMeter").classList.toggle("holding", holding);
-      if (breathEnv > 0.02) {
-        toneGain.gain.setTargetAtTime(breathEnv * 0.95, t, 0.012);
-        noiseGain.gain.setTargetAtTime(breathEnv * s * 0.22, t, 0.015);
+      if (shouldPlay || breathEnv > 0.008) {
+        toneGain.gain.setTargetAtTime(breathEnv * 0.95, t, 0.01);
+        noiseGain.gain.setTargetAtTime(breathEnv * s * 0.22, t, 0.012);
         setPitch(t);
         setVibrato(true, s, t);
       } else {
-        toneGain.gain.setTargetAtTime(0, t, 0.05);
+        toneGain.gain.setTargetAtTime(0, t, 0.04);
         noiseGain.gain.setTargetAtTime(0, t, 0.04);
         setVibrato(false, 0, t);
       }
