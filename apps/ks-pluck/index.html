@@ -14,26 +14,32 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Karplus–Strong</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>Tap</strong> to excite a delay-line string. <strong>X</strong> = pitch. Feedback is kept moderate so rapid taps stay clean.</p>
-    <p>For hold-to-pluck + tilt damping, try <a href="../ks-string/">Karplus–Strong String</a>.</p>
-  </div>
-  <div class="readout-row">
-    <p class="value-chip">Pitch <strong id="freqOut">220</strong> Hz</p>
+    <p>Turn <strong>Audio on</strong>, allow <strong>motion</strong> on iPhone if asked. <strong>Tap</strong> to pluck — <strong>X</strong> = pitch, <strong>Y</strong> = strength. <strong>Tilt</strong> the phone for damping.</p>
+    <p>For hold-to-pluck on one touch, try <a href="../ks-string/">KS String</a>.</p>
   </div>
   <div class="main-stage">
     <div id="pad" class="stage-fill play-grid"></div>
+  </div>
+  <div class="readout-row">
+    <p class="value-chip">Pitch <strong id="freqOut">220</strong> Hz</p>
+    <p class="value-chip">Pluck <strong id="pluckOut">—</strong></p>
+    <p class="value-chip">Damp <strong id="dampOut">4000</strong> Hz</p>
   </div>
   <script type="module">
     import { bindLearn, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
     import { createKSPool, karplusPluck } from "../../shared/ks.js";
+    import { enableSensors, onOrientation, primeSensors } from "../../shared/sensors.js";
 
     bindLearn();
     const pad = document.getElementById("pad");
     let ctx, master, built = false;
+    let tiltReady = false;
+    let currentDamp = 4000;
+    let activeId = null;
     const pool = createKSPool(2);
 
-    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
     const mapX = (nx) => 55 * Math.pow(880 / 55, nx);
 
     function buildAudio(c) {
@@ -42,28 +48,90 @@
       built = true;
     }
 
-    pad.addEventListener("pointerdown", async (e) => {
-      e.preventDefault();
-      await startAudio(!built ? buildAudio : undefined);
+    async function enableTilt() {
+      if (tiltReady) return;
+      primeSensors({ needMotion: false, needOrientation: true });
+      if (await enableSensors({ needMotion: false, needOrientation: true })) {
+        tiltReady = true;
+        onOrientation((o) => {
+          const t = clamp(Math.sqrt((o.beta || 0) ** 2 + (o.gamma || 0) ** 2) / 90, 0, 1);
+          currentDamp = 8000 * (300 / 8000) ** t;
+          document.getElementById("dampOut").textContent = currentDamp.toFixed(0);
+        });
+      }
+    }
+
+    function ripple(x, y) {
+      const el = document.createElement("div");
+      el.className = "pluck-ripple";
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      pad.appendChild(el);
+      setTimeout(() => el.remove(), 600);
+    }
+
+    function pluckAt(x, y) {
       if (!built) return;
       const r = pad.getBoundingClientRect();
-      const nx = clamp((e.clientX - r.left) / r.width, 0, 1);
+      if (r.width <= 0 || r.height <= 0) return;
+      const nx = clamp(x / r.width, 0, 1);
+      const ny = clamp(y / r.height, 0, 1);
       const freq = mapX(nx);
+      const strength = 0.06 + (1 - ny) * 0.38;
+      const dampHz = currentDamp;
       karplusPluck(ctx, master, pool, freq, {
-        strength: 0.36,
-        level: 0.18,
-        feedback: 0.8,
-        dampHz: Math.min(5200, Math.max(500, freq * 5)),
+        strength,
+        dampHz,
+        level: 0.14 + strength * 0.1,
+        feedback: Math.max(0.72, 0.8 - dampHz / 12000),
         decaySec: 1.6,
       });
       document.getElementById("freqOut").textContent = freq.toFixed(0);
-      const ripple = document.createElement("div");
-      ripple.className = "pluck-ripple";
-      ripple.style.left = `${e.clientX - r.left}px`;
-      ripple.style.top = `${e.clientY - r.top}px`;
-      pad.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 600);
+      document.getElementById("pluckOut").textContent = strength.toFixed(2);
+      ripple(x, y);
+    }
+
+    function previewAt(x, y) {
+      const r = pad.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      const nx = clamp(x / r.width, 0, 1);
+      const ny = clamp(y / r.height, 0, 1);
+      document.getElementById("freqOut").textContent = mapX(nx).toFixed(0);
+      document.getElementById("pluckOut").textContent = (0.06 + (1 - ny) * 0.38).toFixed(2);
+    }
+
+    pad.addEventListener("pointerdown", async (ev) => {
+      ev.preventDefault();
+      await startAudio(!built ? (c) => { buildAudio(c); void enableTilt(); } : undefined);
+      if (!built) return;
+      activeId = ev.pointerId;
+      pad.setPointerCapture(ev.pointerId);
+      pad.classList.add("active");
+      const r = pad.getBoundingClientRect();
+      pluckAt(
+        clamp(ev.clientX - r.left, 0, r.width),
+        clamp(ev.clientY - r.top, 0, r.height)
+      );
     });
+
+    pad.addEventListener("pointermove", (ev) => {
+      if (ev.pointerId !== activeId) return;
+      const r = pad.getBoundingClientRect();
+      previewAt(
+        clamp(ev.clientX - r.left, 0, r.width),
+        clamp(ev.clientY - r.top, 0, r.height)
+      );
+    });
+
+    const stop = (ev) => {
+      if (ev.pointerId !== activeId) return;
+      activeId = null;
+      pad.classList.remove("active");
+    };
+
+    pad.addEventListener("pointerup", stop);
+    pad.addEventListener("pointercancel", stop);
+    pad.addEventListener("lostpointercapture", stop);
   </script>
 </body>
 </html>
