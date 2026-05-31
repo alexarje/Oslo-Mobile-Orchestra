@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Spin Chorus — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Spin Chorus</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel"><h2>Gyro whirl</h2><p><strong>Hold</strong> the pad. <strong>Spin</strong> the phone — rotation rate deepens vibrato and stereo wobble.</p></div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+
+import { bindLearn, startAudio } from "../../shared/app.js";
+import { createMasterBus } from "../../shared/audio.js";
+bindLearn();
+const pad=document.getElementById("pad");
+const dot=document.getElementById("dot");
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let ctx,master,built=false,holding=false,activeId=null;
+
+import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
+let osc,amp,pan,lfo,lfoG;
+function build(c){ctx=c;({master}=createMasterBus(c,0.5));osc=ctx.createOscillator();amp=ctx.createGain();pan=ctx.createStereoPanner();lfo=ctx.createOscillator();lfoG=ctx.createGain();lfo.frequency.value=5;lfoG.gain.value=0;lfo.connect(lfoG);lfoG.connect(osc.detune);osc.type="sine";osc.connect(amp);amp.connect(pan);pan.connect(master);osc.start();lfo.start();built=true;
+primeSensors({needMotion:true,needOrientation:false});enableSensors({needMotion:true,needOrientation:false}).then(ok=>{if(!ok)return;onMotion(({rotAlpha:a,rotBeta:b,rotGamma:g})=>{if(!holding)return;const rate=Math.sqrt(a*a+b*b+g*g);const t=ctx.currentTime;lfo.frequency.setTargetAtTime(3+rate*0.08,t,0.05);lfoG.gain.setTargetAtTime(Math.min(45,rate*0.4),t,0.05);pan.pan.setTargetAtTime(clamp(rate*0.002,-1,1),t,0.06);});});}
+function setPad(nx,ny,on){const t=ctx.currentTime;osc.frequency.setTargetAtTime(90*Math.pow(6,nx),t,0.03);amp.gain.setTargetAtTime(on?0.28:0,t,on?0.02:0.06);}
+pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio(!built?build:undefined);if(!built)return;holding=true;activeId=e.pointerId;pad.setPointerCapture(activeId);pad.classList.add("active");const r=pad.getBoundingClientRect();setPad(clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1),true);});
+pad.addEventListener("pointermove",e=>{if(!holding||e.pointerId!==activeId)return;const r=pad.getBoundingClientRect();setPad(clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1),true);});
+const off=e=>{if(e.pointerId!==activeId)return;holding=false;pad.classList.remove("active");setPad(0.5,0.5,false);};
+pad.addEventListener("pointerup",off);pad.addEventListener("pointercancel",off);pad.addEventListener("lostpointercapture",off);
+  </script>
+</body>
+</html>

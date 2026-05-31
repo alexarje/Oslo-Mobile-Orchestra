@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>PD Lead — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>PD Lead</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel"><h2>Phase distortion</h2><p>Casio-style waveshape — <strong>Y</strong> scans distortion amount.</p></div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+
+import { bindLearn, startAudio } from "../../shared/app.js";
+import { createMasterBus } from "../../shared/audio.js";
+bindLearn();
+const pad=document.getElementById("pad");
+const dot=document.getElementById("dot");
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let ctx,master,built=false,holding=false,activeId=null;
+
+let osc,shaper,out;
+function build(c){ctx=c;({master}=createMasterBus(c,0.5));osc=ctx.createOscillator();shaper=ctx.createWaveShaper();out=ctx.createGain();out.gain.value=0;osc.connect(shaper);shaper.connect(out);out.connect(master);osc.start();built=true;}
+function curve(amount){const n=256,c=new Float32Array(n);for(let i=0;i<n;i++){const x=(i/(n-1))*2-1;c[i]=Math.sin(x*Math.PI*(1+amount*3));}return c;}
+function setPad(nx,ny,on){const t=ctx.currentTime;osc.frequency.setTargetAtTime(100*Math.pow(6,nx),t,0.02);shaper.curve=curve(1-ny);out.gain.setTargetAtTime(on?0.28:0,t,on?0.02:0.06);}
+pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio(!built?build:undefined);holding=true;activeId=e.pointerId;pad.setPointerCapture(activeId);pad.classList.add("active");const r=pad.getBoundingClientRect();setPad(clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1),true);});
+pad.addEventListener("pointermove",e=>{if(!holding||e.pointerId!==activeId)return;const r=pad.getBoundingClientRect();setPad(clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1),true);});
+const off=e=>{if(e.pointerId!==activeId)return;holding=false;pad.classList.remove("active");setPad(0.5,0.5,false);};
+pad.addEventListener("pointerup",off);pad.addEventListener("pointercancel",off);
+  </script>
+</body>
+</html>

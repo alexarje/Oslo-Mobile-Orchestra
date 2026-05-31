@@ -37,7 +37,8 @@ The apps should (in theory) work on all modern browsers, but we have seen that t
 |----------|----------|
 | **[Wiki](https://github.com/alexarje/Oslo-Mobile-Orchestra/wiki)** | Full app catalog, workshop scripts, browsers & sensors, ensemble sync, architecture |
 | [Workshop guide](docs/WORKSHOP-GUIDE.md) | 45-minute facilitator script (in-repo copy) |
-| [Ideas](docs/IDEAS.md) | Future features |
+| [Ideas](docs/IDEAS.md) | Backlog (most instrument rows now shipped) |
+| [Device support](support.html) | Sensor API checklist before workshops |
 
 ## License
 

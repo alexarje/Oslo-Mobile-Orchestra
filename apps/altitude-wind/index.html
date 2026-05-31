@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Baro Wind — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Baro Wind</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel"><h2>Altitude wind</h2><p>Barometer (or slider fallback) brightens wind noise.</p></div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+
+import { bindLearn, startAudio } from "../../shared/app.js";
+import { createMasterBus } from "../../shared/audio.js";
+bindLearn();
+const pad=document.getElementById("pad");
+const dot=document.getElementById("dot");
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let ctx,master,built=false,holding=false,activeId=null;
+
+let noise,filt,windGain,press=1013;
+function build(c){ctx=c;({master}=createMasterBus(c,0.42));noise=ctx.createBufferSource();const b=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noise.buffer=b;noise.loop=true;filt=ctx.createBiquadFilter();windGain=ctx.createGain();windGain.gain.value=0;noise.connect(filt);filt.connect(windGain);windGain.connect(master);noise.start();built=true;
+if("PressureSensor" in window){try{const s=new PressureSensor();s.addEventListener("reading",()=>{press=s.pressure||1013;});s.start();}catch{}}}
+function updateWind(on){const t=ctx.currentTime;const bright=clamp((press-980)/60,0,1);filt.frequency.setTargetAtTime(200+bright*6000,t,0.08);windGain.gain.setTargetAtTime(on?0.22:0,t,on?0.04:0.08);}
+pad.addEventListener("pointerdown",async()=>{await startAudio(!built?build:undefined);holding=true;pad.classList.add("active");updateWind(true);});
+pad.addEventListener("pointerup",()=>{holding=false;pad.classList.remove("active");updateWind(false);});
+  </script>
+</body>
+</html>

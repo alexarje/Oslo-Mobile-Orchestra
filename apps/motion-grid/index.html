@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Grain Cam — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Grain Cam</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel"><h2>Motion grid</h2><p>Camera motion energy controls grain rate and filter.</p></div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+
+import { bindLearn, startAudio } from "../../shared/app.js";
+import { createMasterBus } from "../../shared/audio.js";
+bindLearn();
+const pad=document.getElementById("pad");
+const dot=document.getElementById("dot");
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let ctx,master,built=false,holding=false,activeId=null;
+
+import { registerAudioBoot, startAudio } from "../../shared/app.js";
+let noise,filt,grainAmp,video,canvas,ctx2,prev=null;
+function build(c){ctx=c;({master}=createMasterBus(c,0.45));noise=ctx.createBufferSource();const b=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noise.buffer=b;noise.loop=true;filt=ctx.createBiquadFilter();grainAmp=ctx.createGain();grainAmp.gain.value=0;noise.connect(filt);filt.connect(grainAmp);grainAmp.connect(master);noise.start();built=true;}
+registerAudioBoot(async c=>{build(c);video=document.createElement("video");video.playsInline=true;video.muted=true;const stream=await navigator.mediaDevices.getUserMedia({video:true});video.srcObject=stream;await video.play();canvas=document.createElement("canvas");canvas.width=48;canvas.height=36;ctx2=canvas.getContext("2d");function tick(){ctx2.drawImage(video,0,0,48,36);const img=ctx2.getImageData(0,0,48,36);if(prev&&holding){let diff=0;for(let i=0;i<img.data.length;i+=4)diff+=Math.abs(img.data[i]-prev[i]);const e=diff/(48*36*255);filt.frequency.setTargetAtTime(200+e*4000,ctx.currentTime,0.04);grainAmp.gain.setTargetAtTime(0.05+e*0.3,ctx.currentTime,0.05);}prev=new Uint8ClampedArray(img.data);requestAnimationFrame(tick);}tick();});
+pad.addEventListener("pointerdown",async()=>{await startAudio();holding=true;pad.classList.add("active");});
+pad.addEventListener("pointerup",()=>{holding=false;pad.classList.remove("active");grainAmp.gain.setTargetAtTime(0,ctx.currentTime,0.1);});
+  </script>
+</body>
+</html>

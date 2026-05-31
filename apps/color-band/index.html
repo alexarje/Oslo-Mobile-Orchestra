@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Hue Scale — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Hue Scale</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel"><h2>Color band</h2><p>Point camera at coloured objects — hue picks scale degree. Hold pad to play.</p></div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+
+import { bindLearn, startAudio } from "../../shared/app.js";
+import { createMasterBus } from "../../shared/audio.js";
+bindLearn();
+const pad=document.getElementById("pad");
+const dot=document.getElementById("dot");
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let ctx,master,built=false,holding=false,activeId=null;
+
+import { registerAudioBoot, startAudio } from "../../shared/app.js";
+let osc,amp,video,canvas,ctx2,hue=0;
+const scale=[0,2,4,5,7,9,11];
+function build(c){ctx=c;({master}=createMasterBus(c,0.5));osc=ctx.createOscillator();amp=ctx.createGain();amp.gain.value=0;osc.connect(amp);amp.connect(master);osc.start();built=true;}
+registerAudioBoot(async c=>{build(c);video=document.createElement("video");video.playsInline=true;video.muted=true;const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:120,height:90}});video.srcObject=stream;await video.play();canvas=document.createElement("canvas");canvas.width=32;canvas.height=24;ctx2=canvas.getContext("2d");function tick(){ctx2.drawImage(video,0,0,32,24);const d=ctx2.getImageData(16,12,1,1).data;const r=d[0]/255,g=d[1]/255,b=d[2]/255;const max=Math.max(r,g,b),min=Math.min(r,g,b);let h=0;if(max>min){if(max===r)h=(g-b)/(max-min);else if(max===g)h=2+(b-r)/(max-min);else h=4+(r-g)/(max-min);h*=60;if(h<0)h+=360;}hue=h;requestAnimationFrame(tick);}tick();});
+function noteFromHue(){const deg=scale[Math.floor(hue/360*scale.length)%scale.length];return 220*Math.pow(2,deg/12);}
+pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio();holding=true;pad.classList.add("active");osc.frequency.setTargetAtTime(noteFromHue(),ctx.currentTime,0.02);amp.gain.setTargetAtTime(0.28,ctx.currentTime,0.02);});
+pad.addEventListener("pointermove",()=>{if(holding)osc.frequency.setTargetAtTime(noteFromHue(),ctx.currentTime,0.05);});
+pad.addEventListener("pointerup",()=>{holding=false;pad.classList.remove("active");amp.gain.setTargetAtTime(0,ctx.currentTime,0.06);});
+  </script>
+</body>
+</html>

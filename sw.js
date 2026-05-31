@@ -1,7 +1,8 @@
-const CACHE = "omo-v19";
+const CACHE = "omo-v20";
 const ASSETS = [
   "./",
   "./index.html",
+  "./support.html",
   "./shared/ui.css",
   "./shared/app.js",
   "./shared/qr.js",

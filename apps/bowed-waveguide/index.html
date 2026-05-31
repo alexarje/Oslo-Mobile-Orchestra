@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Drag Bow — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Drag Bow</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel"><h2>Bowed waveguide</h2><p>Drag speed = bow energy on a sustained string.</p></div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+
+import { bindLearn, startAudio } from "../../shared/app.js";
+import { createMasterBus } from "../../shared/audio.js";
+bindLearn();
+const pad=document.getElementById("pad");
+const dot=document.getElementById("dot");
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let ctx,master,built=false,holding=false,activeId=null;
+
+import { createKSPool, karplusPluck } from "../../shared/ks.js";
+let pool,lastX=0,lastT=0;
+function build(c){ctx=c;({master}=createMasterBus(c,0.5));pool=createKSPool(2);built=true;}
+pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio(!built?build:undefined);holding=true;activeId=e.pointerId;pad.setPointerCapture(activeId);lastX=e.clientX;lastT=performance.now();pad.classList.add("active");});
+pad.addEventListener("pointermove",e=>{if(!holding||e.pointerId!==activeId)return;const dt=Math.max(1,performance.now()-lastT);const v=Math.abs(e.clientX-lastX)/dt;lastX=e.clientX;lastT=performance.now();const r=pad.getBoundingClientRect();if(v>0.2)karplusPluck(ctx,master,pool,100*Math.pow(4,clamp((e.clientY-r.top)/r.height,0,1)),{strength:clamp(v*0.3,0.2,0.9),level:0.25});});
+const off=e=>{if(e.pointerId!==activeId)return;holding=false;pad.classList.remove("active");};
+pad.addEventListener("pointerup",off);pad.addEventListener("pointercancel",off);
+  </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0f14" />
+  <title>Blade Chorus — OMO</title>
+  <link rel="stylesheet" href="../../shared/ui.css" />
+  
+</head>
+<body class="app-shell">
+  <header class="app-header">
+    <a class="back-link" href="../../">←</a>
+    <h1>Blade Chorus</h1>
+  </header>
+  <div class="learn-panel panel" id="learnPanel"><h2>SuperSaw stack</h2><p>Hold pad — gyro spread widens detuned saw cluster.</p></div>
+  <div class="main-stage">
+    <div id="pad" class="stage-fill play-grid"><div class="touch-dot" id="dot"></div></div>
+  </div>
+  <script type="module">
+
+import { bindLearn, startAudio } from "../../shared/app.js";
+import { createMasterBus } from "../../shared/audio.js";
+bindLearn();
+const pad=document.getElementById("pad");
+const dot=document.getElementById("dot");
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let ctx,master,built=false,holding=false,activeId=null;
+
+import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
+let saws=[];
+function build(c){ctx=c;({master}=createMasterBus(c,0.42));for(let i=-3;i<=3;i++){const o=ctx.createOscillator(),g=ctx.createGain();o.type="sawtooth";g.gain.value=0;o.connect(g);g.connect(master);o.start();saws.push({o,g,det:i*3});}built=true;
+primeSensors({needMotion:true,needOrientation:false});enableSensors({needMotion:true,needOrientation:false}).then(ok=>{if(!ok)return;onMotion(({rotAlpha:a,rotBeta:b,rotGamma:g})=>{if(!holding)return;const spread=Math.sqrt(a*a+b*b+g*g)*0.15;saws.forEach(s=>s.o.detune.setTargetAtTime(s.det*spread,ctx.currentTime,0.05));});});}
+function setPad(nx,on){const hz=90*Math.pow(5,nx);saws.forEach(s=>{s.o.frequency.setTargetAtTime(hz,ctx.currentTime,0.03);s.g.gain.setTargetAtTime(on?0.04:0,ctx.currentTime,on?0.02:0.06);});}
+pad.addEventListener("pointerdown",async e=>{e.preventDefault();await startAudio(!built?build:undefined);holding=true;pad.classList.add("active");const r=pad.getBoundingClientRect();setPad(clamp((e.clientX-r.left)/r.width,0,1),true);});
+pad.addEventListener("pointermove",e=>{if(!holding)return;const r=pad.getBoundingClientRect();setPad(clamp((e.clientX-r.left)/r.width,0,1),true);});
+pad.addEventListener("pointerup",()=>{holding=false;pad.classList.remove("active");setPad(0.5,false);});
+  </script>
+</body>
+</html>

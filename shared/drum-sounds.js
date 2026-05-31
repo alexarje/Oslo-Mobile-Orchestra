@@ -143,3 +143,10 @@ export function playDrum(id, ctx, out) {
   const pad = DRUM_KIT.find((p) => p.id === id);
   pad?.play(ctx, out);
 }
+
+export { playKick, playSnare };
+
+/** @param {AudioContext} ctx @param {AudioNode} out */
+export function playHat(ctx, out) {
+  playHiHat(ctx, out, 0.05);
+}

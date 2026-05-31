@@ -12,51 +12,51 @@ Phones expose more than mic + tilt. Each row is a candidate **app** (or major up
 
 | Idea | Sensor / API | Music role | Synthesis hook |
 |------|----------------|------------|----------------|
-| **Gyro Whirl** | `rotationRate` (αβγ) | Spin phone → vibrato speed & stereo wobble | FM or detuned sines; rate → LFO depth |
-| **Gravity Bounce** | `accelerationIncludingGravity` | “Drop” phone feel → impact triggers | Short noise burst + KS body; \|g\| → pitch bend |
-| **Shake Filter** | High-pass jerk on accel | Sudden shakes open a filter | Subtractive pad; jerk → cutoff + resonance spike |
-| **Pocket Metronome** | Step-like peaks in linear accel | Walk / tap pocket → sidechain duck | Looping pulse + master duck on detected steps |
-| **Flat / Edge** | `beta` / `gamma` thresholds | Only sound when held flat vs upright | Drone gate; orientation unlocks timbre |
-| **Compass Choir** | `webkitCompassHeading` / `alpha` | Section pans by where you face in room | Multi-voice drone; heading → pan + detune spread |
-| **Tilt Doppler** | Rapid β change | Tilt speed → pitch sweep (Doppler-ish) | Continuous tone; derivative of β → detune |
+| ~~**Gyro Whirl**~~ | `rotationRate` (αβγ) | Spin phone → vibrato speed & stereo wobble | [Spin Chorus](../apps/gyro-whirl/) |
+| ~~**Gravity Bounce**~~ | `accelerationIncludingGravity` | “Drop” phone feel → impact triggers | [Drop Bell](../apps/gravity-bounce/) |
+| ~~**Shake Filter**~~ | High-pass jerk on accel | Sudden shakes open a filter | [Jerk Wah](../apps/shake-filter/) |
+| ~~**Pocket Metronome**~~ | Step-like peaks in linear accel | Walk / tap pocket → sidechain duck | [Pocket Pulse](../apps/pocket-metronome/) |
+| ~~**Flat / Edge**~~ | `beta` / `gamma` thresholds | Only sound when held flat vs upright | [Table Drone](../apps/flat-edge/) |
+| ~~**Compass Choir**~~ | `webkitCompassHeading` / `alpha` | Section pans by where you face in room | [Heading Choir](../apps/heading-choir/) |
+| ~~**Tilt Doppler**~~ | Rapid β change | Tilt speed → pitch sweep (Doppler-ish) | [Doppler Tilt](../apps/tilt-doppler/) |
 
 ### Microphone & audio input
 
 | Idea | Sensor / API | Music role | Synthesis hook |
 |------|----------------|------------|----------------|
-| **Room Reverb Send** | Mic RMS + optional loopback | Loudness in room → wet/dry | IR convolution or algorithmic verb on shared tone |
-| **Whisper Gate** | Mic + noise floor tracking | Only soft sounds pass | Band-limited noise → vowel formants |
-| **Clap Architect** | Onset times from mic | Clap spacing builds a rhythm grid | Sequencer learns density; plays synthesized kit |
-| **Pitch Hive** | Multi-pitch peaks (FFT) | Humming group → chord root | Additive chord following chroma (extends Harmonizer) |
-| **Feedback Flute** | Mic + speaker (careful) | Controlled feedback whistle | Resonant bandpass + gain ride; teach distance |
+| ~~**Room Reverb Send**~~ | Mic RMS + optional loopback | Loudness in room → wet/dry | [Room Wash](../apps/room-reverb-send/) |
+| ~~**Whisper Gate**~~ | Mic + noise floor tracking | Only soft sounds pass | [Soft Vowel](../apps/whisper-gate/) |
+| ~~**Clap Architect**~~ | Onset times from mic | Clap spacing builds a rhythm grid | [Clap Grid](../apps/clap-architect/) |
+| ~~**Pitch Hive**~~ | Multi-pitch peaks (FFT) | Humming group → chord root | [Hum Hive](../apps/pitch-hive/) |
+| ~~**Feedback Flute**~~ | Mic + speaker (careful) | Controlled feedback whistle | [Whistle Loop](../apps/feedback-flute/) |
 
 ### Camera & light
 
 | Idea | Sensor / API | Music role | Synthesis hook |
 |------|----------------|------------|----------------|
 | ~~**Light Theremin**~~ | `AmbientLightSensor` | Cover sensor → darker tone | [light-theremin](../apps/light-theremin/) |
-| **Shadow Sequencer** | Front camera brightness map | Hand shadow → 8-step mask | Drum grid; frame diff → step triggers |
-| **Color Band** | Camera dominant hue | Point at coloured objects → scale | Quantized melody; hue → scale degree |
-| **Motion Grid** | Camera frame diff (like Video Sonifier) | Movement amount → rhythm density | Granular density + rate from motion energy |
-| **Torch Pulse** | `torch` / screen flash + rear cam | Flash on beat for ensemble visual | Audio click synced; optional brightness sync |
+| ~~**Shadow Sequencer**~~ | Front camera brightness map | Hand shadow → 8-step mask | [Shadow Steps](../apps/shadow-sequencer/) |
+| ~~**Color Band**~~ | Camera dominant hue | Point at coloured objects → scale | [Hue Scale](../apps/color-band/) |
+| ~~**Motion Grid**~~ | Camera frame diff (like Video Sonifier) | Movement amount → rhythm density | [Grain Cam](../apps/motion-grid/) |
+| ~~**Torch Pulse**~~ | `torch` / screen flash + rear cam | Flash on beat for ensemble visual | [Flash Beat](../apps/torch-pulse/) |
 
 ### Touch & device
 
 | Idea | Sensor / API | Music role | Synthesis hook |
 |------|----------------|------------|----------------|
-| **Pinch Bass** | Two-finger pinch scale | Pinch → filter + sub level | Mono subtractive; distance → cutoff |
-| **Pressure Pad** | `force` on `PointerEvent` (iOS) | Hard press → louder + brighter | Wavetable scan speed + gain |
-| **Edge Strum** | Pointer down at pad edge vs centre | Edge = harmonics, centre = fundamental | KS with pick position metaphor |
-| **Haptic Click** | `navigator.vibrate` patterns | Android: feel the rhythm you programmed | Sequencer drives vibe + audio in parallel |
-| **Battery Drone** | `navigator.getBattery()` | Low battery → thinner, detuned ensemble | Slow beating detune as level drops (ethics: subtle) |
+| ~~**Pinch Bass**~~ | Two-finger pinch scale | Pinch → filter + sub level | [Pinch Sub](../apps/pinch-bass/) |
+| ~~**Pressure Pad**~~ | `force` on `PointerEvent` (iOS) | Hard press → louder + brighter | [Force Bright](../apps/pressure-pad/) |
+| ~~**Edge Strum**~~ | Pointer down at pad edge vs centre | Edge = harmonics, centre = fundamental | [Rim Pluck](../apps/edge-strum/) |
+| ~~**Haptic Click**~~ | `navigator.vibrate` patterns | Android: feel the rhythm you programmed | [Vibe Lane](../apps/haptic-click/) |
+| ~~**Battery Drone**~~ | `navigator.getBattery()` | Low battery → thinner, detuned ensemble | [Power Thin](../apps/battery-drone/) |
 
 ### Location & environment (experimental / fragile APIs)
 
 | Idea | Sensor / API | Music role | Synthesis hook |
 |------|----------------|------------|----------------|
-| **Altitude Wind** | `PressureSensor` (barometer, rare) | Higher elevation → brighter noise mix | Filtered noise + pitch map to pressure |
-| **Geo Drone** | `geolocation` speed / heading | Walk around space → slow panorama | Stereo delay taps; position delta → pan |
-| **Network Static** | `connection.effectiveType` | 3G vs Wi‑Fi → bit-crush amount | Lo-fi sampler; effective type → downsample |
+| ~~**Altitude Wind**~~ | `PressureSensor` (barometer, rare) | Higher elevation → brighter noise mix | [Baro Wind](../apps/altitude-wind/) |
+| ~~**Geo Drone**~~ | `geolocation` speed / heading | Walk around space → slow panorama | [Walk Pan](../apps/geo-drone/) |
+| ~~**Network Static**~~ | `connection.effectiveType` | 3G vs Wi‑Fi → bit-crush amount | [Arcade Static](../apps/bit-crush-pad/) (network crush) |
 
 ### Already explored (reference)
 
@@ -80,38 +80,38 @@ Different ways to generate sound beyond what the hub already demos. Pair with to
 
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
-| **Hard Sync Lead** | Oscillator hard sync | Aggressive lead | Y = modulator ratio; X = carrier pitch |
+| ~~**Hard Sync Lead**~~ | Oscillator hard sync | Aggressive lead | [Sync Scream](../apps/hard-sync-lead/) |
 | ~~**Ring Mod Gong**~~ | Ring mod (two sines) | Metallic inharmonic | [ring-mod-gong](../apps/ring-mod-gong/) |
-| **AM Radio** | Amplitude modulation | Old-radio sidebands | Mic bias → mod depth; drag → carrier |
-| **Phase Distortion** | Casio-style PD curve | Digital 80s lead | 1D waveshape scan on pad |
-| **SuperSaw Stack** | Detuned saw cluster | Ensemble pad | Spread from gyro; hold to sustain |
-| **Pulse Width Bass** | Variable rectangle | Nasty bass | Tilt → pulse width |
+| ~~**AM Radio**~~ | Amplitude modulation | Old-radio sidebands | [AM Dial](../apps/am-radio/) |
+| ~~**Phase Distortion**~~ | Casio-style PD curve | Digital 80s lead | [PD Lead](../apps/phase-distortion/) |
+| ~~**SuperSaw Stack**~~ | Detuned saw cluster | Ensemble pad | [Blade Chorus](../apps/supersaw-stack/) |
+| ~~**Pulse Width Bass**~~ | Variable rectangle | Nasty bass | [Pulse Bass](../apps/pwm-bass/) |
 
 ### Physical & waveguide
 
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
-| **Dual KS Harp** | Two coupled delay lines | Hammered dulcimer | Multi-touch; separate strings |
-| **Bowed Waveguide** | Continuous excitation + loop | Cello-like (simpler than Bow Phone) | Drag = bow speed; no camera |
-| **Pluck Bowl** | 2D wave mesh (lite) | Splashy percussion | Tap location → strike point |
-| **Wind Bottle** | Noise + resonant peak + feedback | Breath without mic | Blow detected optional; tilt = embouchure |
+| ~~**Dual KS Harp**~~ | Two coupled delay lines | Hammered dulcimer | [Twin Wire](../apps/dual-ks-harp/) |
+| ~~**Bowed Waveguide**~~ | Continuous excitation + loop | Cello-like (simpler than Bow Phone) | [Drag Bow](../apps/bowed-waveguide/) |
+| ~~**Pluck Bowl**~~ | 2D wave mesh (lite) | Splashy percussion | [Bowl Splash](../apps/pluck-bowl/) |
+| ~~**Wind Bottle**~~ | Noise + resonant peak + feedback | Breath without mic | [Bottle Breath](../apps/wind-bottle/) |
 
 ### Granular & spectral
 
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
 | ~~**Spectral Freeze**~~ | Hold current FFT frame | Cloud pad | [spectral-freeze](../apps/spectral-freeze/) |
-| **Grain Rain** | Random grain positions | Texture | Accel shakes → grain rate |
-| **Scrub Tape** | Play buffer forward/back | DJ scrub | Drag X; speed from velocity |
-| **Vocoder Choir** | Mic → band vocoder | Robot choir | Vowel from tilt; pitch from mic |
+| ~~**Grain Rain**~~ | Random grain positions | Texture | [Shake Dust](../apps/grain-rain/) |
+| ~~**Scrub Tape**~~ | Play buffer forward/back | DJ scrub | [Tape Scrub](../apps/scrub-tape/) |
+| ~~**Vocoder Choir**~~ | Mic → band vocoder | Robot choir | [Robot Hall](../apps/vocoder-choir/) |
 
 ### Sampling & convolution
 
 | Idea | Approach | Music role | Control idea |
 |------|----------|------------|--------------|
-| **IR Cathedral** | Convolve tone with uploaded IR | Space without reverb unit | Choose IR; wet from tilt |
-| **One-Shot Orchestra** | Multi-sample map on pad zones | Instant ensemble hits | Zones = instrument; velocity = Y |
-| **Live Loop Slicer** | Record bar; jump slices | Breakbeat | Tilt → slice index |
+| ~~**IR Cathedral**~~ | Convolve tone with uploaded IR | Space without reverb unit | [Space Convolve](../apps/ir-cathedral/) |
+| ~~**One-Shot Orchestra**~~ | Multi-sample map on pad zones | Instant ensemble hits | [Zone Hits](../apps/one-shot-orchestra/) |
+| ~~**Live Loop Slicer**~~ | Record bar; jump slices | Breakbeat | [Slice Bar](../apps/live-loop-slicer/) |
 
 ### Algorithmic & generative
 
@@ -152,13 +152,13 @@ Use when designing a new app: pick **one primary sensor** and **one synthesis fa
 
 |  | Subtractive | FM | KS / waveguide | Granular | Additive | Sample |
 |--|-------------|-----|----------------|----------|----------|--------|
-| **Gyro only** | open | Gyro Whirl | open | Grain Rain | open | open |
+| **Gyro only** | open | ~~Gyro Whirl~~ | open | ~~Grain Rain~~ | open | open |
 | **Ambient light** | ~~Light Theremin~~ | open | open | open | open | open |
-| **Magnetometer** | open | open | open | open | Compass Choir | open |
-| **Barometer** | open | open | Wind Bottle | open | open | open |
-| **Pinch / force** | open | open | Edge Strum | open | open | open |
-| **Camera hue** | open | open | open | Motion Grid | Color Band | open |
-| **Vocoder** | — | — | — | — | — | Vocoder Choir |
+| **Magnetometer** | open | open | open | open | ~~Compass Choir~~ | open |
+| **Barometer** | open | open | ~~Wind Bottle~~ | open | open | open |
+| **Pinch / force** | open | open | ~~Edge Strum~~ | open | open | open |
+| **Camera hue** | open | open | open | ~~Motion Grid~~ | ~~Color Band~~ | open |
+| **Vocoder** | — | — | — | — | — | ~~Vocoder Choir~~ |
 
 ---
 
@@ -205,7 +205,7 @@ Use when designing a new app: pick **one primary sensor** and **one synthesis fa
 | **WebSocket hub** | Global grid step broadcast | Not started |
 | **Listen & lock** | Mic phase correction | Partial (Firefly, Harmonizer) |
 | ~~**Section colors**~~ | `?section=` on hub | Shipped |
-| **Room reverb send** | Laptop reverb bus | Not started |
+| **Room reverb send** | Laptop reverb bus | Not started (multi-device bus) |
 | **Bluetooth clock** | Wired sync for pro workshops | Research |
 
 ---
@@ -215,7 +215,7 @@ Use when designing a new app: pick **one primary sensor** and **one synthesis fa
 - ~~Teachable panel, confusion matrix, k slider, ethics, k-NN vs tiny net~~ — [Train & Shake](../apps/train-shake/)
 - ~~Hum vs clap classifier~~ — [hum-clap](../apps/hum-clap/)
 - ~~Genetic drum patterns~~ — [Evo Drumkit](../apps/evo-drumkit/)
-- **Gesture → synthesis params** — ML regresses tilt/shake to filter cutoff (teaching regression)
+- ~~Gesture → synthesis params~~ — [Tilt Learn](../apps/gesture-regression/) (k-NN tilt → filter)
 - **On-device style transfer** — “play like shake” swaps FM ratios (advanced)
 
 ---
@@ -259,16 +259,16 @@ Use when designing a new app: pick **one primary sensor** and **one synthesis fa
 - **i18n** — Norwegian + English
 - **Telemetry opt-in** — anonymous app usage
 - **Version pin** — `?v=2` for workshops
-- **Feature detect page** — `/support.html` lists sensor APIs per device
+- ~~**Feature detect page**~~ — [support.html](../support.html) lists sensor APIs per device
 
 ---
 
 ## Priority (suggested)
 
-1. ~~**Light Theremin**~~ — shipped; **Gyro Whirl** still open  
-2. ~~**Ring Mod Gong**~~ — shipped; **Hard Sync Lead** still open  
+1. ~~**Light Theremin**~~ · ~~**Gyro Whirl**~~ — shipped  
+2. ~~**Ring Mod Gong**~~ · ~~**Hard Sync Lead**~~ — shipped  
 3. ~~**Spectral Freeze**~~ — shipped  
 4. **WebRTC room** — when acoustic sync isn’t enough  
-5. **Feature detect page** — fewer workshop surprises  
+5. ~~**Feature detect page**~~ — [support.html](../support.html)
 
 Contributions welcome: pick an open item, open a PR, link it here and in the [wiki](https://github.com/alexarje/Oslo-Mobile-Orchestra/wiki).
