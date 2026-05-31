@@ -14,37 +14,46 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Additive synthesis</h2>
-    <p>Turn <strong>Audio on</strong>. A bell is many sine <strong>partials</strong> at once — set the sliders, then <strong>tap</strong> the pad or <strong>hit</strong> the phone (palm or knuckle) to strike.</p>
-    <p><strong>Root</strong> sets base pitch; partial ratios are inharmonic like a real bell. Allow <strong>motion</strong> on iPhone.</p>
+    <p>Turn <strong>Audio on</strong>, then <strong>tap the pad</strong> to strike. Set partial sliders and <strong>root</strong> first.</p>
+    <p>Optional: enable <strong>Hit phone to strike</strong> for motion hits (allow motion on iPhone).</p>
   </div>
-  <p class="status-bar" id="status"></p>
-  <div class="bells-scroll">
-    <div class="control-row">
-      <label for="root">Root</label>
-      <input type="range" id="root" min="48" max="72" value="60" />
-      <span id="rootLbl">C4</span>
+  <p class="status-bar" id="status">Audio on · tap pad to play</p>
+  <div class="main-stage bells-layout">
+    <div class="bells-scroll">
+      <div class="control-row">
+        <label for="root">Root</label>
+        <input type="range" id="root" min="48" max="72" value="60" />
+        <span id="rootLbl">C4</span>
+      </div>
+      <div class="control-row">
+        <label class="slide-toggle">
+          <input type="checkbox" id="motionHit" />
+          Hit phone to strike
+        </label>
+      </div>
+      <div id="partials" class="bells-partials"></div>
     </div>
-    <div id="partials" class="bells-partials"></div>
-  </div>
-  <div class="bells-pad-wrap">
-    <div id="pad" class="bells-pad play-grid" role="button" tabindex="0" aria-label="Strike bell"></div>
+    <div class="bells-pad-wrap">
+      <div id="pad" class="bells-pad stage-fill play-grid" role="button" tabindex="0" aria-label="Strike bell">Tap to strike</div>
+    </div>
   </div>
   <script type="module">
     import { bindLearn, registerAudioBoot, setStatus, startAudio } from "../../shared/app.js";
     import { createMasterBus, midiToFreq } from "../../shared/audio.js";
-    import { enableSensors, onMotion, primeSensors } from "../../shared/sensors.js";
+    import { enableSensors, onMotion, primeSensors, stopSensors } from "../../shared/sensors.js";
 
     bindLearn();
 
     const RATIOS = [1, 2.56, 5.12, 8.21, 10.45, 13.8, 17.2, 21.5];
     const NAMES = ["1×", "2.6×", "5.1×", "8.2×", "10×", "14×", "17×", "22×"];
     const SENSOR_OPTS = { needMotion: true, needOrientation: false };
-    const HIT_JERK = 1.55;
-    const HIT_COOLDOWN_MS = 280;
+    const HIT_JERK = 2.75;
+    const HIT_COOLDOWN_MS = 320;
     const GAIN_FLOOR = 0.0001;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
     const pad = document.getElementById("pad");
+    const motionHit = document.getElementById("motionHit");
     const partialsEl = document.getElementById("partials");
     let ctx, master, built = false;
     let sensorsReady = false;
@@ -61,17 +70,14 @@
     });
 
     function getLevels() {
-      return [...partialsEl.querySelectorAll("input")].map((el) => +el.value / 100);
+      return [...partialsEl.querySelectorAll("input[type=range]")].map((el) => +el.value / 100);
     }
 
     function buildAudio(c) {
       ctx = c;
       ({ master } = createMasterBus(c, 0.5));
       built = true;
-      primeSensors(SENSOR_OPTS);
-      void initMotion().then((ok) => {
-        if (ok) setStatus("status", "Tap pad or hit the phone", "ok");
-      });
+      setStatus("status", "Tap pad to strike", "ok");
     }
 
     registerAudioBoot(buildAudio);
@@ -118,39 +124,51 @@
       flashPad();
     }
 
-    async function initMotion() {
-      if (sensorsReady) return true;
+    function onMotionSample({ x, y, z }) {
+      if (!built || !motionHit.checked) return;
+      if (!motionPrimed) {
+        lastAccel = { x, y, z };
+        motionPrimed = true;
+        return;
+      }
+      const jerk = Math.hypot(x - lastAccel.x, y - lastAccel.y, z - lastAccel.z);
+      lastAccel = { x, y, z };
+      const now = performance.now();
+      if (jerk < HIT_JERK || now - lastHitAt < HIT_COOLDOWN_MS) return;
+      lastHitAt = now;
+      const nx = clamp(0.2 + Math.min(0.75, jerk / 5), 0, 1);
+      strike(nx, jerk);
+    }
+
+    async function setMotionHit(on) {
+      motionPrimed = false;
+      lastAccel = null;
+      if (!on) {
+        stopSensors();
+        sensorsReady = false;
+        if (built) setStatus("status", "Tap pad to strike", "ok");
+        return;
+      }
+      if (!built) {
+        setStatus("status", "Turn Audio on first", "warn");
+        motionHit.checked = false;
+        return;
+      }
+      primeSensors(SENSOR_OPTS);
       const ok = await enableSensors(SENSOR_OPTS);
       if (!ok) {
-        setStatus("status", "Motion blocked — tap pad only, or allow motion", "warn");
-        return false;
+        setStatus("status", "Motion blocked — tap pad only", "warn");
+        motionHit.checked = false;
+        return;
       }
-      onMotion(({ x, y, z }) => {
-        if (!built) return;
-        if (!motionPrimed) {
-          lastAccel = { x, y, z };
-          motionPrimed = true;
-          return;
-        }
-        const jerk = Math.hypot(x - lastAccel.x, y - lastAccel.y, z - lastAccel.z);
-        lastAccel = { x, y, z };
-        const now = performance.now();
-        if (jerk < HIT_JERK || now - lastHitAt < HIT_COOLDOWN_MS) return;
-        lastHitAt = now;
-        const nx = clamp(0.2 + Math.min(0.75, jerk / 4.5), 0, 1);
-        strike(nx, jerk);
-      });
+      onMotion(onMotionSample);
       sensorsReady = true;
-      return true;
+      setStatus("status", "Tap pad or hit the phone", "ok");
     }
 
     async function ensureReady() {
-      primeSensors(SENSOR_OPTS);
       await startAudio(!built ? buildAudio : undefined);
-      if (!built) return false;
-      await initMotion();
-      setStatus("status", "Tap pad or hit the phone", "ok");
-      return true;
+      return built;
     }
 
     document.getElementById("root").oninput = (e) => {
@@ -159,11 +177,9 @@
       document.getElementById("rootLbl").textContent = `${names[m % 12]}${Math.floor(m / 12) - 1}`;
     };
 
-    document.querySelector(".bells-scroll")?.addEventListener(
-      "pointerdown",
-      () => primeSensors(SENSOR_OPTS),
-      { once: true, capture: true }
-    );
+    motionHit.addEventListener("change", () => {
+      void setMotionHit(motionHit.checked);
+    });
 
     pad.addEventListener("pointerdown", async (e) => {
       e.preventDefault();
@@ -174,6 +190,10 @@
     });
     pad.addEventListener("pointerup", () => pad.classList.remove("active"));
     pad.addEventListener("pointercancel", () => pad.classList.remove("active"));
+
+    window.addEventListener("pagehide", () => {
+      stopSensors();
+    });
   </script>
 </body>
 </html>
