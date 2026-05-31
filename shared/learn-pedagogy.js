@@ -171,8 +171,8 @@ export const LEARN_PEDAGOGY = {
   ],
 
   "tap-bloom": [
-    "Each tap plants a pentatonic tone and expanding ripple; delay feedback and delayed “child” notes keep the field evolving.",
-    "Generative ambient play — minimal gesture, rich overlap; vertical position chooses pitch height.",
+    "Each tap plants one pentatonic tone that repeats on an even pulse — same pitch, steady rhythm, slowly fading.",
+    "Generative ambient play — minimal gesture, layered blooms; vertical position chooses pitch height.",
   ],
 
   "wavetable-scan": [

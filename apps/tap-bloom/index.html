@@ -14,8 +14,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Generative blooms</h2>
-    <p>In the spirit of Brian Eno’s <em>Bloom</em>: turn <strong>Audio on</strong>, then <strong>tap</strong> anywhere. Each touch opens a ripple and a pentatonic tone that echoes and gently spawns related pitches.</p>
-    <p>Higher on the screen = higher notes. Leave it running — the delay cloud keeps evolving.</p>
+    <p>In the spirit of Brian Eno’s <em>Bloom</em>: turn <strong>Audio on</strong>, then <strong>tap</strong> anywhere. Each touch plants one pentatonic tone that <strong>pulses evenly</strong> — same pitch, steady rhythm.</p>
+    <p>Higher on the screen = higher notes. Tap again to layer more blooms.</p>
   </div>
   <p class="status-bar" id="status">Turn Audio on, then tap the canvas</p>
   <div class="main-stage tap-bloom-stage">
@@ -30,9 +30,12 @@
     const canvas = document.getElementById("bloomCanvas");
     const g = canvas.getContext("2d");
     const PENTA = [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86];
+    const PULSE_SEC = 0.52;
+    const PULSES = 14;
+    const NOTE_DUR = 0.36;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-    let ctx, master, inputBus, delayIn, delayNode, delayFb, delayTap, built = false;
+    let ctx, master, inputBus, built = false;
     let blooms = [];
     let raf = 0;
 
@@ -41,20 +44,7 @@
       ({ master } = createMasterBus(c, 0.48));
       inputBus = ctx.createGain();
       inputBus.gain.value = 1;
-      delayIn = ctx.createGain();
-      delayNode = ctx.createDelay(3);
-      delayNode.delayTime.value = 0.58;
-      delayFb = ctx.createGain();
-      delayFb.gain.value = 0.5;
-      delayTap = ctx.createGain();
-      delayTap.gain.value = 0.62;
       inputBus.connect(master);
-      inputBus.connect(delayIn);
-      delayIn.connect(delayNode);
-      delayNode.connect(delayFb);
-      delayFb.connect(delayIn);
-      delayNode.connect(delayTap);
-      delayTap.connect(master);
       built = true;
       resizeCanvas();
     }
@@ -68,8 +58,7 @@
       canvas.height = Math.max(1, Math.floor(box.height * dpr));
     }
 
-    function playVoice(freq, when, peak, dur = 4.2, delay = 0) {
-      when += delay;
+    function playPulse(freq, when, peak) {
       const o1 = ctx.createOscillator();
       const o2 = ctx.createOscillator();
       const tone = ctx.createGain();
@@ -83,10 +72,10 @@
       o1.frequency.value = freq;
       o2.frequency.value = freq * 2;
       o2.detune.value = 4;
-      harm.gain.value = 0.12;
+      harm.gain.value = 0.1;
       tone.gain.setValueAtTime(0.001, when);
-      tone.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), when + 0.06);
-      tone.gain.exponentialRampToValueAtTime(0.001, when + dur);
+      tone.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), when + 0.04);
+      tone.gain.exponentialRampToValueAtTime(0.001, when + NOTE_DUR);
       o1.connect(tone);
       o2.connect(harm);
       harm.connect(tone);
@@ -94,27 +83,25 @@
       filter.connect(inputBus);
       o1.start(when);
       o2.start(when);
-      o1.stop(when + dur + 0.05);
-      o2.stop(when + dur + 0.05);
+      o1.stop(when + NOTE_DUR + 0.05);
+      o2.stop(when + NOTE_DUR + 0.05);
     }
 
     function spawnBloom(nx, ny) {
       if (!ctx || !built) return;
       const idx = clamp(Math.round((1 - ny) * (PENTA.length - 1)), 0, PENTA.length - 1);
+      const freq = midiToFreq(PENTA[idx]);
       const t = ctx.currentTime;
-      playVoice(midiToFreq(PENTA[idx]), t, 0.2);
-
-      const childOffsets = [-2, -1, 1, 2];
-      const c1 = clamp(idx + childOffsets[(Math.random() * 4) | 0], 0, PENTA.length - 1);
-      const c2 = clamp(idx + childOffsets[(Math.random() * 4) | 0], 0, PENTA.length - 1);
-      playVoice(midiToFreq(PENTA[c1]), t, 0.11, 3.6, 0.32 + Math.random() * 0.28);
-      playVoice(midiToFreq(PENTA[c2]), t, 0.07, 3.2, 0.75 + Math.random() * 0.55);
-
+      for (let i = 0; i < PULSES; i++) {
+        const peak = 0.2 * Math.pow(0.93, i);
+        playPulse(freq, t + i * PULSE_SEC, peak);
+      }
       blooms.push({
         nx,
         ny,
         born: performance.now(),
-        life: 2600 + Math.random() * 900,
+        life: PULSES * PULSE_SEC * 1000 + 400,
+        pulseMs: PULSE_SEC * 1000,
         hue: 190 + (1 - ny) * 40,
       });
       setStatus("status", "Tap to add blooms", "ok");
@@ -129,20 +116,24 @@
       const now = performance.now();
       blooms = blooms.filter((b) => now - b.born < b.life);
       for (const b of blooms) {
-        const age = (now - b.born) / b.life;
-        const r = age * Math.min(w, h) * 0.48;
-        const alpha = (1 - age) * 0.62;
+        const elapsed = now - b.born;
+        const pulseIdx = Math.floor(elapsed / b.pulseMs);
+        const pulsePhase = (elapsed % b.pulseMs) / b.pulseMs;
+        const fade = 1 - elapsed / b.life;
+        const r = pulsePhase * Math.min(w, h) * 0.42;
+        const alpha = (1 - pulsePhase) * 0.62 * fade;
         g.strokeStyle = `hsla(${b.hue}, 55%, 88%, ${alpha})`;
         g.lineWidth = 2 * dpr;
         g.beginPath();
         g.arc(b.nx * w, b.ny * h, r, 0, Math.PI * 2);
         g.stroke();
-        if (age < 0.35) {
-          g.fillStyle = `hsla(${b.hue}, 70%, 95%, ${(0.35 - age) * 0.35})`;
+        if (pulsePhase < 0.12) {
+          g.fillStyle = `hsla(${b.hue}, 70%, 95%, ${(0.12 - pulsePhase) * 3 * fade})`;
           g.beginPath();
           g.arc(b.nx * w, b.ny * h, 8 * dpr, 0, Math.PI * 2);
           g.fill();
         }
+        if (pulseIdx >= PULSES) continue;
       }
       raf = requestAnimationFrame(draw);
     }
