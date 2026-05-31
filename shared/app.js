@@ -2,6 +2,9 @@
  * Shared UI helpers — learn panel, status, iOS-safe audio unlock.
  */
 import { getAudioContext, primeMicStream, unlockAudio } from "./audio.js";
+import { loadA11yPreference } from "./workshop.js";
+
+loadA11yPreference();
 
 const AUDIO_TOGGLE_ID = "audioToggle";
 const HEADER_CONTROLS_ID = "headerControls";

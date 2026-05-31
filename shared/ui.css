@@ -1239,21 +1239,83 @@ body.hub {
   color: #64748b;
 }
 
+html.omo-a11y {
+  --touch-min: 52px;
+  --header-h: 48px;
+  --toolbar-h: 52px;
+  --status-h: 26px;
+}
+
+html.omo-a11y .hub-header h1 {
+  font-size: 1.35rem;
+}
+
+html.omo-a11y .app-list a {
+  min-height: 56px;
+  padding: 0.65rem 0.7rem;
+}
+
+html.omo-a11y .app-list .title {
+  font-size: 1.05rem;
+}
+
+html.omo-a11y .app-list .tag {
+  font-size: 0.68rem;
+}
+
+html.omo-a11y .control-row,
+html.omo-a11y .slide-toggle {
+  font-size: 0.85rem;
+}
+
+html.omo-a11y .slide-toggle input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+}
+
 html.omo-a11y .btn,
 html.omo-a11y .cell,
 html.omo-a11y .drum-pad,
-html.omo-a11y .learn-toggle {
+html.omo-a11y .learn-toggle,
+html.omo-a11y .audio-toggle {
   min-height: 52px;
   font-size: 0.85rem;
 }
 
-html.omo-a11y .app-list a {
-  min-height: 52px;
-  padding: 0.6rem 0.5rem;
+html.omo-a11y .back-link {
+  min-width: 44px;
+  min-height: 44px;
 }
 
-html.omo-a11y {
-  --touch-min: 52px;
+html.omo-a11y .app-header h1 {
+  font-size: 1rem;
+}
+
+html.omo-a11y .status-bar {
+  font-size: 0.78rem;
+}
+
+html.omo-a11y .piano-key.white {
+  width: 32px;
+  height: 132px;
+}
+
+html.omo-a11y .piano-key.black {
+  width: 21px;
+  height: 78px;
+}
+
+html.omo-a11y .piano-key .key-note {
+  font-size: 8px;
+}
+
+html.omo-a11y .drum-pad .pad-icon {
+  font-size: 1.5rem;
+}
+
+html.omo-a11y .drum-pad .pad-name {
+  font-size: 0.72rem;
 }
 
 .hub-banner {

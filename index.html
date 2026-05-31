@@ -45,10 +45,10 @@
 
   <script type="module">
     import { bindLearn } from "./shared/app.js";
-    import { SECTIONS, getPartFromUrl, getSectionFromUrl, applyA11y, loadA11yPreference } from "./shared/workshop.js";
+    import { SECTIONS, getPartFromUrl, getSectionFromUrl, wireA11yToggle } from "./shared/workshop.js";
 
     bindLearn();
-    loadA11yPreference();
+    wireA11yToggle();
 
     const APPS = [
       { href: "apps/conductor/", tag: "Timing", title: "Conductor", section: "rhythm" },
@@ -117,8 +117,6 @@
     const urlSec = getSectionFromUrl();
     if (urlSec) filter.value = urlSec;
     render();
-
-    document.getElementById("a11yToggle").onchange = (e) => applyA11y(e.target.checked);
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
