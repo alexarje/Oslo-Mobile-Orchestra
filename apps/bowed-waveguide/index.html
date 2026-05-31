@@ -14,7 +14,7 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Bowed string</h2>
-    <p>Turn <strong>Audio on</strong>, then <strong>hold</strong> and <strong>drag</strong> across the pad. <strong>Vertical</strong> = pitch · <strong>horizontal speed</strong> = bow pressure (smooth, sustained tone).</p>
+    <p>Turn <strong>Audio on</strong>, <strong>hold</strong> the pad, and <strong>drag</strong> horizontally. Slow strokes = soft tone · faster = brighter. <strong>Vertical</strong> = pitch.</p>
   </div>
   <div class="readout-row">
     <p class="value-chip">Pitch <strong id="hzOut">220</strong> Hz</p>
@@ -28,6 +28,7 @@
   <script type="module">
     import { bindLearn, registerAudioBoot, startAudio } from "../../shared/app.js";
     import { createMasterBus } from "../../shared/audio.js";
+    import { createKSPool, karplusPluck } from "../../shared/ks.js";
     import { createBowedString } from "../../shared/bowed-string.js";
 
     bindLearn();
@@ -37,23 +38,43 @@
     const hzOut = document.getElementById("hzOut");
     const bowOut = document.getElementById("bowOut");
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-    const mapY = (ny) => 82 * Math.pow(440 / 82, 1 - ny);
+    const mapY = (ny) => 98 * Math.pow(392 / 98, 1 - ny);
 
-    let ctx, master, string, built = false;
+    const pool = createKSPool(1);
+    const MIN_PLUCK_MS = 105;
+
+    let ctx, master, sustain, built = false;
     let holding = false;
     let activeId = null;
     let lastX = 0;
     let lastT = 0;
+    let lastPluckAt = 0;
     let smoothBow = 0;
+    let lastHz = 220;
 
     function buildAudio(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.5));
-      string = createBowedString(ctx, master, 220);
+      ({ master } = createMasterBus(c, 0.48));
+      sustain = createBowedString(ctx, master, 220);
       built = true;
     }
 
     registerAudioBoot(buildAudio);
+
+    function maybePluck(hz, bow) {
+      const now = performance.now();
+      if (now - lastPluckAt < MIN_PLUCK_MS) return;
+      lastPluckAt = now;
+      const strength = 0.14 + bow * 0.28;
+      const dampHz = clamp(hz * 3.2, 450, 4800);
+      karplusPluck(ctx, master, pool, hz, {
+        strength,
+        dampHz,
+        feedback: 0.79 + bow * 0.05,
+        level: 0.14 + bow * 0.1,
+        decaySec: 1.6,
+      });
+    }
 
     function updateFromEvent(ev) {
       const r = pad.getBoundingClientRect();
@@ -67,11 +88,17 @@
       lastT = performance.now();
 
       const speed = Math.abs(vx);
-      const targetBow = clamp(speed * 0.022, 0, 1);
-      smoothBow = smoothBow * 0.82 + targetBow * 0.18;
+      const targetBow = clamp(speed * 0.014, 0, 1);
+      smoothBow = smoothBow * 0.88 + targetBow * 0.12;
 
-      string.setPitch(hz);
-      string.setBow(smoothBow);
+      sustain.setPitch(hz);
+      sustain.setBow(smoothBow * 0.35);
+
+      if (smoothBow > 0.06) {
+        const pitchMoved = Math.abs(hz - lastHz) / Math.max(lastHz, 1) > 0.04;
+        if (pitchMoved || speed > 0.12) maybePluck(hz, smoothBow);
+      }
+      lastHz = hz;
 
       dot.style.left = `${nx * 100}%`;
       dot.style.top = `${ny * 100}%`;
@@ -90,8 +117,10 @@
       pad.classList.add("active");
       lastX = e.clientX;
       lastT = performance.now();
-      smoothBow = 0.12;
+      lastPluckAt = 0;
+      smoothBow = 0;
       updateFromEvent(e);
+      maybePluck(mapY(clamp((e.clientY - pad.getBoundingClientRect().top) / pad.getBoundingClientRect().height, 0, 1)), 0.25);
     });
 
     pad.addEventListener("pointermove", (e) => {
@@ -107,7 +136,8 @@
       pad.classList.remove("active");
       dot.style.opacity = "0.35";
       bowOut.textContent = "0";
-      if (string) string.release();
+      smoothBow = 0;
+      if (sustain) sustain.release();
     };
 
     pad.addEventListener("pointerup", stop);

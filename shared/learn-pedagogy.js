@@ -326,8 +326,8 @@ export const LEARN_PEDAGOGY = {
   ],
 
   "bowed-waveguide": [
-    "One Karplus–Strong loop runs continuously; band-limited noise is the bow, not repeated plucks.",
-    "Drag speed controls bow pressure; pitch is vertical position — smooth feedback keeps the tone singing.",
+    "Karplus–Strong plucks at a steady rate give the pitch; a very quiet bow layer adds sustain without runaway feedback.",
+    "Drag speed sets bow energy; vertical position chooses note — slow bowing sounds rounder, fast a little brighter.",
   ],
 
   "pluck-bowl": [
