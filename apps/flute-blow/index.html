@@ -14,8 +14,8 @@
   </header>
   <div class="learn-panel panel" id="learnPanel">
     <h2>Breath + finger holes</h2>
-    <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>blow</strong> past the yellow line.</p>
-    <p><strong>Tap a hole</strong> to cover or uncover it. Uncover from the <strong>bottom</strong> hole upward for higher notes (C → D → E → G → A → C). Bottom hole is nearest the screen edge.</p>
+    <p>Turn <strong>Audio on</strong>, allow the mic, then <strong>hold</strong> finger holes while you <strong>blow</strong> past the yellow line — no hold, no tone.</p>
+    <p><strong>Release</strong> a hole to open it. Open from the <strong>bottom</strong> upward for higher notes (C → D → E → G → A → C). Bottom hole is nearest the screen edge.</p>
   </div>
   <p class="status-bar" id="status"></p>
   <div class="breath-row">
@@ -53,9 +53,12 @@
     let ready = false;
     let booting = false;
     let timeData = new Float32Array(2048);
-    /** true = hole covered. */
+    /** true = hole covered (open when released). */
     const holesCovered = [true, true, true, true, true];
+    /** true while finger is down on that hole. */
+    const holesHeld = [false, false, false, false, false];
     const holeBtns = [];
+    let heldCount = 0;
     let bootPromise = null;
 
     function indexToMidi(i) {
@@ -98,19 +101,43 @@
       });
     }
 
-    function syncPitchIfPlaying() {
-      if (!ctx || !toneOsc) return;
-      if (getRms() > blowThreshold) setPitch(ctx.currentTime);
+    function anyHoleHeld() {
+      return heldCount > 0;
     }
 
-    function onHoleTap(i, e) {
+    function syncPitchIfPlaying() {
+      if (!ctx || !toneOsc) return;
+      if (getRms() > blowThreshold && anyHoleHeld()) setPitch(ctx.currentTime);
+    }
+
+    function onHoleDown(i, e) {
       e.preventDefault();
       e.stopPropagation();
       primeMicStream();
       void enableAudio();
-      holesCovered[i] = !holesCovered[i];
+      if (!holesHeld[i]) {
+        holesHeld[i] = true;
+        heldCount++;
+      }
+      holesCovered[i] = true;
+      holeBtns[i].classList.add("held");
+      holeBtns[i].setPointerCapture(e.pointerId);
       applyFingering();
       syncPitchIfPlaying();
+    }
+
+    function onHoleUp(i, e) {
+      if (!holesHeld[i]) return;
+      holesHeld[i] = false;
+      heldCount = Math.max(0, heldCount - 1);
+      holesCovered[i] = false;
+      holeBtns[i].classList.remove("held");
+      try {
+        holeBtns[i].releasePointerCapture(e.pointerId);
+      } catch {
+        /* noop */
+      }
+      applyFingering();
     }
 
     for (let i = 0; i < HOLE_COUNT; i++) {
@@ -118,7 +145,10 @@
       btn.type = "button";
       btn.className = "flute-hole covered";
       btn.dataset.hole = String(i + 1);
-      btn.addEventListener("pointerdown", (e) => onHoleTap(i, e));
+      btn.addEventListener("pointerdown", (e) => onHoleDown(i, e));
+      btn.addEventListener("pointerup", (e) => onHoleUp(i, e));
+      btn.addEventListener("pointercancel", (e) => onHoleUp(i, e));
+      btn.addEventListener("lostpointercapture", (e) => onHoleUp(i, e));
       fluteTube.appendChild(btn);
       holeBtns.push(btn);
     }
@@ -206,8 +236,10 @@
       const t = ctx.currentTime;
       const headroom = Math.max(0.025, 0.09 - blowThreshold);
       const s = blowing ? Math.min(1, (rms - blowThreshold) / headroom) : 0;
-      const targetEnv = blowing ? 0.35 + s * 0.65 : 0;
-      breathEnv += (targetEnv - breathEnv) * (targetEnv > breathEnv ? 0.42 : 0.12);
+      const holding = anyHoleHeld();
+      const targetEnv = blowing && holding ? 0.35 + s * 0.65 : 0;
+      breathEnv += (targetEnv - breathEnv) * (targetEnv > breathEnv ? 0.42 : holding ? 0.12 : 0.35);
+      document.getElementById("breathMeter").classList.toggle("holding", holding);
       if (breathEnv > 0.02) {
         toneGain.gain.setTargetAtTime(breathEnv * 0.95, t, 0.012);
         noiseGain.gain.setTargetAtTime(breathEnv * s * 0.22, t, 0.015);
@@ -243,7 +275,7 @@
       setStatus("status", "Calibrating… stay quiet", "");
       await calibrate();
       ready = true;
-      setStatus("status", "Blow for tone · tap holes to change pitch", "ok");
+      setStatus("status", "Hold holes + blow for tone", "ok");
       tick();
     }
 
