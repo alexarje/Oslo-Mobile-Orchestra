@@ -15,7 +15,7 @@
   <div class="learn-panel panel" id="learnPanel">
     <h2>Generative blooms</h2>
     <p>In the spirit of Brian Eno’s <em>Bloom</em>: turn <strong>Audio on</strong>, then <strong>tap</strong> anywhere. Each touch plants one pentatonic tone that <strong>pulses evenly</strong> — same pitch, steady rhythm.</p>
-    <p>Higher on the screen = higher notes. Each bloom pulses once per second and fades slowly — tap again to layer more.</p>
+    <p>Higher on the screen = higher notes. Each bloom pulses every four seconds with a long decay and reverb — tap again to layer more.</p>
   </div>
   <p class="status-bar" id="status">Turn Audio on, then tap the canvas</p>
   <div class="main-stage tap-bloom-stage">
@@ -30,21 +30,42 @@
     const canvas = document.getElementById("bloomCanvas");
     const g = canvas.getContext("2d");
     const PENTA = [62, 64, 66, 69, 71, 74, 76, 78, 81, 83, 86];
-    const PULSE_SEC = 1;
-    const PULSES = 28;
-    const NOTE_DUR = 0.42;
+    const PULSE_SEC = 4;
+    const PULSES = 7;
+    const NOTE_DUR = 4.2;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-    let ctx, master, inputBus, built = false;
+    let ctx, master, inputBus, reverbIn, reverbSend, built = false;
     let blooms = [];
     let raf = 0;
 
+    function bloomReverb(c, dest, wet) {
+      const sec = 7.5;
+      const len = Math.floor(c.sampleRate * sec);
+      const buf = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = buf.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 1.85;
+      }
+      const conv = c.createConvolver();
+      conv.buffer = buf;
+      const wetGain = c.createGain();
+      wetGain.gain.value = wet;
+      conv.connect(wetGain);
+      wetGain.connect(dest);
+      return conv;
+    }
+
     function build(c) {
       ctx = c;
-      ({ master } = createMasterBus(c, 0.48));
+      ({ master } = createMasterBus(c, 0.44));
       inputBus = ctx.createGain();
-      inputBus.gain.value = 1;
+      inputBus.gain.value = 0.58;
       inputBus.connect(master);
+      reverbIn = bloomReverb(c, master, 0.72);
+      reverbSend = ctx.createGain();
+      reverbSend.gain.value = 0.92;
+      reverbSend.connect(reverbIn);
       built = true;
       resizeCanvas();
     }
@@ -65,26 +86,27 @@
       const harm = ctx.createGain();
       const filter = ctx.createBiquadFilter();
       filter.type = "lowpass";
-      filter.frequency.value = 2800;
-      filter.Q.value = 0.6;
+      filter.frequency.value = 3200;
+      filter.Q.value = 0.5;
       o1.type = "sine";
       o2.type = "sine";
       o1.frequency.value = freq;
       o2.frequency.value = freq * 2;
       o2.detune.value = 4;
-      harm.gain.value = 0.1;
+      harm.gain.value = 0.08;
       tone.gain.setValueAtTime(0.001, when);
-      tone.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), when + 0.04);
+      tone.gain.exponentialRampToValueAtTime(Math.max(peak, 0.002), when + 0.1);
       tone.gain.exponentialRampToValueAtTime(0.001, when + NOTE_DUR);
       o1.connect(tone);
       o2.connect(harm);
       harm.connect(tone);
       tone.connect(filter);
       filter.connect(inputBus);
+      filter.connect(reverbSend);
       o1.start(when);
       o2.start(when);
-      o1.stop(when + NOTE_DUR + 0.05);
-      o2.stop(when + NOTE_DUR + 0.05);
+      o1.stop(when + NOTE_DUR + 2);
+      o2.stop(when + NOTE_DUR + 2);
     }
 
     function spawnBloom(nx, ny) {
@@ -93,14 +115,14 @@
       const freq = midiToFreq(PENTA[idx]);
       const t = ctx.currentTime;
       for (let i = 0; i < PULSES; i++) {
-        const peak = 0.2 * Math.pow(0.975, i);
+        const peak = 0.22 * Math.pow(0.93, i);
         playPulse(freq, t + i * PULSE_SEC, peak);
       }
       blooms.push({
         nx,
         ny,
         born: performance.now(),
-        life: PULSES * PULSE_SEC * 1000 + 400,
+        life: PULSES * PULSE_SEC * 1000 + 1200,
         pulseMs: PULSE_SEC * 1000,
         hue: 190 + (1 - ny) * 40,
       });

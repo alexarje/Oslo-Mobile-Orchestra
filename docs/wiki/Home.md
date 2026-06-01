@@ -2,6 +2,20 @@ A **phone orchestra** for workshops and classrooms: many browsers, one URL, no s
 
 **Live hub:** https://alexarje.github.io/Oslo-Mobile-Orchestra/
 
+## About OMO
+
+[Oslo Mobile Orchestra (OMO)](https://www.uio.no/ritmo/english/research/labs/fourms/research/projects/omo/index.html) is an ad-hoc ensemble of students and researchers from the University of Oslo and the Norwegian Academy of Music. It was founded in 2009 as the Oslo iPhone Ensemble and renamed in 2012 when patches began working across iOS and Android.
+
+OMO treats mobile phones as **real instruments** — played together like a clarinet or trumpet section, not as controllers for a PA. The ensemble’s working rules are simple:
+
+- Sound comes **only from the phones** — no external amplification
+- Performers embrace the **digital possibilities** of the medium (sensors, synthesis, shared timing)
+- Playing together is **social** — coordination, listening, and ensemble roles matter
+
+This site is the current **browser-based instrument collection** for OMO workshops and performances. It replaces earlier PureData patches deployed via MobMuPlat with Web Audio apps that run in Safari and Chrome on participants’ own phones.
+
+New performers are welcome — see the [OMO project page](https://www.uio.no/ritmo/english/research/labs/fourms/research/projects/omo/index.html) for background, history, and contact.
+
 ## What’s new (2026)
 
 - **Green Button** — swarm tones (formerly Audience; old URL redirects).

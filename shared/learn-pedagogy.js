@@ -171,7 +171,7 @@ export const LEARN_PEDAGOGY = {
   ],
 
   "tap-bloom": [
-    "Each tap plants one pentatonic tone that repeats on an even pulse — same pitch, steady rhythm, slowly fading.",
+    "Each tap plants one pentatonic tone that repeats every four seconds — same pitch, steady rhythm, long decay and reverb.",
     "Generative ambient play — minimal gesture, layered blooms; vertical position chooses pitch height.",
   ],
 
